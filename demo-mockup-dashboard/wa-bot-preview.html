@@ -1,0 +1,237 @@
+<!doctype html>
+<html lang="id">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Ilustrasi WhatsApp Bot SABABUKA - Data Dummy</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      display: grid;
+      place-items: center;
+      padding: 24px;
+      color: #21313c;
+      background: #e6ece9;
+      font-family: Arial, Helvetica, sans-serif;
+    }
+    .page { width: min(100%, 880px); }
+    .warning {
+      margin-bottom: 14px;
+      padding: 13px 16px;
+      color: #7b221d;
+      background: #fff0eb;
+      border: 2px solid #b75045;
+      text-align: center;
+      font-size: .82rem;
+      font-weight: 800;
+    }
+    .phone {
+      max-width: 480px;
+      margin: 0 auto;
+      overflow: hidden;
+      background: #efeae2;
+      border: 8px solid #26343c;
+      border-radius: 24px;
+      box-shadow: 0 18px 50px rgba(24, 45, 40, .18);
+    }
+    .chat-head {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 14px 16px;
+      color: #fff;
+      background: #075e54;
+    }
+    .avatar {
+      width: 42px; height: 42px;
+      display: grid; place-items: center;
+      background: #d8eee8;
+      color: #075e54;
+      border-radius: 50%;
+      font-weight: 800;
+    }
+    .title strong { display: block; }
+    .title span { opacity: .8; font-size: .75rem; }
+    .chat {
+      min-height: 590px;
+      padding: 18px 13px;
+      background-color: #efeae2;
+      background-image: radial-gradient(rgba(7, 94, 84, .055) 1px, transparent 1px);
+      background-size: 18px 18px;
+    }
+    .day {
+      width: max-content;
+      margin: 0 auto 16px;
+      padding: 5px 9px;
+      background: #e2f2f7;
+      border-radius: 6px;
+      color: #53646d;
+      font-size: .7rem;
+    }
+    .bubble {
+      width: fit-content;
+      max-width: 84%;
+      margin: 8px 0;
+      padding: 9px 11px 7px;
+      border-radius: 8px;
+      box-shadow: 0 1px 2px rgba(0,0,0,.12);
+      font-size: .86rem;
+    }
+    .user { margin-left: auto; background: #d9fdd3; border-top-right-radius: 2px; }
+    .bot { background: #fff; border-top-left-radius: 2px; }
+    .bot strong { color: #075e54; }
+    .meta { display: block; margin-top: 5px; color: #7b898e; text-align: right; font-size: .63rem; }
+    .source {
+      display: block;
+      margin-top: 7px;
+      padding-top: 7px;
+      color: #7b221d;
+      border-top: 1px solid #e7ece8;
+      font-size: .7rem;
+      font-weight: 700;
+    }
+    .composer {
+      display: flex;
+      gap: 8px;
+      padding: 10px;
+      background: #f0f2f5;
+    }
+    .composer div {
+      flex: 1;
+      padding: 10px 14px;
+      color: #87949a;
+      background: #fff;
+      border-radius: 20px;
+      font-size: .8rem;
+    }
+    .caption { margin: 18px auto 0; max-width: 660px; color: #56666f; text-align: center; font-size: .82rem; }
+    .caption strong { color: #7b221d; }
+    .back { margin-top: 12px; text-align: center; }
+    .back a { color: #176b61; font-weight: 700; }
+    .quick-questions { display: flex; flex-wrap: wrap; gap: 8px; padding: 10px 13px 4px; background: #f0f2f5; }
+    .quick-btn {
+      padding: 7px 12px;
+      background: #fff;
+      border: 1px solid #cfd9d6;
+      border-radius: 16px;
+      color: #075e54;
+      font-size: .74rem;
+      font-weight: 700;
+      cursor: pointer;
+      font-family: inherit;
+    }
+    .quick-btn:hover { background: #e6f4f1; }
+    .quick-btn:disabled { opacity: .5; cursor: not-allowed; }
+    .quick-btn:focus-visible, .back a:focus-visible { outline: 3px solid #1c6fd6; outline-offset: 2px; }
+    .typing { display: flex; gap: 4px; align-items: center; width: fit-content; margin: 8px 0; padding: 10px 13px; background: #fff; border-radius: 8px; border-top-left-radius: 2px; box-shadow: 0 1px 2px rgba(0,0,0,.12); }
+    .typing span { width: 6px; height: 6px; border-radius: 50%; background: #8aa39e; animation: typing-bounce 1s infinite ease-in-out; }
+    .typing span:nth-child(2) { animation-delay: .15s; }
+    .typing span:nth-child(3) { animation-delay: .3s; }
+    @keyframes typing-bounce { 0%, 60%, 100% { transform: translateY(0); opacity:.5; } 30% { transform: translateY(-4px); opacity:1; } }
+    @media (prefers-reduced-motion: reduce) {
+      .typing span { animation: none; opacity: .8; }
+    }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <div class="warning">ILUSTRASI SAJA · DATA DUMMY · BUKAN BOT WHATSAPP YANG SEDANG BERJALAN</div>
+    <section class="phone" aria-label="Mockup percakapan WhatsApp Bot">
+      <header class="chat-head">
+        <div class="avatar">SB</div>
+        <div class="title"><strong>SABABUKA Assistant</strong><span>prototipe visual · tidak terhubung</span></div>
+      </header>
+      <div class="chat" id="chatLog" aria-live="polite">
+        <div class="day">CONTOH PERCAKAPAN</div>
+
+        <div class="bubble user">Berapa angka stunting bulan ini?<span class="meta">08.42</span></div>
+        <div class="bubble bot"><strong>Ringkasan ilustratif:</strong><br>Prevalensi stunting Kabupaten Kapuas pada Juni ditampilkan sebesar <strong>18,4%</strong>, turun 0,4 poin dibanding Mei.<br><span class="source">DATA DUMMY - Belum berasal dari OPD - Periode ilustrasi Jan - Jun 2026</span><span class="meta">08.42</span></div>
+
+        <div class="bubble user">Kecamatan mana yang perlu perhatian?<span class="meta">08.44</span></div>
+        <div class="bubble bot">Pada contoh ini, nilai tertinggi terlihat di Mandau Talawang, Mantangai, dan Kapuas Hulu. Informasi tersebut belum boleh digunakan untuk keputusan karena seluruh angkanya karangan.<span class="source">ILUSTRASI RESPONS · BUKAN REKOMENDASI RESMI</span><span class="meta">08.44</span></div>
+
+        <div class="bubble user">Bagaimana realisasi PAD kita?<span class="meta">08.46</span></div>
+        <div class="bubble bot">Realisasi PAD ilustratif adalah <strong>Rp186,3 miliar</strong> atau sekitar <strong>54%</strong> dari target contoh. Pada sistem sesungguhnya, jawaban akan menyebut periode, OPD sumber, serta waktu pembaruan data.<span class="source">DATA DUMMY · BELUM TERHUBUNG KE API</span><span class="meta">08.46</span></div>
+      </div>
+      <div class="quick-questions" id="quickQuestions" aria-label="Contoh pertanyaan cepat"></div>
+      <div class="composer"><div>Ketik pertanyaan… (nonaktif pada prototipe)</div></div>
+    </section>
+    <p class="caption"><strong>Catatan:</strong> halaman ini hanya menunjukkan arah pengalaman pengguna. Klik salah satu pertanyaan cepat di atas kolom ketik untuk melihat simulasi jawaban bot. Autentikasi nomor, koneksi API, audit, keamanan, dan pengujian respons AI belum dibuat - tidak ada pesan yang benar-benar terkirim ke WhatsApp.</p>
+    <div class="back"><a href="index.html">← Kembali ke portal DIES</a></div>
+  </main>
+
+  <script>
+    'use strict';
+    var QUICK_QA = [
+      { q: 'Bagaimana capaian pendidikan bulan ini?', a: 'Ilustrasi: Angka partisipasi sekolah jenjang SD-SMP ditampilkan 94,1%, naik 0,7 poin dibanding bulan sebelumnya.' },
+      { q: 'Apa status integrasi data OPD?', a: 'Ilustrasi: Dari simulasi 40 sumber OPD, sebagian besar berstatus "Simulasi Aktif", beberapa "Perlu Pemeriksaan", dan sisanya belum terhubung.' },
+      { q: 'Bagaimana ringkasan sosial dan kemiskinan?', a: 'Ilustrasi: Tingkat kemiskinan ditampilkan 6,42%, dengan 18.230 KK contoh sebagai penerima bantuan sosial.' },
+      { q: 'Kecamatan mana capaian PAD terendah?', a: 'Ilustrasi: Pada contoh ini, Mandau Talawang dan Kapuas Hulu ditampilkan dengan capaian PAD terendah dibanding kecamatan lain.' }
+    ];
+
+    function nowLabel() {
+      var d = new Date();
+      var hh = String(d.getHours()).padStart(2, '0');
+      var mm = String(d.getMinutes()).padStart(2, '0');
+      return hh + '.' + mm;
+    }
+
+    function renderQuickButtons() {
+      var wrap = document.getElementById('quickQuestions');
+      wrap.innerHTML = '';
+      QUICK_QA.forEach(function (item, idx) {
+        var btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'quick-btn';
+        btn.textContent = item.q;
+        btn.addEventListener('click', function () { askQuestion(idx, btn); });
+        wrap.appendChild(btn);
+      });
+    }
+
+    function setButtonsDisabled(disabled) {
+      document.querySelectorAll('.quick-btn').forEach(function (b) { b.disabled = disabled; });
+    }
+
+    function askQuestion(idx, sourceBtn) {
+      var item = QUICK_QA[idx];
+      var log = document.getElementById('chatLog');
+      setButtonsDisabled(true);
+
+      var userBubble = document.createElement('div');
+      userBubble.className = 'bubble user';
+      userBubble.innerHTML = escapeHtml(item.q) + '<span class="meta">' + nowLabel() + '</span>';
+      log.appendChild(userBubble);
+
+      var typing = document.createElement('div');
+      typing.className = 'typing';
+      typing.setAttribute('aria-label', 'SABABUKA Assistant sedang mengetik');
+      typing.innerHTML = '<span></span><span></span><span></span>';
+      log.appendChild(typing);
+      log.scrollTop = log.scrollHeight;
+
+      var reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      window.setTimeout(function () {
+        typing.remove();
+        var botBubble = document.createElement('div');
+        botBubble.className = 'bubble bot';
+        botBubble.innerHTML = escapeHtml(item.a) + '<span class="source">DATA DUMMY - Periode ilustrasi Jan - Jun 2026 - Bot tidak sungguh-sungguh terhubung</span><span class="meta">' + nowLabel() + '</span>';
+        log.appendChild(botBubble);
+        log.scrollTop = log.scrollHeight;
+        setButtonsDisabled(false);
+        if (sourceBtn) sourceBtn.focus();
+      }, reduceMotion ? 150 : 900);
+    }
+
+    function escapeHtml(str) {
+      return String(str).replace(/[&<>"']/g, function (c) {
+        return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+      });
+    }
+
+    renderQuickButtons();
+  </script>
+</body>
+</html>

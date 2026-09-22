@@ -1,0 +1,11 @@
+{
+  "name":"sababuka-bersinar",
+  "version":"1.0.0",
+  "private":true,
+  "scripts":{
+    "demo":"node server.js 3000",
+    "demo:4173":"node server.js 4173",
+    "check":"node --check app.js && node --check src/data/data.js"
+  },
+  "description":"SABABUKA BERSINAR - Sistem Analisis Big Data Kabupaten Kapuas"
+}

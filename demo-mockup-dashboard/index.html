@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="id">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Portal DIES SABABUKA BERSINAR - Prototipe, Data Dummy</title>
+  <meta name="description" content="Prototipe interaktif Portal Web DIES Kabupaten Kapuas. Seluruh data adalah data dummy untuk kebutuhan paparan internal.">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="dummy-banner" role="alert">PROTOTIPE INTERAKTIF · SELURUH DATA DUMMY · BUKAN SISTEM PRODUKSI</div>
+
+  <div class="app-shell" id="appShell">
+    <div class="sidebar-backdrop" id="sidebarBackdrop"></div>
+
+    <aside class="sidebar" aria-label="Navigasi portal DIES">
+      <div class="brand">
+        <div class="brand-mark" aria-hidden="true">SB</div>
+        <div class="brand-text">
+          <strong>SABABUKA BERSINAR</strong>
+          <span>Portal DIES · Kab. Kapuas</span>
+        </div>
+      </div>
+      <nav class="nav" id="navList" aria-label="Menu utama"></nav>
+      <div class="sidebar-footer">
+        <span class="dummy-chip">DATA DUMMY</span>
+        <div>Sistem Analisis Big Data Kabupaten Kapuas. Mockup statis, belum terhubung OPD/backend.</div>
+      </div>
+    </aside>
+
+    <div class="content-area">
+      <header class="topbar">
+        <button type="button" class="icon-btn" id="sidebarToggle" aria-label="Buka atau tutup navigasi sisi">☰</button>
+        <div class="topbar-title">
+          <h1 id="pageTitle" tabindex="-1">Beranda Eksekutif</h1>
+          <p id="pageSubtitle">Ringkasan indikator strategis lintas sektor</p>
+        </div>
+        <div class="topbar-controls">
+          <div class="field-inline">
+            <label for="periodSelect">Periode data (ilustrasi)</label>
+            <select id="periodSelect"></select>
+          </div>
+          <button type="button" class="icon-btn" id="fullscreenBtn" aria-label="Aktifkan atau matikan mode layar penuh" title="Mode layar penuh">⛶</button>
+          <button type="button" class="icon-btn" id="helpBtn" aria-label="Bantuan dan informasi prototipe" title="Bantuan">?</button>
+          <button type="button" class="user-chip" id="userChip" aria-label="Lihat profil pengguna contoh">
+            <span class="avatar-dot" aria-hidden="true">BP</span>
+            <span><strong>Bupati (Demo)</strong><span>Akun contoh</span></span>
+          </button>
+        </div>
+      </header>
+
+      <main class="page-root" id="pageRoot" aria-live="polite"></main>
+
+      <footer class="app-footer">
+        SABABUKA BERSINAR · Mockup komunikasi visual internal · bukan aplikasi produksi · tidak untuk pengambilan keputusan ·
+        <a href="wa-bot-preview.html">Ilustrasi WhatsApp Bot ↗</a>
+      </footer>
+    </div>
+  </div>
+
+  <div id="modalRoot"></div>
+  <div class="toast-container" id="toastContainer" aria-live="polite"></div>
+
+  <script src="app.js"></script>
+</body>
+</html>

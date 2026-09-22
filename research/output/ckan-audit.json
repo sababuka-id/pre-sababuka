@@ -1,0 +1,1405 @@
+{
+  "auditedAt": "2026-09-12T23:42:49.100Z",
+  "site": "Satu Data Kabupaten Kapuas",
+  "organizationCount": 25,
+  "organizations": [
+    {
+      "id": "data-pemerintah-kabupaten-kapuas-2025",
+      "title": "Data Pemerintah Kabupaten Kapuas 2025",
+      "description": "",
+      "datasetCount": 2061,
+      "totalResources": 2061,
+      "withResources": 2061,
+      "withDescription": 2061,
+      "withTags": 457,
+      "structuredResources": 1817,
+      "structuredRatio": 0.8816108685104318,
+      "descriptionRatio": 1,
+      "geoResources": 0,
+      "latest": "2026-06-29T12:59:31.967310",
+      "oldest": "2026-06-12T10:29:45.079639",
+      "formats": {
+        "PDF": 244,
+        "XLSX": 1817
+      },
+      "years": {
+        "2010": 5,
+        "2012": 1,
+        "2013": 2,
+        "2016": 3,
+        "2017": 5,
+        "2018": 1,
+        "2019": 1,
+        "2020": 29,
+        "2021": 21,
+        "2022": 9,
+        "2023": 32,
+        "2024": 166,
+        "2025": 300,
+        "2026": 1,
+        "2029": 1
+      },
+      "licenses": {
+        "Tidak disebutkan": 2061
+      },
+      "readiness": "Siap ditindaklanjuti",
+      "site": "https://satudata.kapuaskab.go.id/uploads/group/2026-06-12-093356.1049782024-05-15-043953.388187satudata.png",
+      "sampleDatasets": [
+        {
+          "title": "SOP PENERBITAN SERTIFIKAT ELEKTRONIK",
+          "name": "sop-penerbitan-sertifikat-elektronik",
+          "modified": "2026-06-29T12:59:31.967310",
+          "formats": [
+            "PDF"
+          ]
+        },
+        {
+          "title": "SOP PEMBARUAN SERTIFIKAT ELEKTRONIK",
+          "name": "sop-pembaruan-sertifikat-elektronik",
+          "modified": "2026-06-29T12:59:29.405874",
+          "formats": [
+            "PDF"
+          ]
+        },
+        {
+          "title": "SOP PENYELENGGARAAN PELAYANAN PENGACAK SINYAL (JAMMING)",
+          "name": "sop-penyelenggaraan-pelayanan-pengacak-sinyal-jamming",
+          "modified": "2026-06-29T12:59:27.181756",
+          "formats": [
+            "PDF"
+          ]
+        },
+        {
+          "title": "SOP LUPA PASSPHRASE",
+          "name": "sop-lupa-passphrase",
+          "modified": "2026-06-29T12:59:24.998318",
+          "formats": [
+            "PDF"
+          ]
+        },
+        {
+          "title": "SK TIM TANGGAP INSIDEN SIBER KABUPATEN KAPUAS",
+          "name": "sk-tim-tanggap-insiden-siber-kabupaten-kapuas",
+          "modified": "2026-06-29T12:59:22.891364",
+          "formats": [
+            "PDF"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "data-pejabat-pengelola-informasi-dan-dokumentasi-kabupaten-kapuas-2011-2026",
+      "title": "Data Pejabat Pengelola Informasi dan Dokumentasi (PPID) Kabupaten Kapuas Tahun 2011-2026",
+      "description": "Data Pejabat Pengelola Informasi dan Dokumentasi (PPID) Kabupaten Kapuas Tahun 2011-2026\r\nSumber: https://ppid.kapuaskab.go.id/",
+      "datasetCount": 1751,
+      "totalResources": 1751,
+      "withResources": 1751,
+      "withDescription": 1751,
+      "withTags": 1751,
+      "structuredResources": 8,
+      "structuredRatio": 0.004568817818389492,
+      "descriptionRatio": 1,
+      "geoResources": 0,
+      "latest": "2026-06-22T08:43:16.188164",
+      "oldest": "2026-06-22T07:28:27.073177",
+      "formats": {
+        "PDF": 1187,
+        "DOCX": 14,
+        "PPT": 1,
+        "PPTX": 1,
+        "XLSX": 8,
+        "JPEG": 523,
+        "RAR": 6,
+        "DOC": 2,
+        "MP4": 5,
+        "PNG": 2,
+        "BIN": 2
+      },
+      "years": {
+        "2002": 1,
+        "2007": 1,
+        "2011": 1,
+        "2013": 8,
+        "2014": 1,
+        "2015": 3,
+        "2016": 66,
+        "2017": 58,
+        "2018": 62,
+        "2019": 44,
+        "2020": 268,
+        "2021": 298,
+        "2022": 65,
+        "2023": 88,
+        "2024": 80,
+        "2025": 54,
+        "2026": 16,
+        "2028": 4,
+        "2029": 4,
+        "2030": 1
+      },
+      "licenses": {
+        "Tidak disebutkan": 1751
+      },
+      "readiness": "Perlu peningkatan mendasar",
+      "site": "https://satudata.kapuaskab.go.id/uploads/group/2026-06-22-055808.6357142024-05-15-043953.388187satudata.png",
+      "sampleDatasets": [
+        {
+          "title": "DATA TPS KEC.SELAT",
+          "name": "data-tps-kec-selat",
+          "modified": "2026-06-22T08:43:16.188164",
+          "formats": [
+            "PDF"
+          ]
+        },
+        {
+          "title": "IJIN TPS LIMBAH BERBAHAYA",
+          "name": "ijin-tps-limbah-berbahaya",
+          "modified": "2026-06-22T08:43:14.235420",
+          "formats": [
+            "PDF"
+          ]
+        },
+        {
+          "title": "KUMPULAN INSTRUKSI BUPATI",
+          "name": "kumpulan-instruksi-bupati",
+          "modified": "2026-06-22T08:43:12.198147",
+          "formats": [
+            "PDF"
+          ]
+        },
+        {
+          "title": "LAP DAFTAR ASET TETAP",
+          "name": "lap-daftar-aset-tetap",
+          "modified": "2026-06-22T08:43:10.248221",
+          "formats": [
+            "PDF"
+          ]
+        },
+        {
+          "title": "PENETAPAN PEMENANG",
+          "name": "penetapan-pemenang",
+          "modified": "2026-06-22T08:43:08.202747",
+          "formats": [
+            "PDF"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "dpupr",
+      "title": "DPUPR Kabupaten Kapuas",
+      "description": "",
+      "datasetCount": 21,
+      "totalResources": 118,
+      "withResources": 21,
+      "withDescription": 21,
+      "withTags": 21,
+      "structuredResources": 22,
+      "structuredRatio": 0.1864406779661017,
+      "descriptionRatio": 1,
+      "geoResources": 93,
+      "latest": "2026-06-22T12:29:31.796938",
+      "oldest": "2024-05-02T17:35:00.970567",
+      "formats": {
+        "CPG": 1,
+        "DBASE": 19,
+        "PRJ": 19,
+        "SBN": 18,
+        "SBX": 18,
+        "SHP": 19,
+        "XML": 2,
+        "SHX": 19,
+        "XLS": 1,
+        "CSV": 1,
+        "XLSX": 1
+      },
+      "years": {
+        "2017": 1
+      },
+      "licenses": {
+        "Tidak disebutkan": 19,
+        "Lainnya (Open)": 1,
+        "Lainnya (Domain Publik)": 1
+      },
+      "readiness": "Perlu standardisasi",
+      "site": "https://satudata.kapuaskab.go.id/uploads/group/2024-05-14-042443.708698pu.png",
+      "sampleDatasets": [
+        {
+          "title": "BATAS WILAYAH KECAMATAN",
+          "name": "batas-wilayah-kecamatan",
+          "modified": "2026-06-22T12:29:31.796938",
+          "formats": [
+            "CPG",
+            "dBase",
+            "PRJ",
+            "SBN",
+            "SBX",
+            "SHP",
+            "XML",
+            "SHX"
+          ]
+        },
+        {
+          "title": "TOPONIM 1.5000",
+          "name": "toponim-1-5000",
+          "modified": "2026-06-22T12:22:57.224537",
+          "formats": [
+            "dBase",
+            "PRJ",
+            "SHP",
+            "SHX"
+          ]
+        },
+        {
+          "title": "SEBARAN UTILITAS",
+          "name": "sebaran-utilitas",
+          "modified": "2026-06-22T12:22:51.729776",
+          "formats": [
+            "dBase",
+            "PRJ",
+            "SBN",
+            "SBX",
+            "SHP",
+            "SHX"
+          ]
+        },
+        {
+          "title": "SEBARAN TPU",
+          "name": "sebaran-tpu",
+          "modified": "2026-06-22T12:22:45.981407",
+          "formats": [
+            "dBase",
+            "PRJ",
+            "SBN",
+            "SBX",
+            "SHP",
+            "XML",
+            "SHX"
+          ]
+        },
+        {
+          "title": "SEBARAN TERMINAL",
+          "name": "sebaran-terminal",
+          "modified": "2026-06-22T12:22:39.294507",
+          "formats": [
+            "dBase",
+            "PRJ",
+            "SBN",
+            "SBX",
+            "SHP",
+            "SHX"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "dinkes",
+      "title": "Dinas Kesehatan",
+      "description": "",
+      "datasetCount": 13,
+      "totalResources": 13,
+      "withResources": 13,
+      "withDescription": 13,
+      "withTags": 13,
+      "structuredResources": 13,
+      "structuredRatio": 1,
+      "descriptionRatio": 1,
+      "geoResources": 0,
+      "latest": "2026-04-15T04:41:24.174513",
+      "oldest": "2024-05-21T05:01:00.020030",
+      "formats": {
+        "XLSX": 13
+      },
+      "years": {
+        "2022": 6
+      },
+      "licenses": {
+        "Lainnya (Open)": 13
+      },
+      "readiness": "Siap ditindaklanjuti",
+      "site": "https://satudata.kapuaskab.go.id/uploads/group/2024-05-14-042645.987708kesehatan.png",
+      "sampleDatasets": [
+        {
+          "title": "Jumlah Persalinan Mati di Kabupaten Kapuas",
+          "name": "jumlah-persalinan-mati-di-kabupaten-kapuas",
+          "modified": "2026-04-15T04:41:24.174513",
+          "formats": [
+            "XLSX"
+          ]
+        },
+        {
+          "title": "Jumlah Kasus 10 Penyakit Terbanyak di Kabupaten Kapuas 2022",
+          "name": "jumlah-kasus-10-penyakit-terbanyak-di-kabupaten-kapuas-2022",
+          "modified": "2024-05-21T05:33:29.343845",
+          "formats": [
+            "XLSX"
+          ]
+        },
+        {
+          "title": "Jumlah Kasus Penyakit Terbanyak di Kabupaten Kapuas 2022",
+          "name": "jumlah-kasus-penyakit-terbanyak-di-kabupaten-kapuas-2022",
+          "modified": "2024-05-21T05:31:21.170581",
+          "formats": [
+            "XLSX"
+          ]
+        },
+        {
+          "title": "Banyaknya Balita yang Pernah Mendapat Imunisasi Menurut Kecamatan dan Jenis Imunisasi di Kabupaten Kapuas Tahun 2022",
+          "name": "banyaknya-balita-yang-pernah-mendapat-imunisasi-menurut-kecamatan",
+          "modified": "2024-05-21T05:28:39.639971",
+          "formats": [
+            "XLSX"
+          ]
+        },
+        {
+          "title": "Jumlah Kasus HIV atau AIDS, IMS, DBD, Diare, TB, dan Malaria di Kabupaten Kapuas",
+          "name": "jumlah-kasus-hiv-atau-aids-ims-dbd-diare-tb-dan-malaria-di-kabupaten-kapuas",
+          "modified": "2024-05-21T05:25:38.818223",
+          "formats": [
+            "XLSX"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "dkpp",
+      "title": "Dinas Ketahanan Pangan dan Perikanan",
+      "description": "",
+      "datasetCount": 7,
+      "totalResources": 7,
+      "withResources": 7,
+      "withDescription": 7,
+      "withTags": 7,
+      "structuredResources": 6,
+      "structuredRatio": 0.8571428571428571,
+      "descriptionRatio": 1,
+      "geoResources": 0,
+      "latest": "2026-05-14T11:31:30.522542",
+      "oldest": "2024-05-21T04:15:09.532020",
+      "formats": {
+        "XLSX": 6,
+        "DOC": 1
+      },
+      "years": {
+        "2021": 1,
+        "2022": 5,
+        "2024": 2
+      },
+      "licenses": {
+        "Tidak disebutkan": 1,
+        "Lainnya (Open)": 6
+      },
+      "readiness": "Siap ditindaklanjuti",
+      "site": "https://satudata.kapuaskab.go.id/uploads/group/2024-05-14-025051.619824logokapuas.png",
+      "sampleDatasets": [
+        {
+          "title": "Luas lahan untuk pembudidayaan ikan di Kabupaten Kapuas Semester I Tahun 2024",
+          "name": "luas-lahan-untuk-pembudidayaan-ikan-di-kabupaten-kapuas-semester-i-tahun-2024",
+          "modified": "2026-05-14T11:31:30.522542",
+          "formats": [
+            "XLSX"
+          ]
+        },
+        {
+          "title": "Data Daerah Rentan Rawan Pangan Tahun 2024",
+          "name": "data-daerah-rentan-rawan-pangan-tahun-2024",
+          "modified": "2026-05-14T11:31:05.599642",
+          "formats": [
+            "DOC"
+          ]
+        },
+        {
+          "title": "Jumlah Produksi Perikanan Tangkap Menurut Kecamatan di Kabupaten Kapuas 2022",
+          "name": "jumlah-produksi-perikanan-tangkap-menurut-kecamatan-di-kabupaten-kapuas-2022",
+          "modified": "2024-05-21T04:34:42.104552",
+          "formats": [
+            "XLSX"
+          ]
+        },
+        {
+          "title": "Jumlah Rumah Tangga Perikanan Tangkap Menurut Kecamatan di Kabupaten Kapuas Tahun 2022",
+          "name": "jumlah-rumah-tangga-perikanan-tangkap-menurut-kecamatan-di-kabupaten-kapuas-tahun-2022",
+          "modified": "2024-05-21T04:28:51.272827",
+          "formats": [
+            "XLSX"
+          ]
+        },
+        {
+          "title": "Rekapitulasi  Prognosa Ketersediaan Dan Kebutuhan Komoditas  Pangan Kabupaten Kapuas Tahun 2022",
+          "name": "rekapitulasi-prognosa-ketersediaan-dan-kebutuhan-komoditas-pangan-kabupaten-kapuas-tahun-2022",
+          "modified": "2024-05-21T04:21:27.912937",
+          "formats": [
+            "XLSX"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "dlhk",
+      "title": "Dinas Lingkungan Hidup dan Kehutanan",
+      "description": "",
+      "datasetCount": 6,
+      "totalResources": 6,
+      "withResources": 6,
+      "withDescription": 6,
+      "withTags": 2,
+      "structuredResources": 2,
+      "structuredRatio": 0.3333333333333333,
+      "descriptionRatio": 1,
+      "geoResources": 0,
+      "latest": "2025-04-16T16:13:35.170276",
+      "oldest": "2024-05-21T05:38:28.736079",
+      "formats": {
+        "PDF": 4,
+        "XLSX": 2
+      },
+      "years": {
+        "2022": 1
+      },
+      "licenses": {
+        "Lainnya (Attribution)": 4,
+        "Lainnya (Open)": 2
+      },
+      "readiness": "Perlu standardisasi",
+      "site": "https://satudata.kapuaskab.go.id/uploads/group/2024-05-14-023524.691902logokapuas.png",
+      "sampleDatasets": [
+        {
+          "title": "Nilai IKA n-1",
+          "name": "nilai-ika-n-1",
+          "modified": "2025-04-16T16:13:35.170276",
+          "formats": [
+            "PDF"
+          ]
+        },
+        {
+          "title": "Nilai IKLH n-1",
+          "name": "nilai-iklh-n-1",
+          "modified": "2025-04-16T16:09:19.382611",
+          "formats": [
+            "PDF"
+          ]
+        },
+        {
+          "title": "Nilai IKU n-1",
+          "name": "nilai-iku-n-1",
+          "modified": "2025-04-16T16:07:50.887284",
+          "formats": [
+            "PDF"
+          ]
+        },
+        {
+          "title": "Nilai IKTL n-1",
+          "name": "nilai-iktl-n-1",
+          "modified": "2025-04-16T16:04:40.606663",
+          "formats": [
+            "PDF"
+          ]
+        },
+        {
+          "title": "Daftar Perusahaan Yang Sudah Memiliki Izin  Pengelolaan Limbah Bahan Berbahaya Dan Beracun Di Wilayah Kabupaten Kapuas",
+          "name": "daftar-perusahaan-yang-sudah-memiliki-izin-pengelolaan-limbah-bahan-berbahaya",
+          "modified": "2024-05-21T05:41:50.597584",
+          "formats": [
+            "XLSX"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "disparbudpora",
+      "title": "Dinas Pariwisata, Kebudayaan, Kepemudaan dan Olahraga",
+      "description": "",
+      "datasetCount": 6,
+      "totalResources": 6,
+      "withResources": 6,
+      "withDescription": 6,
+      "withTags": 6,
+      "structuredResources": 6,
+      "structuredRatio": 1,
+      "descriptionRatio": 1,
+      "geoResources": 0,
+      "latest": "2024-05-21T05:02:10.766203",
+      "oldest": "2024-05-21T03:38:00.223785",
+      "formats": {
+        "XLS": 6
+      },
+      "years": {
+        "2022": 5
+      },
+      "licenses": {
+        "Lainnya (Open)": 6
+      },
+      "readiness": "Siap ditindaklanjuti",
+      "site": "https://satudata.kapuaskab.go.id/uploads/group/2024-05-14-024932.769333logokapuas.png",
+      "sampleDatasets": [
+        {
+          "title": "Data Pelatih Olahraga Yang Bersertifikat",
+          "name": "data-pelatih-olahraga-yang-bersertifikat",
+          "modified": "2024-05-21T05:02:10.766203",
+          "formats": [
+            "XLS"
+          ]
+        },
+        {
+          "title": "Pelatihan Organisasi Pada Organisasi Kepemudaan Tahun 2022",
+          "name": "pelatihan-organisasi-pada-organisasi-kepemudaan-tahun-2022",
+          "modified": "2024-05-21T04:56:17.760444",
+          "formats": [
+            "XLS"
+          ]
+        },
+        {
+          "title": "Daftar Kompetisi Olahraga Tingkat Kabupaten Kapuas Tahun  2022",
+          "name": "daftar-kompetisi-olahraga-tingkat-kabupaten-kapuas-tahun-2022",
+          "modified": "2024-05-21T04:48:28.888071",
+          "formats": [
+            "XLS"
+          ]
+        },
+        {
+          "title": "Data Pemuda Pelatihan Pengembangan Kepemimpinan Dan Kepedulian Tahun 2022",
+          "name": "data-pemuda-pelatihan-pengembangan-kepemimpinan-dan-kepedulian-tahun-2022",
+          "modified": "2024-05-21T04:11:51.218843",
+          "formats": [
+            "XLS"
+          ]
+        },
+        {
+          "title": "Data Pemuda Kewirausahaan Tahun 2022",
+          "name": "data-pemuda-kewirausahaan-tahun-2022",
+          "modified": "2024-05-21T03:57:17.945068",
+          "formats": [
+            "XLS"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "disdik",
+      "title": "Dinas Pendidikan",
+      "description": "",
+      "datasetCount": 6,
+      "totalResources": 6,
+      "withResources": 6,
+      "withDescription": 6,
+      "withTags": 6,
+      "structuredResources": 6,
+      "structuredRatio": 1,
+      "descriptionRatio": 1,
+      "geoResources": 0,
+      "latest": "2024-05-22T07:22:40.465599",
+      "oldest": "2024-05-22T06:38:26.815055",
+      "formats": {
+        "XLS": 3,
+        "XLSX": 3
+      },
+      "years": {},
+      "licenses": {
+        "Lainnya (Open)": 6
+      },
+      "readiness": "Siap ditindaklanjuti",
+      "site": "https://satudata.kapuaskab.go.id/uploads/group/2024-05-14-023727.772994logokapuas.png",
+      "sampleDatasets": [
+        {
+          "title": "Banyaknya Sekolah, Murid dan Guru Sekolah Dasar (SD) di Kabupaten Kapuas",
+          "name": "banyaknya-sekolah-murid-dan-guru-sekolah-dasar-sd-di-kabupaten-kapuas",
+          "modified": "2024-05-22T07:22:40.465599",
+          "formats": [
+            "XLS"
+          ]
+        },
+        {
+          "title": "Banyaknya Sekolah, Murid dan Guru Taman Kanak (TK) di Kabupaten Kapuas",
+          "name": "banyaknya-sekolah-murid-dan-guru-taman-kanak-tk-di-kabupaten-kapuas",
+          "modified": "2024-05-22T07:16:20.224471",
+          "formats": [
+            "XLS"
+          ]
+        },
+        {
+          "title": "Banyaknya  Guru Menurut Jenis dan Status Sekolah Di Kabupaten Kapuas",
+          "name": "banyaknya-guru-menurut-jenis-dan-status-sekolah-di-kabupaten-kapuas",
+          "modified": "2024-05-22T07:08:35.279389",
+          "formats": [
+            "XLS"
+          ]
+        },
+        {
+          "title": "Banyaknya Sekolah, Murid dan Guru Sekolah Menengah Kejuruan (SMK) diKabupaten Kapuas",
+          "name": "banyaknya-sekolah-murid-dan-guru-sekolah-menengah-kejuruan-smk-dikabupaten-kapuas",
+          "modified": "2024-05-22T06:43:12.402689",
+          "formats": [
+            "XLSX"
+          ]
+        },
+        {
+          "title": "Banyaknya Sekolah, Murid dan Guru Sekolah Menengah Atas (SMA)  di Kabupaten  Kapuas",
+          "name": "banyaknya-sekolah-murid-dan-guru-sekolah-menengah-atas-sma-di-kabupaten-kapuas",
+          "modified": "2024-05-22T06:40:55.073366",
+          "formats": [
+            "XLSX"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "dp3appkb",
+      "title": "Dinas Pemberdayaan Perempuan, Perlindungan Anak, Pengendalian Penduduk dan Keluarga Berencana",
+      "description": "",
+      "datasetCount": 5,
+      "totalResources": 5,
+      "withResources": 5,
+      "withDescription": 5,
+      "withTags": 5,
+      "structuredResources": 5,
+      "structuredRatio": 1,
+      "descriptionRatio": 1,
+      "geoResources": 0,
+      "latest": "2024-05-21T04:56:00.446844",
+      "oldest": "2024-05-21T04:43:13.939252",
+      "formats": {
+        "XLSX": 5
+      },
+      "years": {
+        "2022": 5
+      },
+      "licenses": {
+        "Lainnya (Open)": 5
+      },
+      "readiness": "Siap ditindaklanjuti",
+      "site": "https://satudata.kapuaskab.go.id/uploads/group/2024-05-14-024128.909607logokapuas.png",
+      "sampleDatasets": [
+        {
+          "title": "Target dan Realisasi Mix Kontrasepsi Peserta KB Baru 2022",
+          "name": "target-dan-realisasi-mix-kontrasepsi-peserta-kb-baru-2022",
+          "modified": "2024-05-21T04:56:00.446844",
+          "formats": [
+            "XLSX"
+          ]
+        },
+        {
+          "title": "Target dan Realisasi Mix Kontrasepsi Peserta KB Aktif 2022",
+          "name": "target-dan-realisasi-mix-kontrasepsi-peserta-kb-aktif-2022",
+          "modified": "2024-05-21T04:53:30.700956",
+          "formats": [
+            "XLSX"
+          ]
+        },
+        {
+          "title": "Target dan Realisasi Akseptor Aktif dan Baru yang dicapai Kabupaten Kapuas 2022",
+          "name": "target-dan-realisasi-akseptor-aktif-dan-baru-yang-dicapai-kabupaten-kapuas-2022",
+          "modified": "2024-05-21T04:50:39.998732",
+          "formats": [
+            "XLSX"
+          ]
+        },
+        {
+          "title": "Jumlah Klinik Keluarga Berencana (KKB) dan Pos Pelayanan Keluarga Berencana Desa (PPKBD) di Kabupaten Kapuas Tahun 2022",
+          "name": "jumlah-klinik-keluarga-berencana-kkb-dan-pos-pelayanan-keluarga-berencana-desa-ppkbd",
+          "modified": "2024-05-21T04:47:00.529376",
+          "formats": [
+            "XLSX"
+          ]
+        },
+        {
+          "title": "Jumlah Akseptor KB Aktif Di Kabupaten Kapuas Tahun 2022",
+          "name": "jumlah-akseptor-kb-aktif-di-kabupaten-kapuas-tahun-2022",
+          "modified": "2024-05-21T04:43:13.939252",
+          "formats": [
+            "XLSX"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "disarpustaka",
+      "title": "Dinas Kearsipan dan Perpustakaan",
+      "description": "",
+      "datasetCount": 4,
+      "totalResources": 8,
+      "withResources": 4,
+      "withDescription": 4,
+      "withTags": 4,
+      "structuredResources": 8,
+      "structuredRatio": 1,
+      "descriptionRatio": 1,
+      "geoResources": 0,
+      "latest": "2024-06-29T03:57:51.323192",
+      "oldest": "2024-05-22T07:09:45.905949",
+      "formats": {
+        "XLSX": 4,
+        "JSON": 2,
+        "CSV": 2
+      },
+      "years": {
+        "2022": 2,
+        "2023": 2
+      },
+      "licenses": {
+        "Lainnya (Open)": 4
+      },
+      "readiness": "Siap ditindaklanjuti",
+      "site": "https://satudata.kapuaskab.go.id/uploads/group/2024-05-14-023702.948414logokapuas.png",
+      "sampleDatasets": [
+        {
+          "title": "Pengunjung Perpustakaan Berdasarkan Jenis Kelamin Tahun 2023",
+          "name": "pengunjung-perpustakaan-berdasarkan-jenis-kelamin-tahun-2023",
+          "modified": "2024-06-29T03:57:51.323192",
+          "formats": [
+            "XLSX",
+            "JSON",
+            "CSV"
+          ]
+        },
+        {
+          "title": "Layanan Perpustakaan Keliling Tahun 2023",
+          "name": "layanan-perpustakaan-keliling-tahun-2023",
+          "modified": "2024-06-29T03:57:18.306210",
+          "formats": [
+            "XLSX",
+            "JSON",
+            "CSV"
+          ]
+        },
+        {
+          "title": "Layanan Perpustakaan Keliling Tahun 2022",
+          "name": "layanan-perpustakaan-keliling-tahun-2022",
+          "modified": "2024-05-22T07:13:03.723757",
+          "formats": [
+            "XLSX"
+          ]
+        },
+        {
+          "title": "Pengunjung Perpustakaan Berdasarkan Jenis Kelamin Tahun 2022",
+          "name": "pengunjung-perpustakaan-berdasarkan-jenis-kelamin-tahun-2022",
+          "modified": "2024-05-22T07:09:45.905949",
+          "formats": [
+            "XLSX"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "dppkukm",
+      "title": "Dinas Perdagangan, Perindustrian, Koperasi dan Usaha Kecil Menengah",
+      "description": "",
+      "datasetCount": 4,
+      "totalResources": 4,
+      "withResources": 4,
+      "withDescription": 4,
+      "withTags": 4,
+      "structuredResources": 4,
+      "structuredRatio": 1,
+      "descriptionRatio": 1,
+      "geoResources": 0,
+      "latest": "2026-05-14T11:36:12.567442",
+      "oldest": "2024-05-21T04:29:34.912603",
+      "formats": {
+        "XLSX": 4
+      },
+      "years": {
+        "2022": 2
+      },
+      "licenses": {
+        "Tidak disebutkan": 1,
+        "Lainnya (Open)": 3
+      },
+      "readiness": "Siap ditindaklanjuti",
+      "site": "https://satudata.kapuaskab.go.id/uploads/group/2024-05-14-031215.663489logokapuas.png",
+      "sampleDatasets": [
+        {
+          "title": "Agen dan Pasar Rakyat",
+          "name": "agen-dan-pasar-rakyat",
+          "modified": "2026-05-14T11:36:12.567442",
+          "formats": [
+            "XLSX"
+          ]
+        },
+        {
+          "title": "Jumlah Restoran/ Rumah Makan Menurut Kecamatan Di Kabupaten Kapuas",
+          "name": "jumlah-restoran-rumah-makan-menurut-kecamatan-di-kabupaten-kapuas",
+          "modified": "2024-05-21T04:51:17.033124",
+          "formats": [
+            "XLSX"
+          ]
+        },
+        {
+          "title": "Banyaknya Perusahaan menurut Bentuk Perusahaan di Kabupaten Kapuas Tahun 2022",
+          "name": "banyaknya-perusahaan-menurut-bentuk-perusahaan-di-kabupaten-kapuas-tahun-2022",
+          "modified": "2024-05-21T04:34:03.282104",
+          "formats": [
+            "XLSX"
+          ]
+        },
+        {
+          "title": "Industri Kecil Menengah menurut Kecamatan di Kabupaten Kapuas Tahun 2022",
+          "name": "industri-kecil-menengah-menurut-kecamatan-di-kabupaten-kapuas-tahun-2022",
+          "modified": "2024-05-21T04:29:34.912603",
+          "formats": [
+            "XLSX"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "disdukcapil",
+      "title": "Dinas Kependudukan dan Pencatatan Sipil",
+      "description": "",
+      "datasetCount": 3,
+      "totalResources": 3,
+      "withResources": 3,
+      "withDescription": 3,
+      "withTags": 3,
+      "structuredResources": 3,
+      "structuredRatio": 1,
+      "descriptionRatio": 1,
+      "geoResources": 0,
+      "latest": "2024-05-22T06:48:11.241236",
+      "oldest": "2024-05-21T05:16:45.591820",
+      "formats": {
+        "XLSX": 1,
+        "XLS": 2
+      },
+      "years": {
+        "2022": 3
+      },
+      "licenses": {
+        "Lainnya (Open)": 3
+      },
+      "readiness": "Siap ditindaklanjuti",
+      "site": "https://satudata.kapuaskab.go.id/uploads/group/2024-05-14-023115.614334logokapuas.png",
+      "sampleDatasets": [
+        {
+          "title": "Jumlah Penduduk Menurut Kecamatan dan Agama yang dianut di Kabupaten Kapuas Tahun 2022",
+          "name": "jumlah-penduduk-menurut-kecamatan-dan-agama-yang-dianut-di-kabupaten-kapuas-tahun-2022",
+          "modified": "2024-05-22T06:48:11.241236",
+          "formats": [
+            "XLSX"
+          ]
+        },
+        {
+          "title": "Jumlah Penduduk Menurut Kategori Umur di Kabupaten Kapuas 2022",
+          "name": "jumlah-penduduk-menurut-kategori-umur-di-kabupaten-kapuas-2022",
+          "modified": "2024-05-22T06:31:57.220989",
+          "formats": [
+            "XLS"
+          ]
+        },
+        {
+          "title": "Jumlah Penduduk Menurut Gender di Kabupaten Kapuas Tahun 2022",
+          "name": "jumlah-penduduk-menurut-gender-di-kabupaten-kapuas-tahun-2022",
+          "modified": "2024-05-21T05:16:45.591820",
+          "formats": [
+            "XLS"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "diskominfosantik",
+      "title": "Dinas Komunikasi, Informatika, Persandian dan Statistik",
+      "description": "Dinas Komunikasi, Informatika, Persandian dan Statistik sebagai Walidata Kabupaten Kapuas",
+      "datasetCount": 3,
+      "totalResources": 3,
+      "withResources": 3,
+      "withDescription": 3,
+      "withTags": 3,
+      "structuredResources": 3,
+      "structuredRatio": 1,
+      "descriptionRatio": 1,
+      "geoResources": 0,
+      "latest": "2024-05-22T07:05:36.724027",
+      "oldest": "2024-05-21T05:06:10.049018",
+      "formats": {
+        "XLSX": 3
+      },
+      "years": {
+        "2022": 3
+      },
+      "licenses": {
+        "Lainnya (Open)": 3
+      },
+      "readiness": "Siap ditindaklanjuti",
+      "site": "https://satudata.kapuaskab.go.id/uploads/group/2026-04-16-031037.442936komdigilogo.png",
+      "sampleDatasets": [
+        {
+          "title": "Jumlah Pengunjung Website Dinas Kominfo Kabupaten Kapuas Tahun 2022",
+          "name": "jumlah-pengunjung-website-dinas-kominfo-kabupaten-kapuas-tahun-2022",
+          "modified": "2024-05-22T07:05:36.724027",
+          "formats": [
+            "XLSX"
+          ]
+        },
+        {
+          "title": "Data Rekapitulasi Menara Tower Eksisting Tahun 2022",
+          "name": "data-rekapitulasi-menara-tower-eksisting-tahun-2022",
+          "modified": "2024-05-21T05:08:24.487520",
+          "formats": [
+            "XLSX"
+          ]
+        },
+        {
+          "title": "Data Desa/Kelurahan Tidak Ada Sinyal (Blank Spot Tahun 2022)",
+          "name": "data-desa-kelurahan-tidak-ada-sinyal-blank-spot-tahun-2022",
+          "modified": "2024-05-21T05:06:10.049018",
+          "formats": [
+            "XLSX"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "dpmd",
+      "title": "Dinas Pemberdayaan Masyarakat dan Desa",
+      "description": "",
+      "datasetCount": 3,
+      "totalResources": 3,
+      "withResources": 3,
+      "withDescription": 3,
+      "withTags": 3,
+      "structuredResources": 3,
+      "structuredRatio": 1,
+      "descriptionRatio": 1,
+      "geoResources": 0,
+      "latest": "2024-05-21T03:27:27.322629",
+      "oldest": "2024-05-21T03:09:01.326775",
+      "formats": {
+        "XLSX": 2,
+        "XLS": 1
+      },
+      "years": {
+        "2022": 3
+      },
+      "licenses": {
+        "Lainnya (Open)": 3
+      },
+      "readiness": "Siap ditindaklanjuti",
+      "site": "https://satudata.kapuaskab.go.id/uploads/group/2024-05-14-024955.097578logokapuas.png",
+      "sampleDatasets": [
+        {
+          "title": "Jumlah Desa, Kepala Desa Dan Perangkat Desa Di Kabupaten Kapuas Tahun 2022",
+          "name": "jumlah-desa-kepala-desa-dan-perangkat-desa-di-kabupaten-kapuas-tahun-2022",
+          "modified": "2024-05-21T03:27:27.322629",
+          "formats": [
+            "XLSX"
+          ]
+        },
+        {
+          "title": "Jumlah Lurah Dan Perangkat Kelurahan Di Kabupaten Kapuas Tahun 2022",
+          "name": "jumlah-lurah-dan-perangkat-kelurahan-di-kabupaten-kapuas-tahun-2022",
+          "modified": "2024-05-21T03:21:30.632446",
+          "formats": [
+            "XLSX"
+          ]
+        },
+        {
+          "title": "Jumlah Desa/ Kelurahan dan Kategori Desa Di Kabupaten Kapuas Tahun 2022",
+          "name": "jumlah-desa-kelurahan-dan-kategori-desa-di-kabupaten-kapuas-tahun-2022",
+          "modified": "2024-05-21T03:09:01.326775",
+          "formats": [
+            "XLS"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "distan",
+      "title": "Dinas Pertanian",
+      "description": "",
+      "datasetCount": 3,
+      "totalResources": 3,
+      "withResources": 3,
+      "withDescription": 3,
+      "withTags": 3,
+      "structuredResources": 3,
+      "structuredRatio": 1,
+      "descriptionRatio": 1,
+      "geoResources": 0,
+      "latest": "2024-05-21T04:15:06.951553",
+      "oldest": "2024-05-21T03:58:10.368333",
+      "formats": {
+        "XLS": 2,
+        "XLSX": 1
+      },
+      "years": {
+        "2022": 3
+      },
+      "licenses": {
+        "Lainnya (Open)": 3
+      },
+      "readiness": "Siap ditindaklanjuti",
+      "site": "https://satudata.kapuaskab.go.id/uploads/group/2024-05-14-023614.867558logokapuas.png",
+      "sampleDatasets": [
+        {
+          "title": "Luas Lahan Tegal Kebun, Ladang Huma, dan Lahan yang Sementara Tidak Diusahakan diKabupaten Kapuas Tahun 2022",
+          "name": "distan-luas-lahan-tegal-kebun-ladang-huma",
+          "modified": "2024-05-21T04:15:06.951553",
+          "formats": [
+            "XLS"
+          ]
+        },
+        {
+          "title": "Sebaran Populasi Ternak Menurut Jenisnya Di Kabupaten Kapuas Tahun 2022",
+          "name": "distan-sebaran-populasi-ternak-menurut-jenisnya-di-kabupaten-kapuas-tahun-2022",
+          "modified": "2024-05-21T04:14:19.257248",
+          "formats": [
+            "XLS"
+          ]
+        },
+        {
+          "title": "Luas Lahan Sawah Menurut Kecamatan di Kabupaten Kapuas Tahun 2022",
+          "name": "luas-lahan-sawah-menurut-kecamatan-di-kabupaten-kapuas-tahun-2022",
+          "modified": "2024-05-21T03:58:10.368333",
+          "formats": [
+            "XLSX"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "bkpsdm",
+      "title": "Badan Kepegawaian dan Pengembangan Sumber Daya Manusia",
+      "description": "",
+      "datasetCount": 2,
+      "totalResources": 2,
+      "withResources": 2,
+      "withDescription": 2,
+      "withTags": 2,
+      "structuredResources": 2,
+      "structuredRatio": 1,
+      "descriptionRatio": 1,
+      "geoResources": 0,
+      "latest": "2024-05-21T04:14:07.647447",
+      "oldest": "2024-05-21T03:43:32.047675",
+      "formats": {
+        "XLS": 2
+      },
+      "years": {
+        "2022": 2
+      },
+      "licenses": {
+        "Lainnya (Open)": 2
+      },
+      "readiness": "Siap ditindaklanjuti",
+      "site": "https://satudata.kapuaskab.go.id/uploads/group/2024-05-15-043953.388187satudata.png",
+      "sampleDatasets": [
+        {
+          "title": "Jumlah Pegawai Negeri Sipil Daerah menurut Tingkat Pendidikan di Kabupaten Kapuas  Tahun 2022",
+          "name": "jumlah-pegawai-negeri-sipil-daerah-menurut-tingkat-pendidikan-di-kabupaten-kapuas-tahun-2022",
+          "modified": "2024-05-21T04:14:07.647447",
+          "formats": [
+            "XLS"
+          ]
+        },
+        {
+          "title": "Jumlah Pegawai Negeri Sipil Daerah menurut Jenis Kelamin di Kabupaten Kapuas Tahun 2022",
+          "name": "jumlah-pegawai-negeri-sipil-daerah-menurut-jenis-kelamin-di-kabupaten-kapuas-tahun-2022",
+          "modified": "2024-05-21T03:43:32.047675",
+          "formats": [
+            "XLS"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "bpkad",
+      "title": "Badan Keuangan dan Aset Daerah",
+      "description": "",
+      "datasetCount": 2,
+      "totalResources": 2,
+      "withResources": 2,
+      "withDescription": 2,
+      "withTags": 2,
+      "structuredResources": 2,
+      "structuredRatio": 1,
+      "descriptionRatio": 1,
+      "geoResources": 0,
+      "latest": "2024-05-21T04:58:43.957033",
+      "oldest": "2024-05-21T04:55:33.613578",
+      "formats": {
+        "XLSX": 2
+      },
+      "years": {
+        "2022": 2
+      },
+      "licenses": {
+        "Lainnya (Open)": 2
+      },
+      "readiness": "Siap ditindaklanjuti",
+      "site": "https://satudata.kapuaskab.go.id/uploads/group/2024-05-14-025458.135310logokapuas.png",
+      "sampleDatasets": [
+        {
+          "title": "Anggaran Dan Realisasi Pembiayaan Pemerintah Daerah Kabupaten Kapuas Tahun 2022",
+          "name": "anggaran-dan-realisasi-pembiayaan-pemerintah-daerah-kabupaten-kapuas-tahun-2022",
+          "modified": "2024-05-21T04:58:43.957033",
+          "formats": [
+            "XLSX"
+          ]
+        },
+        {
+          "title": "Anggaran Dan Realisasi Pendapatan Daerah Kabupaten Kapuas Tahun 2022",
+          "name": "anggaran-dan-realisasi-pendapatan-daerah-kabupaten-kapuas-tahun-2022",
+          "modified": "2024-05-21T04:55:33.613578",
+          "formats": [
+            "XLSX"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "bpbd",
+      "title": "Badan Penanggulangan Bencana Daerah",
+      "description": "",
+      "datasetCount": 2,
+      "totalResources": 2,
+      "withResources": 2,
+      "withDescription": 2,
+      "withTags": 2,
+      "structuredResources": 2,
+      "structuredRatio": 1,
+      "descriptionRatio": 1,
+      "geoResources": 0,
+      "latest": "2024-05-22T07:19:52.440745",
+      "oldest": "2024-05-22T07:15:57.051550",
+      "formats": {
+        "XLSX": 2
+      },
+      "years": {
+        "2022": 2
+      },
+      "licenses": {
+        "Lainnya (Open)": 2
+      },
+      "readiness": "Siap ditindaklanjuti",
+      "site": "https://satudata.kapuaskab.go.id/uploads/group/2024-05-14-042725.930244bpbd.png",
+      "sampleDatasets": [
+        {
+          "title": "Banyaknya Korban Bencana Alam Menurut Jenisnya Di Kabupaten Kapuas Tahun 2022",
+          "name": "banyaknya-korban-bencana-alam-menurut-jenisnya-di-kabupaten-kapuas-tahun-2022",
+          "modified": "2024-05-22T07:19:52.440745",
+          "formats": [
+            "XLSX"
+          ]
+        },
+        {
+          "title": "Banyaknya Bencana Alam Menurut Jenisnya Di Kabupaten Kapuas Tahun 2022",
+          "name": "banyaknya-bencana-alam-menurut-jenisnya-di-kabupaten-kapuas-tahun-2022",
+          "modified": "2024-05-22T07:15:57.051550",
+          "formats": [
+            "XLSX"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "bapenda",
+      "title": "Badan Pendapatan Daerah",
+      "description": "",
+      "datasetCount": 2,
+      "totalResources": 2,
+      "withResources": 2,
+      "withDescription": 2,
+      "withTags": 2,
+      "structuredResources": 2,
+      "structuredRatio": 1,
+      "descriptionRatio": 1,
+      "geoResources": 0,
+      "latest": "2025-04-15T09:18:42.773878",
+      "oldest": "2025-04-15T09:17:46.303748",
+      "formats": {
+        "XLSX": 2
+      },
+      "years": {},
+      "licenses": {
+        "Lainnya (Attribution)": 2
+      },
+      "readiness": "Siap ditindaklanjuti",
+      "site": "https://satudata.kapuaskab.go.id/uploads/group/2024-05-14-024816.263358logokapuas.png",
+      "sampleDatasets": [
+        {
+          "title": "Dokumen Ketetapan Pajak Daerah",
+          "name": "laporan-hasil-evaluasi-rancangan-peraturan-daerah-tentang-pajak-dan-retribusi-kabupaten-kota",
+          "modified": "2025-04-15T09:18:42.773878",
+          "formats": [
+            "XLSX"
+          ]
+        },
+        {
+          "title": "Laporan Hasil Pengolahan, Pemeliharaan, dan Pelaporan Basis Pajak Daerah",
+          "name": "laporan-hasil-pengolahan-pemeliharaan-dan-pelaporan-basis-pajak-daerah",
+          "modified": "2025-04-15T09:17:46.303748",
+          "formats": [
+            "XLSX"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "dishub",
+      "title": "Dinas Perhubungan",
+      "description": "",
+      "datasetCount": 1,
+      "totalResources": 1,
+      "withResources": 1,
+      "withDescription": 1,
+      "withTags": 1,
+      "structuredResources": 1,
+      "structuredRatio": 1,
+      "descriptionRatio": 1,
+      "geoResources": 0,
+      "latest": "2024-05-21T05:01:54.442082",
+      "oldest": "2024-05-21T05:01:54.442082",
+      "formats": {
+        "XLSX": 1
+      },
+      "years": {
+        "2022": 1
+      },
+      "licenses": {
+        "Lainnya (Open)": 1
+      },
+      "readiness": "Siap ditindaklanjuti",
+      "site": "https://satudata.kapuaskab.go.id/uploads/group/2024-05-14-042517.813065perhubungan.png",
+      "sampleDatasets": [
+        {
+          "title": "Banyaknya Armada Kapal Sungai Yang Terdaftar Di Kabupaten Kapuas Tahun 2022",
+          "name": "banyaknya-armada-kapal-sungai-yang-terdaftar-di-kabupaten-kapuas-tahun-2022",
+          "modified": "2024-05-21T05:01:54.442082",
+          "formats": [
+            "XLSX"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "dinsos",
+      "title": "Dinas Sosial",
+      "description": "",
+      "datasetCount": 1,
+      "totalResources": 3,
+      "withResources": 1,
+      "withDescription": 1,
+      "withTags": 1,
+      "structuredResources": 3,
+      "structuredRatio": 1,
+      "descriptionRatio": 1,
+      "geoResources": 0,
+      "latest": "2024-11-04T03:50:29.311610",
+      "oldest": "2024-11-04T03:50:29.311610",
+      "formats": {
+        "XLSX": 1,
+        "CSV": 1,
+        "JSON": 1
+      },
+      "years": {
+        "2021": 1,
+        "2023": 1
+      },
+      "licenses": {
+        "Lainnya (Open)": 1
+      },
+      "readiness": "Siap ditindaklanjuti",
+      "site": "https://satudata.kapuaskab.go.id/uploads/group/2024-05-14-042622.423822dinsos.png",
+      "sampleDatasets": [
+        {
+          "title": "Rekapitulasi Penyandang Disabilitas yang Terlayani di Kabupaten Kapuas Tahun 2021-2023",
+          "name": "rekapitulasi-penyandang-disabilitas-yang-terlayani-di-kabupaten-kapuas-tahun-2021-2023",
+          "modified": "2024-11-04T03:50:29.311610",
+          "formats": [
+            "XLSX",
+            "CSV",
+            "JSON"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "bakesbangpol",
+      "title": "Badan Kesatuan Bangsa dan Politik",
+      "description": "",
+      "datasetCount": 0,
+      "totalResources": 0,
+      "withResources": 0,
+      "withDescription": 0,
+      "withTags": 0,
+      "structuredResources": 0,
+      "structuredRatio": 0,
+      "descriptionRatio": 0,
+      "geoResources": 0,
+      "latest": null,
+      "oldest": null,
+      "formats": {},
+      "years": {},
+      "licenses": {},
+      "readiness": "Belum ada dataset",
+      "site": "https://satudata.kapuaskab.go.id/uploads/group/2024-05-14-031604.609814logokapuas.png",
+      "sampleDatasets": []
+    },
+    {
+      "id": "bapperida",
+      "title": "Badan Perencanaan Pembangunan, Riset dan Inovasi Daerah",
+      "description": "",
+      "datasetCount": 0,
+      "totalResources": 0,
+      "withResources": 0,
+      "withDescription": 0,
+      "withTags": 0,
+      "structuredResources": 0,
+      "structuredRatio": 0,
+      "descriptionRatio": 0,
+      "geoResources": 0,
+      "latest": null,
+      "oldest": null,
+      "formats": {},
+      "years": {},
+      "licenses": {},
+      "readiness": "Belum ada dataset",
+      "site": "https://satudata.kapuaskab.go.id/uploads/group/2024-05-14-024711.285857logokapuas.png",
+      "sampleDatasets": []
+    },
+    {
+      "id": "dpmptsp",
+      "title": "Dinas Penanaman Modal dan Pelayanan Terpadu Satu Pintu",
+      "description": "",
+      "datasetCount": 0,
+      "totalResources": 0,
+      "withResources": 0,
+      "withDescription": 0,
+      "withTags": 0,
+      "structuredResources": 0,
+      "structuredRatio": 0,
+      "descriptionRatio": 0,
+      "geoResources": 0,
+      "latest": null,
+      "oldest": null,
+      "formats": {},
+      "years": {},
+      "licenses": {},
+      "readiness": "Belum ada dataset",
+      "site": "https://satudata.kapuaskab.go.id/uploads/group/2024-05-14-024637.438321logokapuas.png",
+      "sampleDatasets": []
+    },
+    {
+      "id": "disperkimtan",
+      "title": "Dinas Perumahan, Kawasan Permukiman dan Pertanahan",
+      "description": "Dinas Perumahan, Kawasan Permukiman dan Pertanahan",
+      "datasetCount": 0,
+      "totalResources": 0,
+      "withResources": 0,
+      "withDescription": 0,
+      "withTags": 0,
+      "structuredResources": 0,
+      "structuredRatio": 0,
+      "descriptionRatio": 0,
+      "geoResources": 0,
+      "latest": null,
+      "oldest": null,
+      "formats": {},
+      "years": {},
+      "licenses": {},
+      "readiness": "Belum ada dataset",
+      "site": "https://satudata.kapuaskab.go.id/uploads/group/2026-04-20-114009.0268052024-05-14-042443.708698pu.png",
+      "sampleDatasets": []
+    }
+  ]
+}
