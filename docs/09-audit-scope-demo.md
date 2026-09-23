@@ -26,8 +26,8 @@ Fitur yang menciptakan klaim berlebihan, kompetisi antarlembaga, atau beban impl
 | Rujukan BPS | Pertahankan | Menguatkan sumber statistik resmi. Penarikan otomatis baru diaktifkan setelah token dan pemetaan indikator tersedia. |
 | Ranking OPD | Sembunyikan dari demo awal | Berpotensi dibaca sebagai penilaian kinerja sepihak dan memicu defensif. Dapat kembali hanya jika formula dan mandatnya disepakati. |
 | Ranking kecamatan | Sembunyikan dari demo awal | Berpotensi menstigma wilayah dan menimbulkan perdebatan atas angka dummy. |
-| Keuangan daerah | Sembunyikan dari navigasi demo | Data sensitif dan mudah menjadi pusat perdebatan. Aktifkan hanya dengan data serta otorisasi BPKAD/Bapenda. |
-| Pelayanan publik | Sembunyikan dari navigasi demo | Cakupan terlalu luas untuk pilot awal dan memerlukan definisi layanan yang disepakati. |
+| Keuangan daerah | Tampilkan sebagai bahan diskusi metode | Kebutuhan telah disampaikan dalam diskusi awal BAPPERIDA. Nilai demo tidak boleh dibaca sebagai posisi resmi; rincian per OPD ditahan sampai sumber, definisi, hak akses, dan otorisasi BPKAD/Bapenda disepakati. |
+| Pelayanan publik | Tampilkan sebagai bahan diskusi metode | Kebutuhan telah disampaikan dalam diskusi awal BAPPERIDA. Demo harus membantu memilih layanan prioritas serta menyepakati definisi selesai, SLA, kepuasan, pengaduan, dan sumber data. |
 | Pusat peringatan | Sembunyikan dari navigasi demo | Istilah peringatan dapat dianggap sebagai penilaian otomatis. Kelak gunakan “catatan pemantauan” setelah ambang resmi tersedia. |
 | Asisten Data | Pindahkan ke roadmap | Menarik secara visual tetapi dapat mengalihkan diskusi ke AI, keamanan, dan akurasi. Bukan kebutuhan untuk menyepakati integrasi awal. |
 | Sinkronisasi semua sumber | Jangan diklaim produksi | Tombol demo tidak boleh memberi kesan seluruh sumber benar-benar tersinkron. |
@@ -36,12 +36,14 @@ Fitur yang menciptakan klaim berlebihan, kompetisi antarlembaga, atau beban impl
 
 ## Scope aman untuk rapat awal
 
-Alur demo utama dibatasi menjadi empat halaman:
+Alur demo utama dibatasi menjadi enam halaman:
 
 1. Ringkasan Pimpinan.
 2. Bahan Analisis.
-3. Sumber dan Provenance.
-4. Simulasi Verifikasi.
+3. Diskusi Data Keuangan.
+4. Diskusi Pelayanan Publik.
+5. Sumber dan Provenance.
+6. Simulasi Verifikasi.
 
 Halaman lain tetap berada dalam kode sebagai eksperimen internal dan bahan roadmap, tetapi tidak ditampilkan pada navigasi rapat.
 
