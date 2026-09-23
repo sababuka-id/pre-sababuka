@@ -78,6 +78,40 @@ Kalimat pembuka:
 5. Apakah brief perlu diekspor menjadi PDF, bahan rapat, atau pesan singkat?
 6. Seberapa sering informasi perlu diperbarui?
 
+## Pertanyaan untuk peta sebaran indikator
+
+1. Indikator apa yang harus dapat dipetakan sampai tingkat kecamatan atau desa?
+2. Batas administrasi dan kode wilayah resmi mana yang digunakan?
+3. Apakah data tersedia sebagai GeoJSON, WFS, koordinat fasilitas, atau agregat wilayah?
+4. Apakah warna peta menunjukkan capaian target, perubahan, risiko, atau klasifikasi lain?
+5. Lapisan apa yang perlu ditampilkan bersama: fasilitas, program, jalan, layanan, atau penduduk sasaran?
+
+## Pertanyaan untuk kinerja dan kontribusi OPD
+
+1. Apakah empat dimensi awal—capaian, ketepatan pembaruan, kelengkapan data, dan tindak lanjut—sudah tepat?
+2. Berapa bobot setiap dimensi dan siapa yang mengesahkannya?
+3. Apakah penilaian dibandingkan dengan target OPD sendiri atau dibandingkan antar-OPD?
+4. Kondisi apa yang dikategorikan baik, perlu perhatian, dan prioritas?
+5. Apakah indeks digunakan untuk evaluasi formal atau hanya untuk menemukan kebutuhan dukungan?
+6. Bagaimana OPD mengajukan koreksi atau konteks terhadap nilai yang ditampilkan?
+
+## Pertanyaan untuk pusat peringatan
+
+1. Perubahan apa yang boleh memicu peringatan otomatis?
+2. Siapa yang menerima peringatan pertama dan berapa batas waktu validasinya?
+3. Bukti apa yang harus diperiksa BAPPERIDA sebelum meminta konfirmasi OPD?
+4. Kondisi apa yang membuat peringatan layak dieskalasikan kepada Bupati?
+5. Siapa yang berwenang menutup peringatan dan apa bukti tindak lanjutnya?
+6. Apakah pimpinan hanya melihat peringatan tervalidasi atau juga antrean yang masih diperiksa?
+
+## Pertanyaan untuk Asisten Data
+
+1. Dataset dan peran pengguna apa yang boleh diakses asisten?
+2. Apakah setiap jawaban wajib menampilkan sumber, periode, dan status verifikasi?
+3. Pertanyaan apa yang harus ditolak karena data tidak tersedia atau akses pengguna tidak memadai?
+4. Apakah percakapan perlu dicatat untuk audit dan peningkatan kualitas?
+5. Siapa yang memeriksa jawaban ketika digunakan dalam bahan rapat atau keputusan?
+
 ## Output yang diminta dari forum
 
 - Daftar 5–10 indikator pilot.
