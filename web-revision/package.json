@@ -5,7 +5,7 @@
   "scripts":{
     "demo":"node server.js 3000",
     "demo:4173":"node server.js 4173",
-    "check":"node --check app.js && node --check src/data/data.js && node --check src/services/bps.js"
+    "check":"node --check app.js && node --check src/data/data.js && node --check src/services/bps.js && node scripts/validate-data.mjs"
   },
   "description":"SABABUKA BERSINAR - Sistem Analisis Big Data Kabupaten Kapuas"
 }

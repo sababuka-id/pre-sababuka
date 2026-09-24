@@ -24,7 +24,7 @@ Fitur yang menciptakan klaim berlebihan, kompetisi antarlembaga, atau beban impl
 | Mode presentasi dan ekspor brief | Pertahankan | Bernilai langsung untuk rapat dan mudah dipahami tanpa menambah kompleksitas tata kelola. |
 | CKAN Satu Data | Pertahankan sebatas metadata | Membuktikan konektivitas katalog. Jangan menyatakan nilai indikator sudah terintegrasi. |
 | Rujukan BPS | Pertahankan | Menguatkan sumber statistik resmi. Penarikan otomatis baru diaktifkan setelah token dan pemetaan indikator tersedia. |
-| Capaian target OPD | Tampilkan tanpa ranking | Setiap OPD dibandingkan dengan target resminya sendiri. Status digunakan untuk membuka kebutuhan dukungan dan koordinasi, bukan membandingkan kinerja antar-OPD. Target serta ambang harus dikonfirmasi bersama. |
+| Capaian target OPD | Tampilkan tanpa ranking | Setiap OPD dibandingkan dengan target kerja yang disepakati. Status digunakan untuk membuka kebutuhan dukungan dan koordinasi, bukan membandingkan kinerja antar-OPD. Target serta ambang harus dikonfirmasi bersama. |
 | Profil wilayah dan peta indikator | Tampilkan | Batas geografis 17 kecamatan ditampilkan sebagai peta tematik. Pengguna dapat mengganti indikator, melihat perubahan warna wilayah, dan membuka profil kecamatan. |
 | Keuangan daerah | Tampilkan sebagai bahan diskusi metode | Kebutuhan telah disampaikan dalam diskusi awal BAPPERIDA. Nilai demo tidak boleh dibaca sebagai posisi resmi; rincian per OPD ditahan sampai sumber, definisi, hak akses, dan otorisasi BPKAD/Bapenda disepakati. |
 | Pelayanan publik | Tampilkan sebagai bahan diskusi metode | Kebutuhan telah disampaikan dalam diskusi awal BAPPERIDA. Demo harus membantu memilih layanan prioritas serta menyepakati definisi selesai, SLA, kepuasan, pengaduan, dan sumber data. |
