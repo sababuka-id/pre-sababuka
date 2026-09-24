@@ -100,6 +100,10 @@ WebAPI BPS memerlukan token aplikasi. Token wajib disimpan di backend atau secre
 - Validasi Data
 - Pengaturan
 
+## Fokus strategis
+
+Ringkasan Pimpinan menampilkan empat fokus keputusan: ketahanan pangan dan cetak sawah, konektivitas, stunting, serta ketepatan sasaran DTSEN. Inflasi, bencana, pendidikan, dan integrasi digital berada pada panel pemantauan. Dashboard BAPPERIDA menampilkan seluruh delapan fokus sebagai matriks pengampu–pendukung tanpa menjadikannya ranking antar-OPD.
+
 ## State pengujian
 
 Tambahkan `?state=error` untuk melihat error state. Loading skeleton tampil singkat saat halaman dimuat atau navigasi menu dilakukan. Empty state dapat diuji pada Kinerja OPD melalui pencarian yang tidak menghasilkan data.

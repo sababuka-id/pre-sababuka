@@ -43,6 +43,12 @@ Alur presentasi dibagi menjadi dua ruang peran yang saling terhubung:
 
 Pemisahan menu menjaga agar pimpinan menerima informasi ringkas dan baca-saja, sementara tindakan verifikasi, klarifikasi, dan eskalasi berada pada ruang kerja BAPPERIDA.
 
+## Fokus strategis yang diintegrasikan
+
+Empat fokus masuk ke brief utama pimpinan: ketahanan pangan dan cetak sawah, infrastruktur dan konektivitas, stunting dan layanan dasar, serta kemiskinan dan ketepatan sasaran DTSEN. Empat fokus lain—inflasi dan daya beli, banjir dan karhutla, pendidikan dan Sekolah Rakyat, serta integrasi pelayanan digital—tetap berada pada panel pemantauan dan dapat dinaikkan ketika melewati ambang atau memerlukan keputusan.
+
+Delapan fokus tersebut merupakan lensa isu lintas OPD, bukan daftar penilaian seluruh perangkat daerah. Dashboard BAPPERIDA menampilkan pengampu, OPD pendukung, parameter, status data, dan kebutuhan koordinasi. Kinerja setiap OPD tetap dibandingkan dengan target OPD sendiri.
+
 Halaman lain tetap berada dalam kode sebagai eksperimen internal dan bahan roadmap, tetapi tidak ditampilkan pada navigasi rapat.
 
 ## Syarat sebelum naik dari demo ke pilot
