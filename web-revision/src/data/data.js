@@ -15,8 +15,8 @@ export const indicators=[
 ];
 export const districts=['Basarang','Bataguh','Dadahup','Kapuas Barat','Kapuas Hilir','Kapuas Hulu','Kapuas Kuala','Kapuas Murung','Kapuas Tengah','Kapuas Timur','Mandau Talawang','Mantangai','Pasak Talawang','Pulau Petak','Selat','Tamban Catur','Timpah'].map((name,i)=>({name,score:[82,78,68,74,80,64,71,66,73,84,61,69,63,77,88,75,70][i],poverty:[3.8,4.5,5.9,4.9,3.7,6.2,5.5,6.0,5.0,3.5,6.8,5.7,6.4,4.6,2.9,4.8,5.2][i],stunting:[15,17,24,20,16,26,23,25,21,14,28,22,27,19,12,18,20][i],roads:[77,72,58,68,75,55,62,57,66,79,49,60,52,70,86,69,65][i]}));
 export const opds=[
-['Bapperida',18,91,'Baik','Hari ini'],['Dinas Kesehatan',24,82,'Perlu Perhatian','Hari ini'],['Dinas Pendidikan',22,88,'Baik','Kemarin'],['DPUPRPKP',19,76,'Perlu Perhatian','2 hari lalu'],['Dinas Ketahanan Pangan dan Perikanan',13,84,'Baik','Kemarin'],['Dinas Pertanian',16,73,'Perlu Perhatian','2 hari lalu'],['BPKAD',17,86,'Baik','Hari ini'],['Bapenda',14,89,'Baik','Hari ini'],['BPBD',11,81,'Baik','3 hari lalu'],['DPMD',15,78,'Perlu Perhatian','2 hari lalu'],['Diskominfosantik',12,92,'Baik','Hari ini']
-].map(([name,count,score,status,updated],i)=>({id:i+1,name,count,score,status,updated}));
+['Bapperida',18,91,90,'Hari ini'],['Dinas Kesehatan',24,82,85,'Hari ini'],['Dinas Pendidikan',22,88,86,'Kemarin'],['DPUPRPKP',19,76,82,'2 hari lalu'],['Dinas Ketahanan Pangan dan Perikanan',13,84,82,'Kemarin'],['Dinas Pertanian',16,73,80,'2 hari lalu'],['BPKAD',17,86,85,'Hari ini'],['Bapenda',14,89,88,'Hari ini'],['BPBD',11,81,82,'3 hari lalu'],['DPMD',15,78,83,'2 hari lalu'],['Diskominfosantik',12,92,90,'Hari ini']
+].map(([name,count,score,target,updated],i)=>({id:i+1,name,count,score,target,updated,status:score>=target?'Tercapai':score/target>=.95?'Dalam Jalur':'Perlu Tindak Lanjut'}));
 export const alerts=[
 {id:1,urgency:'Kritis',title:'Prevalensi stunting masih di atas target',opd:'Dinas Kesehatan',time:'18 menit lalu',type:'Indikator',status:'Baru'},
 {id:2,urgency:'Kritis',title:'Kemantapan jalan belum mencapai target semester',opd:'DPUPRPKP',time:'42 menit lalu',type:'Indikator',status:'Baru'},

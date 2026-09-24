@@ -82,14 +82,16 @@ Semua data utama berada pada `src/data/data.js`. Nilai indikator tidak ditanam t
 - **Satu Data Kabupaten Kapuas:** metadata katalog publik dibaca langsung melalui CKAN API.
 - **BPS Kabupaten Kapuas:** publikasi, tabel statistik, dan tabel dinamis ditautkan sebagai sumber provenance resmi. Adapter WebAPI tersedia di `src/services/bps.js` untuk domain Kabupaten Kapuas `6203`.
 - **Data OPD:** masuk melalui API, CSV/XLSX terstruktur, layanan geospasial, atau pertukaran data yang disetujui; halaman berita tidak digunakan sebagai sumber angka.
+- **Batas kecamatan:** `src/data/kapuas-kecamatan.geojson` memuat 17 poligon kecamatan dari [layanan FeatureServer publik Kabupaten Kapuas](https://services3.arcgis.com/VFq4ZNL4ohXxN8gl/ArcGIS/rest/services/Kabupaten_Kapuas/FeatureServer/0) (WGS 84/EPSG:4326). Data dipaketkan lokal agar demo tetap stabil; versi produksi harus mengunci metadata, tanggal pemutakhiran, dan otoritas wali geospasial.
 
 WebAPI BPS memerlukan token aplikasi. Token wajib disimpan di backend atau secret environment dan tidak boleh ditanam di JavaScript browser. Sampai token tersedia, dashboard menampilkan tautan publik resmi BPS serta menandai seluruh nilai prototipe sebagai data demonstrasi. Setelah data dinormalisasi, BAPPERIDA memeriksa sumber, definisi, satuan, periode, wilayah, dan kewajaran sebelum data berstatus layak tampil pada Ringkasan Bupati.
 
 ## Halaman
 
-- Ringkasan Eksekutif
-- Peta Wilayah
-- Kinerja OPD
+- Ringkasan Eksekutif Bupati
+- Dashboard Koordinasi BAPPERIDA
+- Profil Wilayah & Peta Indikator
+- Capaian Target OPD tanpa ranking antar-OPD
 - Keuangan Daerah
 - Pelayanan Publik
 - Analisis dan Rekomendasi

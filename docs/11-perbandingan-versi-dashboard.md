@@ -3,11 +3,11 @@
 | Area | Sebelum audit | Versi presentasi saat ini |
 |---|---|---|
 | Posisi produk | Dashboard besar yang terlihat menangani hampir seluruh urusan | Sistem integrasi data dan dukungan keputusan yang bekerja bersama sistem OPD |
-| Navigasi | Banyak halaman tanpa alur peran yang tegas | Sepuluh ruang yang dikelompokkan menjadi pimpinan, informasi strategis, serta kendali data |
+| Navigasi | Banyak halaman tanpa alur peran yang tegas | Menu dan kewenangan dipisahkan antara Ruang Bupati dan Ruang BAPPERIDA |
 | Ringkasan pimpinan | Kumpulan KPI, grafik, ranking wilayah, dan peringatan | Brief eksekutif dengan fokus pimpinan, agenda tindak lanjut, kelengkapan data, sumber, dan status verifikasi |
 | Bahasa antarmuka | Banyak istilah teknis, simulasi, dan penjelasan prototipe | Bahasa operasional yang menggambarkan pengalaman produk jadi |
-| Informasi wilayah | Ditampilkan sebagai ranking skor komposit | Menjadi Peta Sebaran Indikator yang dapat diganti per indikator dan membuka profil setiap kecamatan |
-| Kinerja OPD | Ditampilkan sebagai ranking tunggal | Menjadi matriks capaian, ketepatan pembaruan, kelengkapan data, dan tindak lanjut; bobotnya dibahas bersama |
+| Informasi wilayah | Ditampilkan sebagai kotak/ranking skor komposit | Menjadi peta geografis 17 kecamatan; warna area mengikuti indikator yang dipilih dan setiap wilayah dapat dibuka |
+| Kinerja OPD | Ditampilkan sebagai ranking atau indeks gabungan | Setiap OPD dibandingkan dengan targetnya sendiri; tidak ada ranking antar-OPD dan status diarahkan untuk dukungan |
 | Pusat peringatan | Sistem langsung memberi peringatan tanpa alur validasi | Menggunakan alur deteksi, validasi BAPPERIDA, konfirmasi OPD, dan eskalasi isu tervalidasi ke pimpinan |
 | Asisten data | Chatbot dapat terlihat terlalu bebas | Dibatasi pada data dan metadata SABABUKA; pertanyaan tanpa data dijawab sebagai informasi belum tersedia |
 | Data keuangan | Ringkasan angka tanpa konteks tata kelola yang cukup | Tampilan lengkap dengan sumber, basis realisasi, hak akses, jejak pembaruan, dan rincian perangkat daerah |

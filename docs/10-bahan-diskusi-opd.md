@@ -88,12 +88,14 @@ Kalimat pembuka:
 
 ## Pertanyaan untuk kinerja dan kontribusi OPD
 
-1. Apakah empat dimensi awal—capaian, ketepatan pembaruan, kelengkapan data, dan tindak lanjut—sudah tepat?
-2. Berapa bobot setiap dimensi dan siapa yang mengesahkannya?
-3. Apakah penilaian dibandingkan dengan target OPD sendiri atau dibandingkan antar-OPD?
-4. Kondisi apa yang dikategorikan baik, perlu perhatian, dan prioritas?
-5. Apakah indeks digunakan untuk evaluasi formal atau hanya untuk menemukan kebutuhan dukungan?
-6. Bagaimana OPD mengajukan koreksi atau konteks terhadap nilai yang ditampilkan?
+1. Target resmi apa yang digunakan oleh setiap OPD dan dari dokumen mana target tersebut berasal?
+2. Apakah realisasi dan target menggunakan definisi, satuan, cakupan, dan periode yang sama?
+3. Berapa ambang yang tepat untuk status Tercapai, Dalam Jalur, dan Perlu Tindak Lanjut?
+4. Apakah target tahunan perlu diterjemahkan menjadi lintasan bulanan atau triwulanan?
+5. Hambatan serta bentuk dukungan apa yang perlu dicatat ketika capaian belum sesuai target?
+6. Bagaimana OPD mengajukan koreksi atau konteks terhadap realisasi maupun target yang ditampilkan?
+
+Prinsip awal: tidak ada ranking antar-OPD. Setiap perangkat daerah dibaca terhadap targetnya sendiri, sedangkan kualitas pembaruan data dicatat terpisah sebagai tata kelola data.
 
 ## Pertanyaan untuk pusat peringatan
 
