@@ -13,14 +13,17 @@ Pekerjaan dapat dinyatakan selesai hanya jika:
 - bukti hasil dapat ditelusuri;
 - kekurangan yang diterima dicatat sebagai risiko residual.
 
-## Data dan scraper
+## Data dan integrasi
 
 - Sumber, pemilik, URL, periode, dan waktu pengambilan tercatat.
 - Hasil dibandingkan dengan sampel sumber asli.
 - Duplikasi, nilai kosong, tipe, satuan, wilayah, dan periode divalidasi.
 - Kegagalan tidak merusak data valid sebelumnya.
-- Retry dibatasi dan tidak membebani situs OPD.
+- Konektor mengutamakan kanal resmi; retry dibatasi dan tidak membebani sistem sumber.
 - Perubahan struktur sumber menghasilkan alert yang dapat ditindaklanjuti.
+- Data yang sudah tersedia pada sumber resmi tidak perlu diinput ulang oleh OPD.
+- Nilai yang berbeda tidak ditimpa dan masuk ke alur rekonsiliasi.
+- Status konfirmasi OPD dan kelayakan tayang BAPPERIDA memiliki audit trail.
 
 ## API
 
@@ -44,21 +47,18 @@ Pekerjaan dapat dinyatakan selesai hanya jika:
 - Proyeksi dibedakan secara visual dari data aktual.
 - Early warning memiliki definisi ambang, pemilik tindak lanjut, dan mekanisme evaluasi false positive/negative.
 - Model tidak dipakai untuk keputusan berisiko tinggi tanpa validasi manusia.
+- Insight membedakan fakta, indikasi, hipotesis, pilihan tindak lanjut, dan keputusan resmi.
+- Asisten Data menolak jawaban jika sumber tidak tersedia, kedaluwarsa, atau tidak dapat diakses pengguna.
 
-## WhatsApp Bot
+## Kanal tambahan setelah disetujui
 
-- Hanya nomor/identitas yang disetujui dapat mengakses.
-- Jawaban faktual berasal dari API dan mencantumkan periode/sumber.
-- Bot menolak atau mengeskalasi pertanyaan di luar data yang tersedia.
-- Pengujian mencakup prompt injection, data leakage, nomor tidak dikenal, dan layanan eksternal gagal.
-- Kebijakan retensi percakapan disetujui.
+WhatsApp Bot, Android, atau kanal lain bukan bagian penerimaan sistem inti. Jika kemudian disetujui:
 
-## Android
-
-- Tidak memuat kredensial statis di paket aplikasi.
-- Login, logout, kedaluwarsa sesi, tautan, unduhan, dan tombol kembali bekerja.
-- Perilaku saat offline atau server gagal jelas.
-- Build dapat direproduksi dan ditandatangani melalui prosedur resmi.
+- kanal memakai API, RBAC, status kelayakan data, dan audit yang sama;
+- tidak memuat kredensial statis atau melewati kontrol akses;
+- jawaban faktual mencantumkan periode dan sumber;
+- kondisi sesi kedaluwarsa, offline, layanan eksternal gagal, dan data tidak tersedia ditangani dengan jelas;
+- keamanan, retensi, prompt injection, data leakage, serta build/release diuji sesuai jenis kanal.
 
 ## Operasional
 

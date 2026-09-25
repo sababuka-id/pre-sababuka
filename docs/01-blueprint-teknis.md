@@ -10,9 +10,12 @@ Menyediakan satu platform data Kabupaten Kapuas yang konsisten, dapat ditelusuri
 
 ### Akuisisi data
 
-- Satu konektor atau scraper untuk setiap sumber.
-- Mendukung tabel HTML, API resmi, Excel, CSV, dan PDF.
-- Mengutamakan API atau unduhan resmi jika tersedia; scraping halaman menjadi pilihan berikutnya.
+- Kontrak sumber ditetapkan per indikator sebelum konektor dibangun.
+- Satu Data digunakan sebagai kanal utama jika dataset dari sumber primer tersedia di sana.
+- BPS dan sistem resmi OPD digunakan sesuai kewenangan indikator, bukan sekadar sebagai fallback berurutan.
+- Mendukung tabel HTML, API resmi, database view, Excel, CSV, layanan geospasial, dan PDF.
+- Mengutamakan API, database view, CKAN, unduhan resmi, dan layanan geospasial.
+- Scraping halaman hanya menjadi pilihan terbatas jika akses diizinkan, tidak tersedia kanal terstruktur, dan stabilitas serta kualitas dapat dipantau.
 - Menyimpan waktu pengambilan, URL, checksum, status, dan pesan kegagalan.
 - Tidak melewati autentikasi, CAPTCHA, larangan akses, atau kontrol anti-bot tanpa izin tertulis.
 
@@ -42,25 +45,26 @@ Setiap nilai indikator minimal membawa:
 - Menyediakan pagination, filter periode/wilayah, dan versi API.
 - Menghasilkan log audit tanpa menyimpan rahasia atau data pribadi secara berlebihan.
 
-### Dashboard DIES
+### Ruang pengguna SABABUKA
 
 - Mobile-responsive dan dapat digunakan pada koneksi terbatas.
-- Memisahkan dashboard umum, OPD, dan eksekutif.
+- Memisahkan Ringkasan Pimpinan, ruang kurasi BAPPERIDA, ruang integrasi Diskominfosantik, dan Kotak Konfirmasi Data OPD.
+- Kotak OPD digunakan untuk konfirmasi, koreksi, catatan, dan riwayat; bukan untuk menginput ulang data yang sudah tersedia pada sumber resmi.
 - Setiap visualisasi menampilkan sumber, periode, satuan, dan waktu pembaruan.
 - Proyeksi dan early warning harus menjelaskan metode serta batas ketidakpastian.
 
-### WhatsApp Bot
+### Asisten Data
 
-- Akses terbatas untuk nomor yang disetujui.
-- Mengambil fakta melalui API, bukan menjawab dari ingatan model.
+- Mengambil fakta melalui API canonical dan metadata sesuai hak akses, bukan menjawab dari ingatan model.
 - Jawaban ringkas, formal, menyebut periode dan sumber.
-- Pertanyaan dan jawaban sensitif memiliki kebijakan retensi dan audit.
+- Membedakan fakta, indikasi, hipotesis, pilihan tindak lanjut, dan keputusan resmi.
+- Menolak menjawab jika data tidak tersedia, kedaluwarsa, atau tidak dapat diakses pengguna.
+- Pertanyaan, jawaban, sumber, dan keputusan sensitif memiliki kebijakan retensi serta audit.
 
-### Android
+### Kanal tambahan
 
-- Dibangun setelah dashboard stabil.
-- Pendekatan awal adalah PWA atau WebView wrapper.
-- Tidak menyimpan token atau data sensitif secara terbuka pada perangkat.
+- Android wrapper, WhatsApp bot, atau kanal lain dibangun hanya setelah web, API, keamanan, dan workflow verifikasi stabil.
+- Kanal tambahan tidak boleh melewati RBAC, metadata, audit, atau status kelayakan data.
 
 ## 3. Kebutuhan lintas komponen
 

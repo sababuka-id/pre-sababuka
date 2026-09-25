@@ -13,13 +13,37 @@ Dokumen ini mencegah keputusan penting hilang di percakapan. Setiap keputusan me
 
 **Konsekuensi negatif:** beberapa tahap membutuhkan jeda persetujuan.
 
-## ADR-001 - Satu backend API untuk seluruh kanal
+## ADR-001 - Satu backend API untuk seluruh ruang pengguna
 
 **Status:** diusulkan kuat berdasarkan dokumen rancang bangun.
 
-**Keputusan yang diusulkan:** Dashboard, WhatsApp Bot, dan Android memakai backend API serta aturan otorisasi yang sama.
+**Keputusan yang diusulkan:** Ringkasan Pimpinan, ruang kurasi BAPPERIDA, ruang integrasi Diskominfosantik, Kotak Konfirmasi Data OPD, dan Asisten Data memakai backend API, data canonical, metadata, serta aturan otorisasi yang sama. WhatsApp, Android, atau kanal lain hanya ditambahkan setelah sistem inti stabil dan tetap menggunakan kontrol yang sama.
 
 **Alasan:** konsistensi data, keamanan terpusat, dan biaya pemeliharaan lebih rendah.
+
+## ADR-004 - Tidak ada input ulang untuk data yang sudah terhubung
+
+**Status:** diusulkan.
+
+**Keputusan yang diusulkan:** OPD tidak mengunggah ulang data ke SABABUKA jika data dapat dibaca dari Satu Data, BPS, SIPD, atau sistem resmi OPD. Ruang OPD berfungsi untuk konfirmasi, koreksi, catatan, dan riwayat. Unggah manual hanya jalur sementara dengan bukti sumber dan rencana migrasi.
+
+**Alasan:** mencegah beban ganda, duplikasi, dan perbedaan versi.
+
+## ADR-005 - Sumber ditetapkan per indikator
+
+**Status:** diusulkan.
+
+**Keputusan yang diusulkan:** setiap indikator memiliki sumber primer, sumber pembanding, kanal, frekuensi, level wilayah, dan batas penggunaan. Satu Data diprioritaskan sebagai kanal jika dataset sumber primer tersedia, bukan otomatis menjadi sumber substansi semua indikator.
+
+**Alasan:** kewenangan sumber berbeda menurut jenis indikator dan data yang terbit di portal dapat merupakan salinan dari produsen lain.
+
+## ADR-006 - BAPPERIDA menetapkan kelayakan tayang, bukan mengambil alih substansi
+
+**Status:** diusulkan.
+
+**Keputusan yang diusulkan:** OPD bertanggung jawab atas substansi data sektoral; BPS berperan sesuai kewenangan statistik; Diskominfosantik mengelola wali data dan integrasi; BAPPERIDA mengoordinasikan rekonsiliasi serta menentukan kelayakan penyajian untuk konteks pimpinan.
+
+**Alasan:** menjaga akuntabilitas, menghindari tumpang tindih, dan mengurangi gesekan lintas OPD.
 
 ## ADR-002 - Penyimpanan data berlapis
 
