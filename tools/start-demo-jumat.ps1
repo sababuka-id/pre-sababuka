@@ -1,5 +1,7 @@
 [CmdletBinding()]
-param()
+param(
+  [switch]$ResetDemoUsers
+)
 
 $ErrorActionPreference = "Stop"
 $projectRoot = Split-Path -Parent $PSScriptRoot
@@ -8,6 +10,12 @@ $frontendRoot = Join-Path $projectRoot "frontend"
 
 function Test-ListeningPort([int]$Port) {
   return [bool](Get-NetTCPConnection -LocalPort $Port -State Listen -ErrorAction SilentlyContinue)
+}
+
+function Get-ContainerEnvValue([string[]]$Environment, [string]$Name) {
+  $entry = $Environment | Where-Object { $_ -like "${Name}=*" } | Select-Object -First 1
+  if (-not $entry) { return "" }
+  return ([string]$entry).Substring($Name.Length + 1).Trim()
 }
 
 Write-Host "Menyiapkan demo SABABUKA..." -ForegroundColor Cyan
@@ -21,24 +29,18 @@ if ($container.Trim() -ne "running") {
 }
 
 $dbEnv = wsl -d Ubuntu -- docker inspect -f "{{range .Config.Env}}{{println .}}{{end}}" sababuka-local-db
-$dbUser = (($dbEnv | Select-String "^POSTGRES_USER=") -replace "^POSTGRES_USER=", "").Trim()
-$dbPass = (($dbEnv | Select-String "^POSTGRES_PASSWORD=") -replace "^POSTGRES_PASSWORD=", "").Trim()
-$dbName = (($dbEnv | Select-String "^POSTGRES_DB=") -replace "^POSTGRES_DB=", "").Trim()
+$dbUser = Get-ContainerEnvValue $dbEnv "POSTGRES_USER"
+$dbPass = Get-ContainerEnvValue $dbEnv "POSTGRES_PASSWORD"
+$dbName = Get-ContainerEnvValue $dbEnv "POSTGRES_DB"
 if (-not $dbUser) { $dbUser = "postgres" }
 if (-not $dbName) { $dbName = "postgres" }
 
-$securePassword = Read-Host "Masukkan password akun demo (minimal 16 karakter)" -AsSecureString
-$passwordPointer = [Runtime.InteropServices.Marshal]::SecureStringToBSTR($securePassword)
-try {
-  $demoPassword = [Runtime.InteropServices.Marshal]::PtrToStringBSTR($passwordPointer)
-} finally {
-  [Runtime.InteropServices.Marshal]::ZeroFreeBSTR($passwordPointer)
+if ($dbPass) {
+  $env:DATABASE_URL = "postgresql://${dbUser}:${dbPass}@127.0.0.1:55432/${dbName}"
+} else {
+  $env:DATABASE_URL = "postgresql://${dbUser}@127.0.0.1:55432/${dbName}"
 }
-if ($demoPassword.Length -lt 16) { throw "Password demo minimal 16 karakter." }
-
-$env:DATABASE_URL = "postgresql://${dbUser}:${dbPass}@127.0.0.1:55432/${dbName}"
 $env:NODE_ENV = "development"
-$env:DEMO_PASSWORD = $demoPassword
 $env:HOST = "127.0.0.1"
 $env:PORT = "3001"
 $env:COOKIE_SECURE = "false"
@@ -50,8 +52,19 @@ Push-Location $backendRoot
 try {
   pnpm db:migrate
   if ($LASTEXITCODE -ne 0) { throw "Migration gagal." }
-  pnpm dev:seed-users
-  if ($LASTEXITCODE -ne 0) { throw "Seed akun demo gagal." }
+  if ($ResetDemoUsers) {
+    $securePassword = Read-Host "Masukkan password akun demo (minimal 16 karakter)" -AsSecureString
+    $passwordPointer = [Runtime.InteropServices.Marshal]::SecureStringToBSTR($securePassword)
+    try {
+      $demoPassword = [Runtime.InteropServices.Marshal]::PtrToStringBSTR($passwordPointer)
+    } finally {
+      [Runtime.InteropServices.Marshal]::ZeroFreeBSTR($passwordPointer)
+    }
+    if ($demoPassword.Length -lt 16) { throw "Password demo minimal 16 karakter." }
+    $env:DEMO_PASSWORD = $demoPassword
+    pnpm dev:seed-users
+    if ($LASTEXITCODE -ne 0) { throw "Seed akun demo gagal." }
+  }
   pnpm dev:seed-content
   if ($LASTEXITCODE -ne 0) { throw "Seed konten demo gagal." }
   pnpm dev:seed-official
@@ -100,5 +113,9 @@ if ($lanAddress) {
 }
 Write-Host "Akun Pimpinan: pimpinan@sababuka.local"
 Write-Host "Akun BAPPERIDA: bapperida@sababuka.local"
-Write-Host "Gunakan password demo yang baru dimasukkan."
+if ($ResetDemoUsers) {
+  Write-Host "Password akun demo sudah diatur ulang."
+} else {
+  Write-Host "Password akun demo tidak diubah saat restart."
+}
 

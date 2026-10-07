@@ -49,7 +49,7 @@ Hindari menyebut aplikasi sudah produksi, seluruh data sudah resmi, atau seluruh
 
 1. Nyalakan Docker Desktop dan pastikan WSL Ubuntu berjalan.
 2. Dari PowerShell pada folder proyek, jalankan `pwsh -File .\tools\start-demo-jumat.ps1`.
-3. Masukkan password demo minimal 16 karakter ketika diminta.
+3. Restart normal mempertahankan password akun demo. Gunakan opsi `-ResetDemoUsers` hanya saat akun demo memang perlu diatur ulang; opsi ini akan meminta password demo minimal 16 karakter.
 4. Buka `http://127.0.0.1:5173/` dan uji akun Pimpinan serta BAPPERIDA.
 5. Siapkan hotspot cadangan. Demo utama tidak membutuhkan internet, kecuali ketika membuka tautan sumber.
 6. Simpan tangkapan layar dashboard sebagai cadangan bila laptop bermasalah.
