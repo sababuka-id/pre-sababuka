@@ -82,6 +82,14 @@ function requireGlobal(auth: AuthContext): void {
   if (!isGlobal(auth)) throw new ApiError(403, "SCOPE_DENIED", "Pengelolaan master indikator memerlukan scope global.");
 }
 
+const INDICATOR_DRAFTER_ROLES = new Set(["superadmin", "indicator_author"]);
+
+function requireIndicatorDrafter(auth: AuthContext): void {
+  if (!auth.user.roles.some((role) => INDICATOR_DRAFTER_ROLES.has(role.code))) {
+    throw new ApiError(403, "PERMISSION_DENIED", "Hanya role penyusun indikator yang dapat mengajukan definisi ke BAPPERIDA.");
+  }
+}
+
 function translateDatabaseError(error: unknown): never {
   const code = (error as { code?: string }).code;
   if (code === "23505") throw new ApiError(409, "CONFLICT", "Kode atau identitas data sudah digunakan.");
@@ -429,7 +437,9 @@ export class GovernanceService {
       );
       if (!current.rowCount) throw new ApiError(404, "NOT_FOUND", "Versi indikator tidak ditemukan.");
       const currentVersion = current.rows[0]!;
-      if (action === "verify") {
+      if (action === "submit") {
+        requireIndicatorDrafter(auth);
+      } else if (action === "verify") {
         const scope = organizationScope(auth);
         if (!isGlobal(auth) && (!currentVersion.owner_organization_id || !scope.includes(currentVersion.owner_organization_id))) {
           throw new ApiError(403, "SCOPE_DENIED", "Verifikasi hanya dapat dilakukan oleh OPD pemilik indikator.");

@@ -78,6 +78,8 @@ export function IndicatorsPage() {
     return { categories: categories.data, units: units.data, periods: periods.data, organizations: organizations.data };
   }, []);
   const canManage = user?.permissions.includes("indicator.manage") ?? false;
+  const canSubmit = (user?.permissions.includes("indicator.submit") ?? false)
+    && (user?.roles.some((role) => role.code === "superadmin" || role.code === "indicator_author") ?? false);
   const transition = async (indicator: Indicator, action: "submit" | "approve" | "verify" | "activate" | "retire") => {
     setActionError("");
     try {
@@ -101,7 +103,7 @@ export function IndicatorsPage() {
     </section>
     {createOpen && refs.data && <IndicatorForm references={refs.data} onClose={() => setCreateOpen(false)} onCreated={() => { setCreateOpen(false); indicators.reload(); }} />}
     {editing && refs.data && <IndicatorForm references={refs.data} initial={editing} onClose={() => setEditing(null)} onCreated={() => { setEditing(null); indicators.reload(); }} />}
-    {selected && <IndicatorDetail indicator={selected} permissions={user?.permissions ?? []} canEdit={canManage && selected.status === "draft"} onEdit={() => { setEditing(selected); setSelected(null); }} onAction={(action) => transition(selected, action)} onClose={() => setSelected(null)} />}
+    {selected && <IndicatorDetail indicator={selected} permissions={user?.permissions ?? []} canSubmit={canSubmit} canEdit={canManage && selected.status === "draft"} onEdit={() => { setEditing(selected); setSelected(null); }} onAction={(action) => transition(selected, action)} onClose={() => setSelected(null)} />}
   </>;
 }
 
@@ -116,8 +118,8 @@ function formatTarget(target: Indicator["targets"][number], indicator: Indicator
   return `${new Intl.NumberFormat("id-ID", { maximumFractionDigits: 4 }).format(value)}${indicator.unit_symbol ?? ""}`;
 }
 
-function IndicatorDetail({ indicator, permissions, canEdit, onEdit, onAction, onClose }: { indicator: Indicator; permissions: string[]; canEdit: boolean; onEdit(): void; onAction(action: "submit" | "approve" | "verify" | "activate" | "retire"): void; onClose(): void }) {
-  const action = indicator.status === "draft" && permissions.includes("indicator.submit") ? ["submit", "Ajukan ke BAPPERIDA"] as const
+function IndicatorDetail({ indicator, permissions, canSubmit, canEdit, onEdit, onAction, onClose }: { indicator: Indicator; permissions: string[]; canSubmit: boolean; canEdit: boolean; onEdit(): void; onAction(action: "submit" | "approve" | "verify" | "activate" | "retire"): void; onClose(): void }) {
+  const action = indicator.status === "draft" && canSubmit ? ["submit", "Ajukan ke BAPPERIDA"] as const
     : indicator.status === "in_review" && permissions.includes("indicator.approve") ? ["approve", "Kirim ke OPD untuk verifikasi"] as const
     : indicator.status === "opd_verification" && permissions.includes("indicator.verify") ? ["verify", "Konfirmasi teknis indikator"] as const
     : indicator.status === "approved" && permissions.includes("indicator.activate") ? ["activate", "Aktifkan indikator"] as const

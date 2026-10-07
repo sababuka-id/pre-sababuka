@@ -20,6 +20,7 @@ test("alur kategori, indikator, OPD, publikasi, dan dashboard berjalan lintas pe
     );
     const dkpp = organizations.rows.find((item) => item.code === "DKPP")!.id;
     const roleUsers = [
+      { role: "superadmin", scope: "global", organizationId: null },
       { role: "bapperida", scope: "global", organizationId: null },
       { role: "opd", scope: "organization", organizationId: dkpp },
       { role: "pimpinan", scope: "published", organizationId: null },
@@ -51,6 +52,7 @@ test("alur kategori, indikator, OPD, publikasi, dan dashboard berjalan lintas pe
       assert.equal(response.statusCode, 200, response.body);
       return { cookie: String(response.headers["set-cookie"]).split(";", 1)[0]!, "x-csrf-token": response.json().csrf_token as string };
     };
+    const superadmin = await login("superadmin");
     const bapperida = await login("bapperida");
     const opd = await login("opd");
     const pimpinan = await login("pimpinan");
@@ -73,7 +75,7 @@ test("alur kategori, indikator, OPD, publikasi, dan dashboard berjalan lintas pe
     assert.equal(category.json().review_status, "draft");
 
     const indicator = await app.inject({
-      method: "POST", url: "/api/v1/indicators", headers: bapperida,
+      method: "POST", url: "/api/v1/indicators", headers: superadmin,
       payload: {
         code: `FLOW_${suffix}`, name: `Indikator Alur ${suffix}`, category_id: category.json().id,
         owner_organization_id: dkpp, definition: "Indikator pengujian alur strategis lintas peran.",
@@ -87,7 +89,7 @@ test("alur kategori, indikator, OPD, publikasi, dan dashboard berjalan lintas pe
     const blocked = await app.inject({
       method: "POST", url: `/api/v1/indicator-versions/${indicator.json().version_id}/actions/submit`, headers: bapperida,
     });
-    assert.equal(blocked.statusCode, 409, blocked.body);
+    assert.equal(blocked.statusCode, 403, blocked.body);
 
     for (const action of ["submit", "approve"] as const) {
       const response = await app.inject({
@@ -95,7 +97,15 @@ test("alur kategori, indikator, OPD, publikasi, dan dashboard berjalan lintas pe
       });
       assert.equal(response.statusCode, 200, response.body);
     }
-    for (const [action, expected] of [["submit", "in_review"], ["approve", "opd_verification"]] as const) {
+    const reviewerSubmit = await app.inject({
+      method: "POST", url: `/api/v1/indicator-versions/${indicator.json().version_id}/actions/submit`, headers: bapperida,
+    });
+    assert.equal(reviewerSubmit.statusCode, 403, reviewerSubmit.body);
+    const submittedByDrafter = await app.inject({
+      method: "POST", url: `/api/v1/indicator-versions/${indicator.json().version_id}/actions/submit`, headers: superadmin,
+    });
+    assert.equal(submittedByDrafter.statusCode, 200, submittedByDrafter.body);
+    for (const [action, expected] of [["approve", "opd_verification"]] as const) {
       const response = await app.inject({
         method: "POST", url: `/api/v1/indicator-versions/${indicator.json().version_id}/actions/${action}`, headers: bapperida,
       });

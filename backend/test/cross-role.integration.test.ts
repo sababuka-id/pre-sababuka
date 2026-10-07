@@ -45,6 +45,9 @@ test("akses dan menu lintas role mengikuti permission serta scope", { skip: !dat
 
     const bapperida = await login("bapperida"); const bappMenu = await menuCodes(bapperida.cookie);
     assert.ok(bappMenu.includes("reviews") && bappMenu.includes("publications") && bappMenu.includes("operations"));
+    const bappMe = await app.inject({ method: "GET", url: "/api/v1/me", headers: { cookie: bapperida.cookie } });
+    assert.equal(bappMe.statusCode, 200, bappMe.body);
+    assert.ok(!bappMe.json().permissions.includes("indicator.submit"));
     const bappOperations = await app.inject({ method: "GET", url: "/api/v1/operations/dashboard", headers: { cookie: bapperida.cookie } });
     assert.equal(bappOperations.statusCode, 200, bappOperations.body);
     const forbiddenSystem = await app.inject({ method: "GET", url: "/api/v1/system/configuration", headers: { cookie: bapperida.cookie } });
