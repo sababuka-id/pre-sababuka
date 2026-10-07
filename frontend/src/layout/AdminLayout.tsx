@@ -78,7 +78,7 @@ export function AdminLayout({ pathname, title, subtitle, actions, children }: { 
   const governanceEntries = useMemo(() => sectionChildren(menu, "governance"), [menu]);
   const adminEntries = useMemo(() => sectionChildren(menu, "administration"), [menu]);
   const operationalEntries = useMemo(() => menu.filter((item) => ["operations", "submissions", "reviews", "publications"].includes(item.code) && item.route_name && supportedRoutes.has(item.route_name)), [menu]);
-  const primaryEntries = useMemo(() => menu.filter((item) => ["dashboard", "executive", "assistant"].includes(item.code) && item.route_name && supportedRoutes.has(item.route_name)), [menu]);
+  const primaryEntries = useMemo(() => menu.filter((item) => ["dashboard", "assistant"].includes(item.code) && item.route_name && supportedRoutes.has(item.route_name)), [menu]);
   const auditEntries = useMemo(() => menu.filter((item) => item.code === "audit" && item.route_name && supportedRoutes.has(item.route_name)), [menu]);
   const isSuperadmin = user?.roles.some((role) => role.code === "superadmin") ?? false;
   const areaLabel = pathname.startsWith("/admin") ? "Konfigurasi Internal"
@@ -109,7 +109,8 @@ export function AdminLayout({ pathname, title, subtitle, actions, children }: { 
       <div className="sidebar-brand"><div className="brand-symbol light">S</div><div className="sidebar-brand-copy"><strong>SABABUKA</strong><span>BERSINAR · KAPUAS</span></div><button className="mobile-close" aria-label="Tutup menu" onClick={() => setMobile(false)}><X /></button></div>
       <nav>
         {isSuperadmin && <button className={`nav-link ${pathname === "/admin" ? "active" : ""}`} onClick={() => go("/admin")}><LayoutDashboard /><span>Beranda Administrasi</span></button>}
-        {!isSuperadmin && primaryEntries.map((entry) => { const Icon = iconByCode[entry.code] ?? LayoutDashboard; return <button key={entry.code} className={`nav-link ${pathname === entry.route_name ? "active" : ""}`} onClick={() => go(entry.route_name!)}><Icon /><span>{navigationLabels[entry.code] ?? entry.label}</span></button>; })}
+        {primaryEntries.length > 0 && <div className="nav-label">Ruang pimpinan</div>}
+        {primaryEntries.map((entry) => { const Icon = iconByCode[entry.code] ?? LayoutDashboard; return <button key={entry.code} className={`nav-link ${pathname === entry.route_name ? "active" : ""}`} onClick={() => go(entry.route_name!)}><Icon /><span>{navigationLabels[entry.code] ?? entry.label}</span></button>; })}
         {governanceEntries.length > 0 && <div className="nav-label">Tata kelola data</div>}
         {governanceEntries.map((entry) => {
           const Icon = iconByCode[entry.code] ?? Settings2;

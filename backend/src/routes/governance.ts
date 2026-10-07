@@ -73,11 +73,24 @@ export async function governanceRoutes(app: FastifyInstance): Promise<void> {
   app.post<{ Body: CategoryInput }>("/categories", { schema: { body: categoryBody } }, async (request, reply) => {
     mutate(request, "category.manage"); return reply.code(201).send(await service(request).createCategory(request.auth!, request.body, requestAuditContext(request)));
   });
+  app.post<{ Params: { category_id: string; action: "submit" | "approve" | "reject" | "reopen" } }>(
+    "/categories/:category_id/actions/:action",
+    {
+      schema: { params: { type: "object", additionalProperties: false, required: ["category_id", "action"], properties: {
+        category_id: uuid, action: { type: "string", enum: ["submit", "approve", "reject", "reopen"] },
+      } } },
+    },
+    async (request) => {
+      const permission = ["approve", "reject"].includes(request.params.action) ? "category.approve" : "category.manage";
+      mutate(request, permission);
+      return service(request).transitionCategory(request.auth!, request.params.category_id, request.params.action, requestAuditContext(request));
+    },
+  );
   app.get("/units", async (request) => { requirePermission(request, "indicator.view"); return service(request).listUnits(); });
   app.get("/periods", async (request) => { requirePermission(request, "indicator.view"); return service(request).listPeriods(); });
   app.get<{ Querystring: PageQueryInput & { category_id?: string; organization_id?: string; status?: string } }>("/indicators", {
     schema: { querystring: { type: "object", additionalProperties: false, properties: { ...pageProperties, category_id: uuid, organization_id: uuid,
-      status: { type: "string", enum: ["draft", "in_review", "approved", "active", "retired"] } } } },
+      status: { type: "string", enum: ["draft", "in_review", "opd_verification", "approved", "active", "retired"] } } } },
   }, async (request) => {
     requirePermission(request, "indicator.view"); return service(request).listIndicators(request.auth!, { ...pageQuery(request.query), categoryId: request.query.category_id, organizationId: request.query.organization_id, status: request.query.status });
   });
@@ -93,16 +106,17 @@ export async function governanceRoutes(app: FastifyInstance): Promise<void> {
     mutate(request, "indicator.manage");
     return service(request).updateIndicatorDraft(request.auth!, request.params.indicator_id, request.body, requestAuditContext(request));
   });
-  app.post<{ Params: { version_id: string; action: "submit" | "approve" | "activate" | "retire" } }>(
+  app.post<{ Params: { version_id: string; action: "submit" | "approve" | "verify" | "activate" | "retire" } }>(
     "/indicator-versions/:version_id/actions/:action",
     {
       schema: { params: { type: "object", additionalProperties: false, required: ["version_id", "action"], properties: {
-        version_id: uuid, action: { type: "string", enum: ["submit", "approve", "activate", "retire"] },
+        version_id: uuid, action: { type: "string", enum: ["submit", "approve", "verify", "activate", "retire"] },
       } } },
     },
     async (request) => {
       const permission = request.params.action === "submit" ? "indicator.submit"
-        : request.params.action === "approve" ? "indicator.approve" : "indicator.activate";
+        : request.params.action === "approve" ? "indicator.approve"
+          : request.params.action === "verify" ? "indicator.verify" : "indicator.activate";
       mutate(request, permission);
       return service(request).transitionIndicatorVersion(request.auth!, request.params.version_id, request.params.action, requestAuditContext(request));
     },

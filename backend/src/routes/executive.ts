@@ -36,7 +36,9 @@ export async function executiveRoutes(app: FastifyInstance): Promise<void> {
          JOIN sababuka.organizations org ON org.id = b.organization_id
          JOIN sababuka.dataset_versions dv ON dv.id = pi.dataset_version_id
          JOIN sababuka.datasets d ON d.id = dv.dataset_id
-         WHERE ($1::uuid IS NULL OR pf.id = $1) AND ($2::uuid IS NULL OR per.id = $2)
+         WHERE iv.status = 'active'
+           AND c.review_status = 'approved'
+           AND ($1::uuid IS NULL OR pf.id = $1) AND ($2::uuid IS NULL OR per.id = $2)
          ORDER BY c.display_order, pi.display_order, i.name`,
         [request.query.policy_focus_id ?? null, request.query.period_id ?? null],
       ),

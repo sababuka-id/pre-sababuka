@@ -51,7 +51,8 @@ test("akses dan menu lintas role mengikuti permission serta scope", { skip: !dat
     assert.equal(forbiddenSystem.statusCode, 403, forbiddenSystem.body);
 
     const pimpinan = await login("pimpinan"); const pimpinanMenu = await menuCodes(pimpinan.cookie);
-    assert.ok(pimpinanMenu.includes("dashboard") && pimpinanMenu.includes("executive") && pimpinanMenu.includes("assistant"));
+    assert.ok(pimpinanMenu.includes("dashboard") && pimpinanMenu.includes("assistant"));
+    assert.ok(!pimpinanMenu.includes("executive"));
     assert.ok(!pimpinanMenu.includes("submissions") && !pimpinanMenu.includes("audit"));
     assert.equal((await app.inject({ method: "GET", url: "/api/v1/executive/dashboard", headers: { cookie: pimpinan.cookie } })).statusCode, 200);
     assert.equal((await app.inject({ method: "GET", url: "/api/v1/submissions", headers: { cookie: pimpinan.cookie } })).statusCode, 403);

@@ -40,6 +40,14 @@ test("master kategori dan indikator pilot dapat dibaca dan ditambah sebagai draf
       payload: { code: `TEST_${suffix}`, name: `Kategori Integration ${suffix}`, description: "Data khusus pengujian." },
     });
     assert.equal(category.statusCode, 201, category.body);
+    assert.equal(category.json().review_status, "draft");
+    for (const [action, expected] of [["submit", "in_review"], ["approve", "approved"]] as const) {
+      const transition = await app.inject({
+        method: "POST", url: `/api/v1/categories/${category.json().id}/actions/${action}`, headers,
+      });
+      assert.equal(transition.statusCode, 200, transition.body);
+      assert.equal(transition.json().review_status, expected);
+    }
 
     const unit = units.json().data.find((item: { code: string }) => item.code === "PERCENT");
     const period = periods.json().data.find((item: { code: string }) => item.code === "2025");
@@ -76,7 +84,7 @@ test("master kategori dan indikator pilot dapat dibaca dan ditambah sebagai draf
     assert.equal(filtered.statusCode, 200, filtered.body);
     assert.equal(Number(filtered.json().data[0].targets[0].numeric_value), 11);
 
-    for (const [action, expected] of [["submit", "in_review"], ["approve", "approved"], ["activate", "active"]] as const) {
+    for (const [action, expected] of [["submit", "in_review"], ["approve", "opd_verification"], ["verify", "approved"], ["activate", "active"]] as const) {
       const transition = await app.inject({
         method: "POST", url: `/api/v1/indicator-versions/${indicator.json().version_id}/actions/${action}`, headers,
       });

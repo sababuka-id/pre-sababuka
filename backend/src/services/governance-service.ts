@@ -125,6 +125,8 @@ export class GovernanceService {
     const result = await this.db.query<CountedRow & Record<string, unknown>>(
       `SELECT c.id::text, c.code, c.name, c.description, c.policy_focus_id::text,
               pf.name AS policy_focus_name, c.parent_id::text, c.display_order, c.is_active,
+              c.review_status, c.submitted_by::text, c.submitted_at::text,
+              c.decided_by::text, c.decided_at::text, c.decision_notes,
               count(i.id)::int AS indicator_count, count(*) OVER()::text AS total_count
        FROM sababuka.categories c
        LEFT JOIN sababuka.policy_focuses pf ON pf.id = c.policy_focus_id
@@ -144,16 +146,69 @@ export class GovernanceService {
     try {
       const result = await this.db.query<QueryResultRow & Record<string, unknown>>(
         `INSERT INTO sababuka.categories
-           (code, name, description, policy_focus_id, parent_id, display_order, created_by)
-         VALUES ($1, $2, $3, $4, $5, $6, $7)
+           (code, name, description, policy_focus_id, parent_id, display_order, review_status, created_by)
+         VALUES ($1, $2, $3, $4, $5, $6, 'draft', $7)
          RETURNING id::text, code, name, description, policy_focus_id::text, parent_id::text,
-                   display_order, is_active, created_at::text, updated_at::text`,
+                   display_order, is_active, review_status, submitted_at::text,
+                   decided_at::text, decision_notes, created_at::text, updated_at::text`,
         [input.code, input.name, input.description ?? null, input.policy_focus_id ?? null, input.parent_id ?? null, input.display_order ?? 0, auth.user.id],
       );
       const category = result.rows[0]!;
       await recordAudit(this.db, { ...audit, eventType: "category.created", entityType: "category", entityId: category.id as string, afterData: category });
       return category;
     } catch (error) { translateDatabaseError(error); }
+  }
+
+  async transitionCategory(
+    auth: AuthContext,
+    categoryId: string,
+    action: "submit" | "approve" | "reject" | "reopen",
+    audit: AuditContext,
+  ) {
+    requireGlobal(auth);
+    const transitions = {
+      submit: { from: "draft", to: "in_review" },
+      approve: { from: "in_review", to: "approved" },
+      reject: { from: "in_review", to: "rejected" },
+      reopen: { from: "rejected", to: "draft" },
+    } as const;
+    const transition = transitions[action];
+    const client = await this.db.connect();
+    try {
+      await client.query("BEGIN");
+      const current = await client.query<QueryResultRow & { id: string; review_status: string }>(
+        `SELECT id::text, review_status FROM sababuka.categories
+         WHERE id = $1 AND archived_at IS NULL FOR UPDATE`,
+        [categoryId],
+      );
+      if (!current.rowCount) throw new ApiError(404, "NOT_FOUND", "Kategori tidak ditemukan.");
+      if (current.rows[0]!.review_status !== transition.from) {
+        throw new ApiError(409, "CONFLICT", `Aksi ${action} hanya dapat dijalankan dari status ${transition.from}.`);
+      }
+      const result = await client.query<QueryResultRow & Record<string, unknown>>(
+        `UPDATE sababuka.categories
+         SET review_status = $2,
+             submitted_by = CASE WHEN $3 = 'submit' THEN $4 ELSE submitted_by END,
+             submitted_at = CASE WHEN $3 = 'submit' THEN now() ELSE submitted_at END,
+             decided_by = CASE WHEN $3 IN ('approve', 'reject') THEN $4 WHEN $3 = 'reopen' THEN NULL ELSE decided_by END,
+             decided_at = CASE WHEN $3 IN ('approve', 'reject') THEN now() WHEN $3 = 'reopen' THEN NULL ELSE decided_at END,
+             decision_notes = CASE WHEN $3 = 'reject' THEN 'Kategori dikembalikan untuk perbaikan.' WHEN $3 = 'reopen' THEN NULL ELSE decision_notes END
+         WHERE id = $1
+         RETURNING id::text, code, name, review_status, submitted_by::text, submitted_at::text,
+                   decided_by::text, decided_at::text, decision_notes, updated_at::text`,
+        [categoryId, transition.to, action, auth.user.id],
+      );
+      await recordAudit(client, {
+        ...audit, eventType: `category.${action}`, entityType: "category", entityId: categoryId,
+        beforeData: { review_status: transition.from }, afterData: result.rows[0]!,
+      });
+      await client.query("COMMIT");
+      return result.rows[0]!;
+    } catch (error) {
+      await client.query("ROLLBACK");
+      if (error instanceof ApiError) throw error;
+      translateDatabaseError(error);
+    } finally { client.release(); }
   }
 
   async listUnits() {
@@ -170,6 +225,7 @@ export class GovernanceService {
     const scope = organizationScope(auth);
     const result = await this.db.query<CountedRow & Record<string, unknown>>(
       `SELECT i.id::text, i.code, i.name, i.category_id::text, c.name AS category_name,
+              c.review_status AS category_review_status,
               i.owner_organization_id::text, owner.name AS owner_organization_name, i.is_active,
               iv.id::text AS version_id, iv.version_number, iv.definition, iv.formula,
               iv.frequency, iv.data_type, iv.direction, iv.source_reference,
@@ -346,13 +402,13 @@ export class GovernanceService {
   async transitionIndicatorVersion(
     auth: AuthContext,
     versionId: string,
-    action: "submit" | "approve" | "activate" | "retire",
+    action: "submit" | "approve" | "verify" | "activate" | "retire",
     audit: AuditContext,
   ) {
-    requireGlobal(auth);
     const transitions = {
       submit: { from: "draft", to: "in_review" },
-      approve: { from: "in_review", to: "approved" },
+      approve: { from: "in_review", to: "opd_verification" },
+      verify: { from: "opd_verification", to: "approved" },
       activate: { from: "approved", to: "active" },
       retire: { from: "active", to: "retired" },
     } as const;
@@ -360,14 +416,35 @@ export class GovernanceService {
     const client = await this.db.connect();
     try {
       await client.query("BEGIN");
-      const current = await client.query<QueryResultRow & { id: string; indicator_id: string; status: string }>(
-        `SELECT id::text, indicator_id::text, status
-         FROM sababuka.indicator_versions WHERE id = $1 FOR UPDATE`,
+      const current = await client.query<QueryResultRow & {
+        id: string; indicator_id: string; status: string; owner_organization_id: string | null; category_review_status: string;
+      }>(
+        `SELECT iv.id::text, iv.indicator_id::text, iv.status,
+                i.owner_organization_id::text, c.review_status AS category_review_status
+         FROM sababuka.indicator_versions iv
+         JOIN sababuka.indicators i ON i.id = iv.indicator_id
+         JOIN sababuka.categories c ON c.id = i.category_id
+         WHERE iv.id = $1 FOR UPDATE OF iv`,
         [versionId],
       );
       if (!current.rowCount) throw new ApiError(404, "NOT_FOUND", "Versi indikator tidak ditemukan.");
-      if (current.rows[0]!.status !== transition.from) {
+      const currentVersion = current.rows[0]!;
+      if (action === "verify") {
+        const scope = organizationScope(auth);
+        if (!isGlobal(auth) && (!currentVersion.owner_organization_id || !scope.includes(currentVersion.owner_organization_id))) {
+          throw new ApiError(403, "SCOPE_DENIED", "Verifikasi hanya dapat dilakukan oleh OPD pemilik indikator.");
+        }
+      } else {
+        requireGlobal(auth);
+      }
+      if (currentVersion.status !== transition.from) {
         throw new ApiError(409, "CONFLICT", `Aksi ${action} hanya dapat dijalankan dari status ${transition.from}.`);
+      }
+      if (action === "submit" && currentVersion.category_review_status !== "approved") {
+        throw new ApiError(409, "CONFLICT", "Kategori harus disetujui BAPPERIDA sebelum indikator diajukan.");
+      }
+      if (action === "approve" && !currentVersion.owner_organization_id) {
+        throw new ApiError(409, "CONFLICT", "OPD pemilik harus ditetapkan sebelum indikator dikirim untuk verifikasi teknis.");
       }
       if (action === "activate") {
         await client.query(
@@ -382,11 +459,18 @@ export class GovernanceService {
          SET status = $2,
              submitted_by = CASE WHEN $3 = 'submit' THEN $4 ELSE submitted_by END,
              submitted_at = CASE WHEN $3 = 'submit' THEN now() ELSE submitted_at END,
-             approved_by = CASE WHEN $3 = 'approve' THEN $4 ELSE approved_by END,
-             approved_at = CASE WHEN $3 = 'approve' THEN now() ELSE approved_at END
+             bapperida_reviewed_by = CASE WHEN $3 = 'approve' THEN $4 ELSE bapperida_reviewed_by END,
+             bapperida_reviewed_at = CASE WHEN $3 = 'approve' THEN now() ELSE bapperida_reviewed_at END,
+             opd_verified_by = CASE WHEN $3 = 'verify' THEN $4 ELSE opd_verified_by END,
+             opd_verified_at = CASE WHEN $3 = 'verify' THEN now() ELSE opd_verified_at END,
+             approved_by = CASE WHEN $3 = 'verify' THEN $4 ELSE approved_by END,
+             approved_at = CASE WHEN $3 = 'verify' THEN now() ELSE approved_at END
          WHERE id = $1
          RETURNING id::text, indicator_id::text, version_number, status,
-                   submitted_by::text, submitted_at::text, approved_by::text, approved_at::text, updated_at::text`,
+                   submitted_by::text, submitted_at::text,
+                   bapperida_reviewed_by::text, bapperida_reviewed_at::text,
+                   opd_verified_by::text, opd_verified_at::text,
+                   approved_by::text, approved_at::text, updated_at::text`,
         [versionId, transition.to, action, auth.user.id],
       );
       await recordAudit(client, {

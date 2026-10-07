@@ -19,8 +19,8 @@ try {
 
   await client.query(
     `UPDATE sababuka.indicator_versions iv
-     SET status = 'active', submitted_by = $1, submitted_at = COALESCE(submitted_at, now()),
-         approved_by = $1, approved_at = COALESCE(approved_at, now()),
+     SET status = 'active', submitted_by = $1, submitted_at = COALESCE(iv.submitted_at, now()),
+         approved_by = $1, approved_at = COALESCE(iv.approved_at, now()),
          change_notes = 'DEMO laporan antara; metadata dan target memerlukan validasi Bapperida/OPD.',
          source_reference = CASE
            WHEN source_reference LIKE 'Rujukan rancangan (belum diverifikasi): %' THEN source_reference

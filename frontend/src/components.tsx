@@ -76,6 +76,7 @@ const STATUS_LABELS: Record<string, string> = {
   active: "Aktif", inactive: "Nonaktif", draft: "Draf", submitted: "Dikirim",
   verified: "Terverifikasi", rejected: "Ditolak", published: "Terbit",
   replaced: "Digantikan", pending: "Menunggu", approved: "Disetujui",
+  in_review: "Dalam pemeriksaan BAPPERIDA", opd_verification: "Menunggu verifikasi OPD",
   archived: "Diarsipkan", open: "Terbuka", closed: "Selesai",
 };
 

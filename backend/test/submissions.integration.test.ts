@@ -20,7 +20,16 @@ test("form capaian OPD mendukung isi, submit, return, dan approve", { skip: !dat
     const indicators = await app.inject({ method: "GET", url: "/api/v1/indicators?q=IKP", headers: { cookie } });
     assert.equal(indicators.statusCode, 200, indicators.body);
     const indicator = indicators.json().data.find((item: { code: string }) => item.code === "IKP");
-    for (const action of ["submit", "approve", "activate"] as const) {
+    const categories = await app.inject({ method: "GET", url: `/api/v1/categories?q=${encodeURIComponent(indicator.category_name)}`, headers: { cookie } });
+    assert.equal(categories.statusCode, 200, categories.body);
+    const category = categories.json().data.find((item: { id: string }) => item.id === indicator.category_id);
+    if (category.review_status === "draft") {
+      for (const action of ["submit", "approve"] as const) {
+        const transition = await app.inject({ method: "POST", url: `/api/v1/categories/${category.id}/actions/${action}`, headers });
+        assert.equal(transition.statusCode, 200, transition.body);
+      }
+    }
+    for (const action of ["submit", "approve", "verify", "activate"] as const) {
       const transition = await app.inject({ method: "POST", url: `/api/v1/indicator-versions/${indicator.version_id}/actions/${action}`, headers });
       assert.equal(transition.statusCode, 200, transition.body);
     }

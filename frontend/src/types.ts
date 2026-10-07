@@ -128,6 +128,12 @@ export interface Category {
   parent_id: string | null;
   display_order: number;
   is_active: boolean;
+  review_status: "draft" | "in_review" | "approved" | "rejected";
+  submitted_by: string | null;
+  submitted_at: string | null;
+  decided_by: string | null;
+  decided_at: string | null;
+  decision_notes: string | null;
   indicator_count: number;
 }
 
@@ -171,6 +177,7 @@ export interface Indicator {
   name: string;
   category_id: string;
   category_name: string;
+  category_review_status: "draft" | "in_review" | "approved" | "rejected";
   owner_organization_id: string | null;
   owner_organization_name: string | null;
   is_active: boolean;
@@ -184,7 +191,7 @@ export interface Indicator {
   source_reference: string | null;
   access_level: string;
   effective_from: string;
-  status: "draft" | "in_review" | "approved" | "active" | "retired";
+  status: "draft" | "in_review" | "opd_verification" | "approved" | "active" | "retired";
   unit_id: string;
   unit_name: string;
   unit_symbol: string | null;

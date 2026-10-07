@@ -23,7 +23,7 @@ function AuthBrand() {
 }
 
 export function LoginPage() {
-  const { login, user } = useAuth();
+  const { login } = useAuth();
   const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");
   const [mfaMode, setMfaMode] = useState<"totp" | "recovery" | null>(null);
@@ -31,8 +31,6 @@ export function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => { if (user) navigate("/admin"); }, [user]);
 
   async function submit(event: FormEvent) {
     event.preventDefault();
@@ -45,7 +43,6 @@ export function LoginPage() {
         ...(mfaMode === "totp" ? { mfa_code: mfaValue } : {}),
         ...(mfaMode === "recovery" ? { recovery_code: mfaValue } : {}),
       });
-      navigate("/admin");
     } catch (reason) {
       if (reason instanceof ApiClientError && reason.code === "MFA_REQUIRED") {
         setMfaMode("totp");

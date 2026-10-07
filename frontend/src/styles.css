@@ -120,7 +120,23 @@ code { font-family: "SFMono-Regular", Consolas, monospace; }
 .sidebar-brand-copy strong, .sidebar-brand-copy span { display: block; }
 .sidebar-brand-copy strong { color: #fff; letter-spacing: .08em; }
 .sidebar-brand-copy span { color: #7ea3c6; font-size: 9px; letter-spacing: .11em; font-weight: 800; margin-top: 3px; }
-.sidebar nav { margin-top: 28px; display: flex; flex-direction: column; gap: 5px; }
+.sidebar nav {
+  margin-top: 28px;
+  padding-right: 4px;
+  padding-bottom: 12px;
+  display: flex;
+  flex: 1 1 auto;
+  min-height: 0;
+  flex-direction: column;
+  gap: 5px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(183, 203, 224, .38) transparent;
+}
+.sidebar nav::-webkit-scrollbar { width: 6px; }
+.sidebar nav::-webkit-scrollbar-track { background: transparent; }
+.sidebar nav::-webkit-scrollbar-thumb { background: rgba(183, 203, 224, .38); border-radius: 999px; }
 .nav-label { margin: 19px 11px 7px; color: #6f90b0; font-size: 9px; font-weight: 850; letter-spacing: .13em; text-transform: uppercase; white-space: nowrap; }
 .nav-link { width: 100%; min-height: 43px; display: flex; align-items: center; gap: 12px; padding: 0 12px; color: #b7cbe0; background: transparent; border: 0; border-radius: 10px; text-align: left; font-size: 13px; font-weight: 650; white-space: nowrap; }
 .nav-link svg { width: 19px; flex: 0 0 19px; }
