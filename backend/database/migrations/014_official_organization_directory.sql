@@ -71,4 +71,8 @@ SET parent_id = parent.id, updated_at = now()
 FROM sababuka.organizations parent
 WHERE child.organization_type = 'district' AND parent.code = 'KECAMATAN';
 
+INSERT INTO sababuka.schema_migrations (version, description)
+VALUES ('014', 'official organization and district directory')
+ON CONFLICT (version) DO NOTHING;
+
 COMMIT;

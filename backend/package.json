@@ -19,7 +19,8 @@
     "admin:create": "tsx src/scripts/create-superadmin.ts",
     "dev:seed-users": "tsx src/scripts/seed-demo-users.ts",
     "dev:seed-content": "tsx src/scripts/seed-demo-content.ts",
-    "dev:seed-official": "tsx src/scripts/seed-official-pilot-data.ts"
+    "dev:seed-official": "tsx src/scripts/seed-official-pilot-data.ts",
+    "dev:seed-e2e": "tsx src/scripts/seed-demo-e2e.ts"
   },
   "dependencies": {
     "@fastify/cookie": "^11.1.2",

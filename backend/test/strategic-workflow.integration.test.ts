@@ -133,6 +133,16 @@ test("alur kategori, indikator, OPD, publikasi, dan dashboard berjalan lintas pe
       payload: {},
     });
     assert.equal(submitted.statusCode, 200, submitted.body);
+    const bypassed = await app.inject({
+      method: "POST", url: `/api/v1/submissions/${submission.json().id}/actions/approve`, headers: bapperida,
+      payload: { notes: "Tidak boleh melewati review." },
+    });
+    assert.equal(bypassed.statusCode, 409, bypassed.body);
+    const reviewed = await app.inject({
+      method: "POST", url: `/api/v1/submissions/${submission.json().id}/actions/start-review`, headers: bapperida,
+      payload: {},
+    });
+    assert.equal(reviewed.statusCode, 200, reviewed.body);
     const approved = await app.inject({
       method: "POST", url: `/api/v1/submissions/${submission.json().id}/actions/approve`, headers: bapperida,
       payload: { notes: "Data lolos pengujian lintas peran." },

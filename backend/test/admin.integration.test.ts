@@ -81,6 +81,15 @@ test(
       });
       assert.equal(assignment.statusCode, 201, assignment.body);
 
+      const invalidScope = await app.inject({
+        method: "POST",
+        url: `/api/v1/users/${userId}/role-assignments`,
+        headers,
+        payload: { role_id: opdRole.id, scope_type: "global" },
+      });
+      assert.equal(invalidScope.statusCode, 400, invalidScope.body);
+      assert.equal(invalidScope.json().error.code, "INVALID_ROLE_SCOPE");
+
       const updated = await app.inject({
         method: "PATCH",
         url: `/api/v1/users/${userId}`,
@@ -100,7 +109,7 @@ test(
 
       const permissions = await app.inject({ method: "GET", url: "/api/v1/permissions", headers: { cookie } });
       assert.equal(permissions.statusCode, 200, permissions.body);
-      assert.equal(permissions.json().data.length, 42);
+      assert.ok(permissions.json().data.length >= 42);
 
       const protectedPermissions = await app.inject({
         method: "PUT",

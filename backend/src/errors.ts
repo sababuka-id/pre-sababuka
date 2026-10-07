@@ -1,5 +1,6 @@
 export type ApiErrorCode =
   | "VALIDATION_ERROR"
+  | "INVALID_ROLE_SCOPE"
   | "AUTH_REQUIRED"
   | "INVALID_CREDENTIALS"
   | "MFA_REQUIRED"

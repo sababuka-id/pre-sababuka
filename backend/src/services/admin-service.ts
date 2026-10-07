@@ -48,6 +48,30 @@ export interface RoleAssignmentInput {
   ends_at?: string | null;
 }
 
+export type RoleScope = RoleAssignmentInput["scope_type"];
+
+export const ROLE_SCOPE_RULES: Readonly<Record<string, readonly RoleScope[]>> = {
+  superadmin: ["global"],
+  bapperida: ["global"],
+  kominfo: ["global"],
+  opd: ["organization"],
+  pimpinan: ["published"],
+};
+
+export function allowedScopesForRole(roleCode: string): readonly RoleScope[] {
+  return ROLE_SCOPE_RULES[roleCode] ?? [];
+}
+
+export function assertRoleScope(roleCode: string, scopeType: RoleScope, organizationId?: string | null): void {
+  const allowed = allowedScopesForRole(roleCode);
+  if (!allowed.length || !allowed.includes(scopeType)) {
+    throw new ApiError(400, "INVALID_ROLE_SCOPE", `Scope ${scopeType} tidak sah untuk role ${roleCode}.`);
+  }
+  if ((scopeType === "organization") !== Boolean(organizationId)) {
+    throw new ApiError(400, "VALIDATION_ERROR", "organization_id wajib hanya untuk scope organization.");
+  }
+}
+
 const PROTECTED_SUPERADMIN_PERMISSIONS = [
   "system.configure",
   "organization.manage",
@@ -332,12 +356,12 @@ export class AdminService {
 
   async assignRole(auth: AuthContext, userId: string, input: RoleAssignmentInput, audit: AuditContext) {
     requireGlobal(auth);
-    if ((input.scope_type === "organization") !== Boolean(input.organization_id)) {
-      throw new ApiError(400, "VALIDATION_ERROR", "organization_id wajib hanya untuk scope organization.");
-    }
     const client = await this.db.connect();
     try {
       await client.query("BEGIN");
+      const role = await client.query<{ code: string }>("SELECT code FROM sababuka.roles WHERE id = $1 AND is_active = true", [input.role_id]);
+      if (!role.rows[0]) throw new ApiError(404, "NOT_FOUND", "Role tidak ditemukan.");
+      assertRoleScope(role.rows[0].code, input.scope_type, input.organization_id);
       const result = await client.query<QueryResultRow & Record<string, unknown>>(
         `INSERT INTO sababuka.user_role_assignments
            (user_id, role_id, organization_id, scope_type, ends_at, assigned_by)

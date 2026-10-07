@@ -135,7 +135,6 @@ function SubmissionDetailModal({ id, permissions, onClose, onChanged }: { id: st
   };
   const action = detail.data?.status === "draft" || detail.data?.status === "returned"
     ? (permissions.includes("submission.submit") ? "submit" : null)
-    : detail.data?.status === "submitted" && permissions.includes("submission.approve") ? "approve"
     : detail.data?.status === "submitted" && permissions.includes("submission.review") ? "start-review"
     : detail.data?.status === "under_review" && permissions.includes("submission.approve") ? "approve" : null;
 

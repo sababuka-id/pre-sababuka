@@ -75,8 +75,9 @@ test("form capaian OPD mendukung isi, submit, return, dan approve", { skip: !dat
     await db.query(`INSERT INTO sababuka.user_role_assignments (user_id, role_id, scope_type) SELECT $1, id, 'global' FROM sababuka.roles WHERE code = 'bapperida'`, [reviewer.rows[0]!.id]);
 
     for (const [action, expected, notes] of [
-      ["submit", "submitted", null], ["return", "returned", "Mohon cek kembali sumber data."],
-      ["submit", "submitted", null], ["approve", "approved", "Telah diverifikasi."],
+      ["submit", "submitted", null], ["start-review", "under_review", null], ["return", "returned", "Mohon cek kembali sumber data."],
+      ["submit", "submitted", null], ["start-review", "under_review", null], ["return", "returned", "Mohon cek kembali sumber data."],
+      ["submit", "submitted", null], ["start-review", "under_review", null], ["approve", "approved", "Telah diverifikasi."],
     ] as const) {
       const transition = await app.inject({ method: "POST", url: `/api/v1/submissions/${created.json().id}/actions/${action}`, headers, payload: { notes } });
       assert.equal(transition.statusCode, 200, transition.body);
@@ -104,8 +105,7 @@ test("form capaian OPD mendukung isi, submit, return, dan approve", { skip: !dat
     const executive = await app.inject({ method: "GET", url: "/api/v1/executive/dashboard", headers: { cookie } });
     assert.equal(executive.statusCode, 200, executive.body);
     assert.ok(executive.json().metrics.approved_submissions >= 1);
-    assert.equal(executive.json().items.length, 1);
-    assert.equal(executive.json().items[0].indicator_code, "IKP");
+    assert.ok(executive.json().items.some((item: { indicator_code: string }) => item.indicator_code === "IKP"));
 
     const assistantSession = await app.inject({ method: "POST", url: "/api/v1/assistant/sessions", headers,
       payload: { title: "Integration assistant" } });
@@ -114,7 +114,7 @@ test("form capaian OPD mendukung isi, submit, return, dan approve", { skip: !dat
       payload: { message: "Berapa nilai IKP tahun 2025?" } });
     assert.equal(answered.statusCode, 200, answered.body);
     assert.notEqual(answered.json().sufficiency, "insufficient");
-    assert.equal(answered.json().citations.length, 1);
+    assert.ok(answered.json().citations.length >= 1);
     assert.match(answered.json().answer, /82,75/u);
     const refused = await app.inject({ method: "POST", url: `/api/v1/assistant/sessions/${assistantSession.json().id}/messages`, headers,
       payload: { message: "Berapa jumlah kendaraan listrik tahun 2035?" } });

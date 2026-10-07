@@ -1,6 +1,7 @@
 import { AlertTriangle, Check, ChevronRight, Menu, Save, ShieldCheck } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { api, jsonBody } from "../api";
+import { useAuth } from "../auth";
 import { Badge, EmptyState, Notice, Spinner, useAsync } from "../components";
 import type { AdminMenuItem, Permission, Role } from "../types";
 
@@ -11,6 +12,8 @@ function riskTone(risk: Permission["risk_level"]): "neutral" | "warning" | "dang
 }
 
 export function RolesPage() {
+  const { user } = useAuth();
+  const canManage = user?.permissions.includes("role.manage") ?? false;
   const result = useAsync(() => Promise.all([
     api<{ data: Role[] }>("/roles"),
     api<{ data: Permission[] }>("/permissions"),
@@ -51,7 +54,7 @@ export function RolesPage() {
   if (result.error || !result.data) return <Notice tone="error">{result.error?.message ?? "Peran tidak dapat dimuat."}</Notice>;
   return <div className="access-layout">
     <aside className="role-list"><div className="role-list-head"><ShieldCheck /><span><strong>Daftar peran</strong><small>{result.data.roles.length} peran tersedia</small></span></div>{result.data.roles.map((role) => <button key={role.id} className={currentRole?.id === role.id ? "active" : ""} onClick={() => setRoleId(role.id)}><span><strong>{role.name}</strong><small>{role.code} - {role.permissions.length} hak akses</small></span><ChevronRight /></button>)}</aside>
-    <section className="panel permission-panel"><header className="panel-heading"><div><span className="eyebrow">Peran terpilih</span><h2>{currentRole?.name}</h2><p>{currentRole?.description}</p></div><div className="heading-actions">{currentRole?.is_system && <Badge tone="info">Peran sistem</Badge>}<button className="button primary" disabled={busy} onClick={save}><Save />{busy ? "Menyimpan…" : "Simpan hak akses"}</button></div></header>{message && <Notice tone={message.tone}>{message.text}</Notice>}<div className="permission-groups">{groups.map(([group, permissions]) => <section key={group}><header><strong>{group.replaceAll("_", " ")}</strong><span>{permissions.filter((permission) => selected.has(permission.id)).length}/{permissions.length} aktif</span></header><div>{permissions.map((permission) => <label className="permission-row" key={permission.id}><input type="checkbox" checked={selected.has(permission.id)} onChange={() => setSelected((current) => { const next = new Set(current); if (next.has(permission.id)) next.delete(permission.id); else next.add(permission.id); return next; })} /><span><strong>{permission.name}</strong><code>{permission.code}</code></span><Badge tone={riskTone(permission.risk_level)}>{permission.risk_level}</Badge></label>)}</div></section>)}</div></section>
+    <section className="panel permission-panel"><header className="panel-heading"><div><span className="eyebrow">Peran terpilih</span><h2>{currentRole?.name}</h2><p>{currentRole?.description}</p></div><div className="heading-actions">{currentRole?.is_system && <Badge tone="info">Peran sistem</Badge>}{canManage && <button className="button primary" disabled={busy} onClick={save}><Save />{busy ? "Menyimpan…" : "Simpan hak akses"}</button>}</div></header>{message && <Notice tone={message.tone}>{message.text}</Notice>}{!canManage && <Notice tone="warning">Anda dapat melihat hak akses, tetapi tidak dapat mengubahnya.</Notice>}<div className="permission-groups">{groups.map(([group, permissions]) => <section key={group}><header><strong>{group.replaceAll("_", " ")}</strong><span>{permissions.filter((permission) => selected.has(permission.id)).length}/{permissions.length} aktif</span></header><div>{permissions.map((permission) => <label className="permission-row" key={permission.id}><input type="checkbox" disabled={!canManage} checked={selected.has(permission.id)} onChange={() => setSelected((current) => { const next = new Set(current); if (next.has(permission.id)) next.delete(permission.id); else next.add(permission.id); return next; })} /><span><strong>{permission.name}</strong><code>{permission.code}</code></span><Badge tone={riskTone(permission.risk_level)}>{permission.risk_level}</Badge></label>)}</div></section>)}</div></section>
   </div>;
 }
 

@@ -1,6 +1,7 @@
 import { Check, Copy, KeyRound, Plus, Search, ShieldPlus, UserRound, Users } from "lucide-react";
 import { useState, type FormEvent } from "react";
 import { api, jsonBody } from "../api";
+import { useAuth } from "../auth";
 import { Badge, EmptyState, formatDate, Modal, Notice, Pagination, Spinner, useAsync } from "../components";
 import type { Organization, PageResponse, Role, UserSummary } from "../types";
 
@@ -11,7 +12,19 @@ function statusTone(status: UserSummary["status"]): "success" | "warning" | "dan
   return "neutral";
 }
 
+type RoleScope = "global" | "organization" | "self" | "published";
+const roleScopeRules: Record<string, readonly RoleScope[]> = {
+  superadmin: ["global"],
+  bapperida: ["global"],
+  kominfo: ["global"],
+  opd: ["organization"],
+  pimpinan: ["published"],
+};
+
 export function UsersPage() {
+  const { user } = useAuth();
+  const canCreate = user?.permissions.includes("user.create") ?? false;
+  const canAssign = user?.permissions.includes("user.assign_role") ?? false;
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState("");
   const [query, setQuery] = useState("");
@@ -25,9 +38,9 @@ export function UsersPage() {
   ]).then(([organizations, roles]) => ({ organizations: organizations.data, roles: roles.data })), []);
 
   return <>
-    <div className="toolbar"><form className="search-box" role="search" onSubmit={(event) => { event.preventDefault(); setPage(1); setQuery(search); }}><Search aria-hidden /><input aria-label="Cari pengguna" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Cari nama, email, atau username" /><button className="button secondary">Cari</button></form><button className="button primary" onClick={() => setCreateOpen(true)}><Plus />Undang pengguna</button></div>
+    <div className="toolbar"><form className="search-box" role="search" onSubmit={(event) => { event.preventDefault(); setPage(1); setQuery(search); }}><Search aria-hidden /><input aria-label="Cari pengguna" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Cari nama, email, atau username" /><button className="button secondary">Cari</button></form>{canCreate && <button className="button primary" onClick={() => setCreateOpen(true)}><Plus />Undang pengguna</button>}</div>
     {(users.error || references.error) && <Notice tone="error">{users.error?.message ?? references.error?.message}</Notice>}
-    <section className="panel table-panel">{users.loading ? <div className="panel-loading"><Spinner /></div> : !users.data?.data.length ? <EmptyState title="Belum ada pengguna">Undang pengguna pertama dan tetapkan peran sesuai tugasnya.</EmptyState> : <div className="table-scroll"><table><thead><tr><th>Pengguna</th><th>Organisasi utama</th><th>Status</th><th>MFA</th><th>Login terakhir</th><th>Tindakan</th></tr></thead><tbody>{users.data.data.map((user) => <tr key={user.id}><td><div className="identity-cell"><span className="avatar small">{user.full_name.split(/\s+/u).slice(0, 2).map((part) => part[0]).join("")}</span><span><strong>{user.full_name}</strong><small>{user.email}</small></span></div></td><td><span className="cell-main">{user.organization_name ?? "-"}</span><small>{user.organization_code}</small></td><td><Badge tone={statusTone(user.status)}>{user.status}</Badge></td><td><Badge tone={user.mfa_required ? "info" : "neutral"}>{user.mfa_required ? "Wajib" : "Belum wajib"}</Badge></td><td>{formatDate(user.last_login_at)}</td><td><button className="button compact secondary" onClick={() => setAssignUser(user)}><ShieldPlus />Tetapkan peran</button></td></tr>)}</tbody></table></div>}
+    <section className="panel table-panel">{users.loading ? <div className="panel-loading"><Spinner /></div> : !users.data?.data.length ? <EmptyState title="Belum ada pengguna">{canCreate ? "Undang pengguna pertama dan tetapkan peran sesuai tugasnya." : "Belum ada pengguna dalam lingkup yang dapat Anda lihat."}</EmptyState> : <div className="table-scroll"><table><thead><tr><th>Pengguna</th><th>Organisasi utama</th><th>Status</th><th>MFA</th><th>Login terakhir</th>{canAssign && <th>Tindakan</th>}</tr></thead><tbody>{users.data.data.map((user) => <tr key={user.id}><td><div className="identity-cell"><span className="avatar small">{user.full_name.split(/\s+/u).slice(0, 2).map((part) => part[0]).join("")}</span><span><strong>{user.full_name}</strong><small>{user.email}</small></span></div></td><td><span className="cell-main">{user.organization_name ?? "-"}</span><small>{user.organization_code}</small></td><td><Badge tone={statusTone(user.status)}>{user.status}</Badge></td><td><Badge tone={user.mfa_required ? "info" : "neutral"}>{user.mfa_required ? "Wajib" : "Belum wajib"}</Badge></td><td>{formatDate(user.last_login_at)}</td>{canAssign && <td><button className="button compact secondary" onClick={() => setAssignUser(user)}><ShieldPlus />Tetapkan peran</button></td>}</tr>)}</tbody></table></div>}
       {users.data && <Pagination page={users.data.meta.page} totalPages={users.data.meta.total_pages} onChange={setPage} />}</section>
     {createOpen && references.data && <UserInvitationForm organizations={references.data.organizations} onClose={() => setCreateOpen(false)} onCreated={(created) => { setCreateOpen(false); setInvitation(created); users.reload(); }} />}
     {assignUser && references.data && <RoleAssignmentForm user={assignUser} roles={references.data.roles} organizations={references.data.organizations} onClose={() => setAssignUser(null)} onSaved={() => { setAssignUser(null); users.reload(); }} />}
@@ -62,17 +75,20 @@ function InvitationResult({ invitation, onClose }: { invitation: { name: string;
 
 function RoleAssignmentForm({ user, roles, organizations, onClose, onSaved }: { user: UserSummary; roles: Role[]; organizations: Organization[]; onClose(): void; onSaved(): void }) {
   const [roleId, setRoleId] = useState(roles.find((role) => role.code !== "superadmin")?.id ?? roles[0]?.id ?? "");
-  const [scope, setScope] = useState<"global" | "organization" | "self" | "published">("organization");
+  const selectedRole = roles.find((role) => role.id === roleId);
+  const allowedScopes = selectedRole ? roleScopeRules[selectedRole.code] ?? [] : [];
+  const [scope, setScope] = useState<RoleScope>(allowedScopes[0] ?? "organization");
   const [organizationId, setOrganizationId] = useState(user.organization_id ?? organizations[0]?.id ?? "");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   async function submit(event: FormEvent) {
     event.preventDefault(); setBusy(true); setError(null);
     try {
+      if (!selectedRole || !allowedScopes.includes(scope)) throw new Error("Role tersebut belum memiliki aturan scope yang sah.");
       await api(`/users/${user.id}/role-assignments`, { method: "POST", mutation: true, body: jsonBody({ role_id: roleId, scope_type: scope, organization_id: scope === "organization" ? organizationId : null }) });
       onSaved();
     } catch (reason) { setError(reason instanceof Error ? reason.message : "Peran gagal ditetapkan."); }
     finally { setBusy(false); }
   }
-  return <Modal title={`Tetapkan peran - ${user.full_name}`} onClose={onClose}>{error && <Notice tone="error">{error}</Notice>}<form className="form-stack" onSubmit={submit}><label className="field"><span>Peran</span><select value={roleId} onChange={(event) => setRoleId(event.target.value)}>{roles.map((role) => <option key={role.id} value={role.id}>{role.name} ({role.code})</option>)}</select></label><label className="field"><span>Lingkup akses</span><select value={scope} onChange={(event) => setScope(event.target.value as typeof scope)}><option value="organization">Organisasi/OPD</option><option value="global">Global</option><option value="self">Data sendiri</option><option value="published">Data terpublikasi</option></select></label>{scope === "organization" && <label className="field"><span>Organisasi</span><select value={organizationId} onChange={(event) => setOrganizationId(event.target.value)}>{organizations.map((item) => <option key={item.id} value={item.id}>{item.code} - {item.name}</option>)}</select></label>}<Notice tone="warning">Penetapan peran mengubah kewenangan pengguna dan dicatat sebagai audit berisiko tinggi.</Notice><footer className="modal-actions"><button type="button" className="button secondary" onClick={onClose}>Batal</button><button className="button primary" disabled={busy}><KeyRound />{busy ? "Menyimpan…" : "Tetapkan peran"}</button></footer></form></Modal>;
+  return <Modal title={`Tetapkan peran - ${user.full_name}`} onClose={onClose}>{error && <Notice tone="error">{error}</Notice>}<form className="form-stack" onSubmit={submit}><label className="field"><span>Peran</span><select value={roleId} onChange={(event) => { const nextRoleId = event.target.value; const nextRole = roles.find((role) => role.id === nextRoleId); setRoleId(nextRoleId); setScope(roleScopeRules[nextRole?.code ?? ""]?.[0] ?? "organization"); }}>{roles.map((role) => <option key={role.id} value={role.id}>{role.name} ({role.code})</option>)}</select></label><label className="field"><span>Lingkup akses</span><select value={scope} onChange={(event) => setScope(event.target.value as RoleScope)}>{allowedScopes.map((item) => <option value={item} key={item}>{item === "organization" ? "Organisasi/OPD" : item === "published" ? "Data terpublikasi" : item === "global" ? "Global" : "Data sendiri"}</option>)}</select></label>{scope === "organization" && <label className="field"><span>Organisasi</span><select value={organizationId} onChange={(event) => setOrganizationId(event.target.value)}>{organizations.map((item) => <option key={item.id} value={item.id}>{item.code} - {item.name}</option>)}</select></label>}{!allowedScopes.length && <Notice tone="error">Role ini belum memiliki kebijakan scope dan tidak dapat ditetapkan.</Notice>}<Notice tone="warning">Penetapan peran mengubah kewenangan pengguna dan dicatat sebagai audit berisiko tinggi.</Notice><footer className="modal-actions"><button type="button" className="button secondary" onClick={onClose}>Batal</button><button className="button primary" disabled={busy || !allowedScopes.length}><KeyRound />{busy ? "Menyimpan…" : "Tetapkan peran"}</button></footer></form></Modal>;
 }

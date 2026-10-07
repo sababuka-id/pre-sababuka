@@ -291,8 +291,8 @@ export class SubmissionService {
     const transitions: Record<SubmissionAction, { from: string[]; to: string }> = {
       submit: { from: ["draft", "returned"], to: "submitted" },
       "start-review": { from: ["submitted"], to: "under_review" },
-      return: { from: ["submitted", "under_review"], to: "returned" },
-      approve: { from: ["submitted", "under_review"], to: "approved" },
+      return: { from: ["under_review"], to: "returned" },
+      approve: { from: ["under_review"], to: "approved" },
     };
     const transition = transitions[action];
     if (!transition.from.includes(from)) throw new ApiError(409, "CONFLICT", `Aksi ${action} tidak berlaku dari status ${from}.`);
