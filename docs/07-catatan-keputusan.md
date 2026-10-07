@@ -15,7 +15,7 @@ Dokumen ini mencegah keputusan penting hilang di percakapan. Setiap keputusan me
 
 ## ADR-001 - Satu backend API untuk seluruh ruang pengguna
 
-**Status:** diusulkan kuat berdasarkan dokumen rancang bangun.
+**Status:** diterima sebagai baseline MVP v1 pada 2026-09-29.
 
 **Keputusan yang diusulkan:** Ringkasan Pimpinan, ruang kurasi BAPPERIDA, ruang integrasi Diskominfosantik, Kotak Konfirmasi Data OPD, dan Asisten Data memakai backend API, data canonical, metadata, serta aturan otorisasi yang sama. WhatsApp, Android, atau kanal lain hanya ditambahkan setelah sistem inti stabil dan tetap menggunakan kontrol yang sama.
 
@@ -57,17 +57,15 @@ Dokumen ini mencegah keputusan penting hilang di percakapan. Setiap keputusan me
 
 ## ADR-003 - Fondasi teknologi aplikasi
 
-**Status:** belum diputuskan.
+**Status:** diterima sebagai baseline implementasi pada 2026-09-29.
 
-Pilihan akan dibandingkan pada langkah berikutnya berdasarkan:
+**Keputusan:** PostgreSQL 18/PostGIS digunakan untuk basis data canonical, metadata, workflow, publikasi, dan audit. Kontrak HTTP menggunakan OpenAPI 3.1 pada base path `/api/v1`. Service backend menggunakan TypeScript, Node.js 22, Fastify 5, dan pnpm yang versinya dikunci pada repository.
 
-- kemampuan tim;
-- dukungan server Pemkab;
-- kecepatan pengembangan;
-- biaya operasional;
-- kebutuhan scraper dan analitik;
-- keamanan serta kemudahan serah terima;
-- dukungan jangka panjang dan ketergantungan vendor.
+**Alasan:** PostgreSQL/PostGIS telah tersedia pada VPS dan sesuai untuk data terstruktur maupun geospasial. TypeScript memberi kontrak tipe yang jelas, sedangkan Fastify menyediakan fondasi HTTP yang ringan, modular, dan mudah diuji. Seluruh komponen dapat diserahterimakan tanpa ketergantungan layanan proprietary.
+
+**Konsekuensi positif:** kontrak data lebih mudah dijaga dari API sampai implementasi, satu runtime dapat dipakai untuk backend dan tooling, serta pengujian route dapat dilakukan tanpa membuka port jaringan.
+
+**Konsekuensi negatif:** modul native seperti Argon2 membutuhkan toolchain build pada server, dan analitik Python di masa depan tetap perlu dipisahkan sebagai worker bila kebutuhannya meningkat.
 
 ## Template keputusan baru
 

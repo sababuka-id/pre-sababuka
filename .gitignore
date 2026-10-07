@@ -2,6 +2,16 @@
 .claude/
 .codex-*/
 tmp/
+.pnpm-store/
+.qa/
+.slide-build/
+.tmp/
+
+# Local secrets
+.env
+.env.*
+!.env.example
+!**/.env.example
 
 # Dependencies and generated frontend output
 node_modules/

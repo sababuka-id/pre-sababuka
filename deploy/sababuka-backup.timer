@@ -1,0 +1,11 @@
+[Unit]
+Description=Jadwal backup harian database SABABUKA
+
+[Timer]
+OnCalendar=*-*-* 02:15:00 Asia/Jakarta
+Persistent=true
+RandomizedDelaySec=10m
+Unit=sababuka-backup.service
+
+[Install]
+WantedBy=timers.target

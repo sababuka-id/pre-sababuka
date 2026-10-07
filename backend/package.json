@@ -1,0 +1,39 @@
+{
+  "name": "@sababuka/backend",
+  "version": "0.1.0",
+  "private": true,
+  "packageManager": "pnpm@11.19.0",
+  "type": "module",
+  "description": "Backend API SABABUKA Bersinar",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "dev": "tsx watch src/server.ts",
+    "build": "tsc -p tsconfig.json",
+    "start": "node dist/src/server.js",
+    "check": "tsc --noEmit -p tsconfig.json && pnpm test",
+    "test": "tsx --test test/*.test.ts",
+    "test:integration": "tsx --test test/*.integration.test.ts",
+    "db:migrate": "tsx src/scripts/migrate.ts",
+    "admin:create": "tsx src/scripts/create-superadmin.ts",
+    "dev:seed-users": "tsx src/scripts/seed-demo-users.ts",
+    "dev:seed-content": "tsx src/scripts/seed-demo-content.ts",
+    "dev:seed-official": "tsx src/scripts/seed-official-pilot-data.ts"
+  },
+  "dependencies": {
+    "@fastify/cookie": "^11.1.2",
+    "@fastify/helmet": "^13.1.1",
+    "@fastify/multipart": "9.3.0",
+    "@fastify/rate-limit": "^11.2.0",
+    "argon2": "^0.45.1",
+    "fastify": "^5.12.5",
+    "pg": "^8.23.0"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.3",
+    "@types/pg": "^8.23.1",
+    "tsx": "^4.23.15",
+    "typescript": "^7.0.2"
+  }
+}

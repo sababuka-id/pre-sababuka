@@ -1,0 +1,63 @@
+import type { FastifyInstance } from "fastify";
+import { requirePermission } from "../plugins/authentication.js";
+
+const uuid = { type: "string", format: "uuid" } as const;
+
+export async function operationRoutes(app: FastifyInstance): Promise<void> {
+  app.get<{ Querystring: { period_id?: string } }>("/operations/dashboard", {
+    schema: {
+      querystring: {
+        type: "object",
+        additionalProperties: false,
+        properties: { period_id: uuid },
+      },
+    },
+  }, async (request) => {
+    requirePermission(request, "submission.view");
+    const auth = request.auth!;
+    const global = auth.user.roles.some((role) => role.scope_type === "global");
+    const organizations = [...new Set([...auth.user.organizations.map((item) => item.id), ...auth.user.roles.flatMap((role) => role.organization_id ? [role.organization_id] : [])])];
+    const params = [global, organizations, request.query.period_id ?? null] as const;
+    const [status, indicators, organizationsSummary, recent] = await Promise.all([
+      app.db.query<{ status: string; count: number }>(
+        `SELECT b.status, count(*)::int AS count FROM sababuka.data_batches b
+         JOIN sababuka.dataset_versions dv ON dv.id = b.dataset_version_id JOIN sababuka.datasets d ON d.id = dv.dataset_id
+         WHERE d.code = 'SABABUKA.CAPAIAN_MANUAL' AND ($1::boolean OR b.organization_id = ANY($2::uuid[]))
+           AND ($3::uuid IS NULL OR b.reporting_period_id = $3) GROUP BY b.status`, params),
+      app.db.query<{ count: number }>(
+        `SELECT count(DISTINCT iv.id)::int AS count FROM sababuka.indicator_versions iv JOIN sababuka.indicators i ON i.id = iv.indicator_id
+         WHERE iv.status = 'active' AND ($1::boolean OR i.owner_organization_id = ANY($2::uuid[]) OR EXISTS
+           (SELECT 1 FROM sababuka.indicator_organizations io WHERE io.indicator_version_id = iv.id AND io.organization_id = ANY($2::uuid[])))`, [global, organizations]),
+      app.db.query(
+        `SELECT o.id::text AS organization_id, o.code, COALESCE(o.short_name, o.name) AS organization_name,
+                count(b.id)::int AS total_forms,
+                count(b.id) FILTER (WHERE b.status IN ('submitted','under_review'))::int AS pending_review,
+                count(b.id) FILTER (WHERE b.status = 'returned')::int AS returned,
+                count(b.id) FILTER (WHERE b.status = 'approved')::int AS approved
+         FROM sababuka.organizations o LEFT JOIN sababuka.data_batches b ON b.organization_id = o.id
+           AND ($3::uuid IS NULL OR b.reporting_period_id = $3)
+         WHERE o.archived_at IS NULL AND ($1::boolean OR o.id = ANY($2::uuid[]))
+         GROUP BY o.id ORDER BY pending_review DESC, organization_name LIMIT 50`, params),
+      app.db.query(
+        `SELECT b.id::text, o.code AS organization_code, COALESCE(o.short_name,o.name) AS organization_name,
+                p.label AS period_label, b.status, b.row_count, b.updated_at::text
+         FROM sababuka.data_batches b JOIN sababuka.organizations o ON o.id = b.organization_id
+         LEFT JOIN sababuka.periods p ON p.id = b.reporting_period_id
+         WHERE ($1::boolean OR b.organization_id = ANY($2::uuid[])) AND ($3::uuid IS NULL OR b.reporting_period_id = $3)
+         ORDER BY b.updated_at DESC LIMIT 10`, params),
+    ]);
+    const byStatus = Object.fromEntries(status.rows.map((row) => [row.status, row.count]));
+    return {
+      generated_at: new Date().toISOString(),
+      metrics: {
+        active_indicators: indicators.rows[0]?.count ?? 0,
+        draft: byStatus.draft ?? 0,
+        pending_review: (byStatus.submitted ?? 0) + (byStatus.under_review ?? 0),
+        returned: byStatus.returned ?? 0,
+        approved: byStatus.approved ?? 0,
+      },
+      organizations: organizationsSummary.rows,
+      recent: recent.rows,
+    };
+  });
+}

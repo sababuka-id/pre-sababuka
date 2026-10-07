@@ -1,0 +1,16 @@
+[Unit]
+Description=Backup database PostgreSQL SABABUKA
+After=postgresql.service
+Requires=postgresql.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/sababuka-backup-postgres
+User=root
+Group=root
+PrivateTmp=true
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/backups/sababuka
+

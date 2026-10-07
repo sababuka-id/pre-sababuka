@@ -1,0 +1,2185 @@
+openapi: 3.1.0
+info:
+  title: SABABUKA Bersinar API
+  version: 1.0.0-draft
+  summary: Kontrak API MVP untuk tata kelola data Kabupaten Kapuas
+  description: |
+    API tunggal untuk ruang Superadmin, BAPPERIDA, Kominfo, OPD, Pimpinan,
+    dashboard eksekutif, dan Asisten AI. Semua operasi dibatasi oleh permission,
+    lingkup organisasi, status workflow, dan feature flag.
+  contact:
+    name: Pengelola SABABUKA Bersinar
+  license:
+    name: Penggunaan Internal Pemerintah Kabupaten Kapuas
+    identifier: LicenseRef-SABABUKA-Internal
+servers:
+  - url: http://127.0.0.1:3001/api/v1
+    description: Local development (aktif saat ini)
+  - url: https://dev.sababuka.com/api/v1
+    description: Development (belum diaktifkan)
+  - url: https://sababuka.com/api/v1
+    description: Production (setelah disetujui)
+tags:
+  - name: System
+    description: Kesehatan layanan dan konfigurasi sistem.
+  - name: Authentication
+    description: Login, session, undangan, password, dan MFA.
+  - name: Identity
+    description: Organisasi, pengguna, role, permission, dan menu.
+  - name: Governance
+    description: Fokus kebijakan, kategori, indikator, serta referensi tata kelola.
+  - name: Catalog
+    description: Dataset, sumber data, metadata, dan observasi.
+  - name: Submissions
+    description: Pengiriman, validasi, konfirmasi, dan review data OPD.
+  - name: Publications
+    description: Penyusunan dan aktivasi publikasi resmi.
+  - name: Executive
+    description: Ringkasan terkurasi untuk pimpinan.
+  - name: Operations
+    description: Ringkasan kerja OPD, Bapperida, dan Kominfo sesuai scope.
+  - name: Assistant
+    description: Asisten AI berbasis data yang telah dipublikasikan.
+  - name: Audit
+    description: Penelusuran dan ekspor jejak perubahan.
+security:
+  - sessionCookie: []
+paths:
+  /health:
+    get:
+      tags: [System]
+      operationId: getHealth
+      summary: Memeriksa kesehatan layanan
+      security: []
+      responses:
+        "200":
+          description: Layanan sehat
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthResponse"
+        "503":
+          $ref: "#/components/responses/ServiceUnavailable"
+        "429": {$ref: "#/components/responses/RateLimited"}
+  /auth/login:
+    post:
+      tags: [Authentication]
+      operationId: login
+      summary: Membuat sesi pengguna
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginRequest"
+      responses:
+        "200":
+          description: Login berhasil; cookie sesi dikirim melalui Set-Cookie
+          headers:
+            Set-Cookie:
+              schema: {type: string}
+              description: Cookie sesi HttpOnly, Secure, SameSite=Lax
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SessionResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+  /auth/logout:
+    post:
+      tags: [Authentication]
+      operationId: logout
+      summary: Mengakhiri sesi aktif
+      parameters:
+        - $ref: "#/components/parameters/CsrfToken"
+      responses:
+        "204": {description: Sesi diakhiri}
+        "401": {$ref: "#/components/responses/Unauthorized"}
+  /auth/invitations/{token}:
+    get:
+      tags: [Authentication]
+      operationId: inspectInvitation
+      summary: Memeriksa undangan pengguna yang masih berlaku
+      security: []
+      parameters:
+        - $ref: "#/components/parameters/InvitationToken"
+      responses:
+        "200":
+          description: Informasi minimum undangan
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/InvitationInfo"}
+        "404": {$ref: "#/components/responses/NotFound"}
+  /auth/invitations/{token}/mfa/setup:
+    post:
+      tags: [Authentication]
+      operationId: setupInvitationMfa
+      summary: Membuat secret TOTP untuk pengguna undangan
+      security: []
+      parameters:
+        - $ref: "#/components/parameters/InvitationToken"
+      responses:
+        "200":
+          description: Secret dan URI provisioning Authenticator; hanya ditampilkan pada tahap ini
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/TotpSetupResponse"}
+        "404": {$ref: "#/components/responses/NotFound"}
+        "429": {$ref: "#/components/responses/RateLimited"}
+  /auth/invitations/{token}/accept:
+    post:
+      tags: [Authentication]
+      operationId: acceptInvitation
+      summary: Mengaktifkan akun dengan password dan verifikasi TOTP
+      security: []
+      parameters:
+        - $ref: "#/components/parameters/InvitationToken"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: "#/components/schemas/InvitationAcceptInput"}
+      responses:
+        "200":
+          description: Akun aktif; recovery code hanya dikirim sekali
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/InvitationAcceptResponse"}
+        "400": {$ref: "#/components/responses/ValidationError"}
+        "401": {$ref: "#/components/responses/Unauthorized"}
+        "404": {$ref: "#/components/responses/NotFound"}
+        "409": {$ref: "#/components/responses/Conflict"}
+        "429": {$ref: "#/components/responses/RateLimited"}
+  /me:
+    get:
+      tags: [Authentication]
+      operationId: getCurrentUser
+      summary: Mendapatkan identitas, role, scope, dan permission efektif
+      responses:
+        "200":
+          description: Konteks pengguna aktif
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CurrentUser"
+        "401": {$ref: "#/components/responses/Unauthorized"}
+  /me/menu:
+    get:
+      tags: [Authentication]
+      operationId: getCurrentMenu
+      summary: Mendapatkan menu efektif pengguna
+      responses:
+        "200":
+          description: Menu yang sudah difilter oleh role, permission, dan feature flag
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: array
+                    items: {$ref: "#/components/schemas/MenuItem"}
+        "401": {$ref: "#/components/responses/Unauthorized"}
+  /me/mfa/totp/setup:
+    post:
+      tags: [Authentication]
+      operationId: setupCurrentUserMfa
+      summary: Memulai enrollment TOTP untuk pengguna aktif
+      parameters:
+        - $ref: "#/components/parameters/CsrfToken"
+      responses:
+        "200":
+          description: Secret dan URI provisioning Authenticator
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/TotpSetupResponse"}
+        "401": {$ref: "#/components/responses/Unauthorized"}
+        "409": {$ref: "#/components/responses/Conflict"}
+  /me/mfa/totp/confirm:
+    post:
+      tags: [Authentication]
+      operationId: confirmCurrentUserMfa
+      summary: Memverifikasi enrollment TOTP dan menghasilkan recovery code
+      parameters:
+        - $ref: "#/components/parameters/CsrfToken"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: "#/components/schemas/MfaConfirmInput"}
+      responses:
+        "200":
+          description: MFA aktif; recovery code hanya dikirim sekali
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/RecoveryCodesResponse"}
+        "400": {$ref: "#/components/responses/ValidationError"}
+        "401": {$ref: "#/components/responses/Unauthorized"}
+        "404": {$ref: "#/components/responses/NotFound"}
+  /organizations:
+    get:
+      tags: [Identity]
+      operationId: listOrganizations
+      summary: Daftar organisasi
+      description: Membutuhkan `organization.view`.
+      parameters:
+        - $ref: "#/components/parameters/Page"
+        - $ref: "#/components/parameters/PageSize"
+        - $ref: "#/components/parameters/Search"
+        - name: active
+          in: query
+          schema: {type: boolean}
+      responses:
+        "200":
+          description: Daftar organisasi sesuai scope
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OrganizationPage"
+        "403": {$ref: "#/components/responses/Forbidden"}
+    post:
+      tags: [Identity]
+      operationId: createOrganization
+      summary: Membuat organisasi
+      description: Membutuhkan `organization.manage`.
+      parameters:
+        - $ref: "#/components/parameters/CsrfToken"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: "#/components/schemas/OrganizationInput"}
+      responses:
+        "201":
+          description: Organisasi dibuat
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/Organization"}
+        "400": {$ref: "#/components/responses/ValidationError"}
+        "403": {$ref: "#/components/responses/Forbidden"}
+        "409": {$ref: "#/components/responses/Conflict"}
+  /users:
+    get:
+      tags: [Identity]
+      operationId: listUsers
+      summary: Daftar pengguna
+      description: Membutuhkan `user.view`; hasil mengikuti scope organisasi.
+      parameters:
+        - $ref: "#/components/parameters/Page"
+        - $ref: "#/components/parameters/PageSize"
+        - $ref: "#/components/parameters/Search"
+        - name: organization_id
+          in: query
+          schema: {$ref: "#/components/schemas/Uuid"}
+      responses:
+        "200":
+          description: Daftar pengguna
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/PageEnvelope"
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items: {$ref: "#/components/schemas/UserSummary"}
+        "403": {$ref: "#/components/responses/Forbidden"}
+    post:
+      tags: [Identity]
+      operationId: createUser
+      summary: Membuat undangan pengguna
+      description: Membutuhkan `user.create`. Pembuatan tidak otomatis memberi role.
+      parameters:
+        - $ref: "#/components/parameters/CsrfToken"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: "#/components/schemas/UserCreateInput"}
+      responses:
+        "201":
+          description: Pengguna dibuat dengan status invited
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/UserInvitationCreated"}
+        "400": {$ref: "#/components/responses/ValidationError"}
+        "403": {$ref: "#/components/responses/Forbidden"}
+        "409": {$ref: "#/components/responses/Conflict"}
+  /users/{user_id}/role-assignments:
+    post:
+      tags: [Identity]
+      operationId: assignUserRole
+      summary: Menetapkan role dan scope pengguna
+      description: Membutuhkan `user.assign_role`; dicatat sebagai audit berisiko tinggi.
+      parameters:
+        - $ref: "#/components/parameters/UserId"
+        - $ref: "#/components/parameters/CsrfToken"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: "#/components/schemas/RoleAssignmentInput"}
+      responses:
+        "201": {description: Assignment dibuat}
+        "400": {$ref: "#/components/responses/ValidationError"}
+        "403": {$ref: "#/components/responses/Forbidden"}
+        "404": {$ref: "#/components/responses/NotFound"}
+  /users/{user_id}:
+    patch:
+      tags: [Identity]
+      operationId: updateUser
+      summary: Mengubah profil, status, atau kewajiban MFA pengguna
+      description: Membutuhkan `user.update`; perubahan status membutuhkan `user.activate`.
+      parameters:
+        - $ref: "#/components/parameters/UserId"
+        - $ref: "#/components/parameters/CsrfToken"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: "#/components/schemas/UserUpdateInput"}
+      responses:
+        "200":
+          description: Pengguna diperbarui
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/UserSummary"}
+        "400": {$ref: "#/components/responses/ValidationError"}
+        "403": {$ref: "#/components/responses/Forbidden"}
+        "404": {$ref: "#/components/responses/NotFound"}
+        "409": {$ref: "#/components/responses/Conflict"}
+  /roles:
+    get:
+      tags: [Identity]
+      operationId: listRoles
+      summary: Daftar role beserta permission
+      description: Membutuhkan `role.view`.
+      responses:
+        "200":
+          description: Daftar role
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: array
+                    items: {$ref: "#/components/schemas/Role"}
+        "403": {$ref: "#/components/responses/Forbidden"}
+  /permissions:
+    get:
+      tags: [Identity]
+      operationId: listPermissions
+      summary: Daftar permission yang tersedia
+      description: Membutuhkan `role.view`.
+      responses:
+        "200":
+          description: Daftar permission
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: array
+                    items: {$ref: "#/components/schemas/Permission"}
+        "403": {$ref: "#/components/responses/Forbidden"}
+  /roles/{role_id}/permissions:
+    put:
+      tags: [Identity]
+      operationId: replaceRolePermissions
+      summary: Mengganti permission efektif sebuah role
+      description: Membutuhkan `role.manage`; permission inti Superadmin dilindungi dari penghapusan.
+      parameters:
+        - $ref: "#/components/parameters/RoleId"
+        - $ref: "#/components/parameters/CsrfToken"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: "#/components/schemas/RolePermissionsInput"}
+      responses:
+        "200": {description: Permission role diperbarui}
+        "400": {$ref: "#/components/responses/ValidationError"}
+        "403": {$ref: "#/components/responses/Forbidden"}
+        "404": {$ref: "#/components/responses/NotFound"}
+        "409": {$ref: "#/components/responses/Conflict"}
+  /menus:
+    get:
+      tags: [Identity]
+      operationId: listMenus
+      summary: Daftar seluruh menu yang dapat dikonfigurasi
+      description: Membutuhkan `menu.manage`.
+      responses:
+        "200":
+          description: Daftar menu
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: array
+                    items: {$ref: "#/components/schemas/AdminMenuItem"}
+        "403": {$ref: "#/components/responses/Forbidden"}
+  /roles/{role_id}/menus:
+    get:
+      tags: [Identity]
+      operationId: getRoleMenus
+      summary: Mendapatkan menu yang tampil untuk sebuah role
+      description: Membutuhkan `menu.manage`.
+      parameters:
+        - $ref: "#/components/parameters/RoleId"
+      responses:
+        "200":
+          description: Identitas menu aktif untuk role
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [role_id, menu_ids, menu_codes]
+                properties:
+                  role_id: {type: string, format: uuid}
+                  menu_ids:
+                    type: array
+                    items: {type: string, format: uuid}
+                  menu_codes:
+                    type: array
+                    items: {type: string}
+        "403": {$ref: "#/components/responses/Forbidden"}
+        "404": {$ref: "#/components/responses/NotFound"}
+    put:
+      tags: [Identity]
+      operationId: replaceRoleMenus
+      summary: Mengganti menu yang tampil untuk sebuah role
+      description: Membutuhkan `menu.manage`; parent menu ditambahkan otomatis dan menu inti Superadmin dilindungi.
+      parameters:
+        - $ref: "#/components/parameters/RoleId"
+        - $ref: "#/components/parameters/CsrfToken"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: "#/components/schemas/RoleMenusInput"}
+      responses:
+        "200": {description: Menu role diperbarui}
+        "400": {$ref: "#/components/responses/ValidationError"}
+        "403": {$ref: "#/components/responses/Forbidden"}
+        "404": {$ref: "#/components/responses/NotFound"}
+        "409": {$ref: "#/components/responses/Conflict"}
+  /system/configuration:
+    get:
+      tags: [System]
+      operationId: getSystemConfiguration
+      summary: Mendapatkan pengaturan nonrahasia dan feature flag
+      description: Membutuhkan `system.configure`.
+      responses:
+        "200":
+          description: Konfigurasi sistem
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/SystemConfiguration"}
+        "403": {$ref: "#/components/responses/Forbidden"}
+  /system/settings/{key}:
+    put:
+      tags: [System]
+      operationId: upsertSystemSetting
+      summary: Membuat atau memperbarui pengaturan nonrahasia
+      description: Membutuhkan `system.configure`; secret tidak disimpan di tabel pengaturan ini.
+      parameters:
+        - name: key
+          in: path
+          required: true
+          schema: {type: string, pattern: "^[a-z][a-z0-9._-]*$", maxLength: 120}
+        - $ref: "#/components/parameters/CsrfToken"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: "#/components/schemas/SystemSettingInput"}
+      responses:
+        "200": {description: Pengaturan disimpan}
+        "400": {$ref: "#/components/responses/ValidationError"}
+        "403": {$ref: "#/components/responses/Forbidden"}
+  /system/feature-flags/{code}:
+    put:
+      tags: [System]
+      operationId: updateFeatureFlag
+      summary: Mengubah status dan konfigurasi feature flag
+      description: Membutuhkan `system.feature_manage`.
+      parameters:
+        - name: code
+          in: path
+          required: true
+          schema: {type: string, pattern: "^[a-z][a-z0-9._-]*$", maxLength: 80}
+        - $ref: "#/components/parameters/CsrfToken"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: "#/components/schemas/FeatureFlagInput"}
+      responses:
+        "200": {description: Feature flag diperbarui}
+        "400": {$ref: "#/components/responses/ValidationError"}
+        "403": {$ref: "#/components/responses/Forbidden"}
+        "404": {$ref: "#/components/responses/NotFound"}
+  /policy-focuses:
+    get:
+      tags: [Governance]
+      operationId: listPolicyFocuses
+      summary: Daftar fokus kebijakan
+      description: Membutuhkan `policy_focus.view`.
+      parameters:
+        - $ref: "#/components/parameters/Page"
+        - $ref: "#/components/parameters/PageSize"
+      responses:
+        "200":
+          description: Daftar fokus
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/PolicyFocusPage"}
+        "403": {$ref: "#/components/responses/Forbidden"}
+    post:
+      tags: [Governance]
+      operationId: createPolicyFocus
+      summary: Membuat fokus kebijakan
+      description: Membutuhkan `policy_focus.manage`.
+      parameters:
+        - $ref: "#/components/parameters/CsrfToken"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: "#/components/schemas/PolicyFocusInput"}
+      responses:
+        "201":
+          description: Fokus dibuat
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/PolicyFocus"}
+        "400": {$ref: "#/components/responses/ValidationError"}
+        "403": {$ref: "#/components/responses/Forbidden"}
+  /categories:
+    get:
+      tags: [Governance]
+      operationId: listCategories
+      summary: Daftar kategori dinamis
+      description: Membutuhkan `category.view`.
+      parameters:
+        - $ref: "#/components/parameters/Page"
+        - $ref: "#/components/parameters/PageSize"
+        - $ref: "#/components/parameters/Search"
+        - name: policy_focus_id
+          in: query
+          schema: {$ref: "#/components/schemas/Uuid"}
+      responses:
+        "200":
+          description: Daftar kategori
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/CategoryPage"}
+        "403": {$ref: "#/components/responses/Forbidden"}
+    post:
+      tags: [Governance]
+      operationId: createCategory
+      summary: Membuat kategori
+      description: Membutuhkan `category.manage`.
+      parameters:
+        - $ref: "#/components/parameters/CsrfToken"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: "#/components/schemas/CategoryInput"}
+      responses:
+        "201":
+          description: Kategori dibuat
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/Category"}
+        "400": {$ref: "#/components/responses/ValidationError"}
+        "403": {$ref: "#/components/responses/Forbidden"}
+  /units:
+    get:
+      tags: [Governance]
+      operationId: listUnits
+      summary: Daftar satuan indikator aktif
+      description: Membutuhkan `indicator.view`.
+      responses:
+        "200":
+          description: Daftar satuan
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: array
+                    items: {$ref: "#/components/schemas/Unit"}
+        "403": {$ref: "#/components/responses/Forbidden"}
+  /periods:
+    get:
+      tags: [Governance]
+      operationId: listPeriods
+      summary: Daftar periode pelaporan
+      description: Membutuhkan `indicator.view`.
+      responses:
+        "200":
+          description: Daftar periode
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: array
+                    items: {$ref: "#/components/schemas/Period"}
+        "403": {$ref: "#/components/responses/Forbidden"}
+  /indicators:
+    get:
+      tags: [Governance]
+      operationId: listIndicators
+      summary: Daftar indikator
+      description: Membutuhkan `indicator.view`.
+      parameters:
+        - $ref: "#/components/parameters/Page"
+        - $ref: "#/components/parameters/PageSize"
+        - $ref: "#/components/parameters/Search"
+        - name: category_id
+          in: query
+          schema: {$ref: "#/components/schemas/Uuid"}
+        - name: organization_id
+          in: query
+          schema: {$ref: "#/components/schemas/Uuid"}
+        - name: status
+          in: query
+          schema: {$ref: "#/components/schemas/IndicatorStatus"}
+      responses:
+        "200":
+          description: Daftar indikator
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/IndicatorPage"}
+        "403": {$ref: "#/components/responses/Forbidden"}
+    post:
+      tags: [Governance]
+      operationId: createIndicator
+      summary: Membuat indikator dan versi draft pertama
+      description: Membutuhkan `indicator.manage`.
+      parameters:
+        - $ref: "#/components/parameters/CsrfToken"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: "#/components/schemas/IndicatorCreateInput"}
+      responses:
+        "201":
+          description: Indikator dan versi draft dibuat
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/IndicatorDetail"}
+        "400": {$ref: "#/components/responses/ValidationError"}
+        "403": {$ref: "#/components/responses/Forbidden"}
+        "409": {$ref: "#/components/responses/Conflict"}
+  /indicators/{indicator_id}:
+    patch:
+      tags: [Governance]
+      operationId: updateIndicatorDraft
+      summary: Mengubah metadata versi indikator draft
+      description: Membutuhkan `indicator.manage`; versi selain draft ditolak agar histori definisi tetap terjaga.
+      parameters:
+        - name: indicator_id
+          in: path
+          required: true
+          schema: {$ref: "#/components/schemas/Uuid"}
+        - $ref: "#/components/parameters/CsrfToken"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: "#/components/schemas/IndicatorCreateInput"}
+      responses:
+        "200":
+          description: Draft indikator diperbarui
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/IndicatorDetail"}
+        "400": {$ref: "#/components/responses/ValidationError"}
+        "403": {$ref: "#/components/responses/Forbidden"}
+        "404": {$ref: "#/components/responses/NotFound"}
+        "409": {$ref: "#/components/responses/Conflict"}
+  /indicator-versions/{version_id}/actions/{action}:
+    post:
+      tags: [Governance]
+      operationId: transitionIndicatorVersion
+      summary: Menjalankan transisi versi indikator
+      description: |
+        Aksi `submit`, `approve`, `activate`, atau `retire`. Permission dan status
+        asal diperiksa sesuai dokumen workflow MVP v1.
+      parameters:
+        - $ref: "#/components/parameters/VersionId"
+        - name: action
+          in: path
+          required: true
+          schema:
+            type: string
+            enum: [submit, approve, activate, retire]
+        - $ref: "#/components/parameters/CsrfToken"
+      requestBody:
+        content:
+          application/json:
+            schema: {$ref: "#/components/schemas/TransitionInput"}
+      responses:
+        "200":
+          description: Transisi berhasil
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/IndicatorVersion"}
+        "400": {$ref: "#/components/responses/InvalidTransition"}
+        "403": {$ref: "#/components/responses/Forbidden"}
+        "404": {$ref: "#/components/responses/NotFound"}
+  /datasets:
+    get:
+      tags: [Catalog]
+      operationId: listDatasets
+      summary: Daftar dataset sesuai scope
+      description: Membutuhkan `dataset.view`.
+      parameters:
+        - $ref: "#/components/parameters/Page"
+        - $ref: "#/components/parameters/PageSize"
+        - $ref: "#/components/parameters/Search"
+        - name: organization_id
+          in: query
+          schema: {$ref: "#/components/schemas/Uuid"}
+      responses:
+        "200":
+          description: Daftar dataset
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/DatasetPage"}
+        "403": {$ref: "#/components/responses/Forbidden"}
+    post:
+      tags: [Catalog]
+      operationId: createDataset
+      summary: Membuat dataset dan versi draft
+      description: Membutuhkan `dataset.manage`; scope organisasi tetap diperiksa.
+      parameters:
+        - $ref: "#/components/parameters/CsrfToken"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: "#/components/schemas/DatasetCreateInput"}
+      responses:
+        "201":
+          description: Dataset dibuat
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/DatasetDetail"}
+        "400": {$ref: "#/components/responses/ValidationError"}
+        "403": {$ref: "#/components/responses/Forbidden"}
+  /submissions:
+    get:
+      tags: [Submissions]
+      operationId: listSubmissions
+      summary: Daftar pengiriman data
+      description: Membutuhkan `submission.view`; hasil mengikuti scope.
+      parameters:
+        - $ref: "#/components/parameters/Page"
+        - $ref: "#/components/parameters/PageSize"
+        - name: organization_id
+          in: query
+          schema: {$ref: "#/components/schemas/Uuid"}
+        - name: status
+          in: query
+          schema: {$ref: "#/components/schemas/SubmissionStatus"}
+        - name: period_id
+          in: query
+          schema: {$ref: "#/components/schemas/Uuid"}
+      responses:
+        "200":
+          description: Daftar submission
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/SubmissionPage"}
+        "403": {$ref: "#/components/responses/Forbidden"}
+    post:
+      tags: [Submissions]
+      operationId: createSubmission
+      summary: Membuat batch pengiriman draft
+      description: Membutuhkan `submission.create`.
+      parameters:
+        - $ref: "#/components/parameters/CsrfToken"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: "#/components/schemas/SubmissionCreateInput"}
+      responses:
+        "201":
+          description: Batch draft dibuat
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/SubmissionDetail"}
+        "400": {$ref: "#/components/responses/ValidationError"}
+        "403": {$ref: "#/components/responses/Forbidden"}
+  /submissions/{submission_id}:
+    get:
+      tags: [Submissions]
+      operationId: getSubmission
+      summary: Rincian form capaian beserta indikator aktif yang ditugaskan
+      description: Membutuhkan `submission.view`; akses mengikuti scope organisasi.
+      parameters:
+        - $ref: "#/components/parameters/SubmissionId"
+      responses:
+        "200":
+          description: Rincian form capaian
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/SubmissionDetail"}
+        "403": {$ref: "#/components/responses/Forbidden"}
+        "404": {$ref: "#/components/responses/NotFound"}
+  /submissions/{submission_id}/observations/{indicator_version_id}:
+    put:
+      tags: [Submissions]
+      operationId: saveSubmissionObservation
+      summary: Menyimpan realisasi satu indikator pada draft
+      description: Membutuhkan `submission.update`; hanya berlaku untuk indikator aktif yang ditugaskan kepada OPD.
+      parameters:
+        - $ref: "#/components/parameters/SubmissionId"
+        - name: indicator_version_id
+          in: path
+          required: true
+          schema: {$ref: "#/components/schemas/Uuid"}
+        - $ref: "#/components/parameters/CsrfToken"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: "#/components/schemas/ObservationInput"}
+      responses:
+        "200":
+          description: Realisasi tersimpan
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/SubmissionObservation"}
+        "400": {$ref: "#/components/responses/ValidationError"}
+        "403": {$ref: "#/components/responses/Forbidden"}
+        "409": {$ref: "#/components/responses/InvalidTransition"}
+  /submissions/{submission_id}/upload:
+    post:
+      tags: [Submissions]
+      operationId: uploadSubmissionFile
+      summary: Mengunggah CSV atau XLSX ke batch draft
+      description: Membutuhkan `submission.update`; tipe dan ukuran berkas dibatasi server.
+      parameters:
+        - $ref: "#/components/parameters/SubmissionId"
+        - $ref: "#/components/parameters/CsrfToken"
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file]
+              properties:
+                file:
+                  type: string
+                  format: binary
+      responses:
+        "202":
+          description: Berkas diterima untuk parsing dan validasi awal
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/SubmissionDetail"}
+        "403": {$ref: "#/components/responses/Forbidden"}
+        "413": {$ref: "#/components/responses/UploadTooLarge"}
+        "415": {$ref: "#/components/responses/UnsupportedFile"}
+  /submissions/{submission_id}/evidence:
+    get:
+      tags: [Submissions]
+      operationId: listSubmissionEvidence
+      summary: Daftar bukti dukung privat sesuai scope
+      parameters:
+        - $ref: "#/components/parameters/SubmissionId"
+      responses:
+        "200": {description: Daftar metadata bukti dukung}
+        "403": {$ref: "#/components/responses/Forbidden"}
+    post:
+      tags: [Submissions]
+      operationId: uploadSubmissionEvidence
+      summary: Unggah PDF, JPG, PNG, atau XLSX maksimum 10 MB
+      parameters:
+        - $ref: "#/components/parameters/SubmissionId"
+        - name: indicator_version_id
+          in: query
+          schema: {$ref: "#/components/schemas/Uuid"}
+        - $ref: "#/components/parameters/CsrfToken"
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file]
+              properties:
+                file: {type: string, format: binary}
+      responses:
+        "201": {description: Bukti tersimpan dengan checksum SHA-256}
+        "413": {$ref: "#/components/responses/UploadTooLarge"}
+        "415": {$ref: "#/components/responses/UnsupportedFile"}
+  /submissions/{submission_id}/evidence/{evidence_id}:
+    delete:
+      tags: [Submissions]
+      operationId: deleteSubmissionEvidence
+      summary: Soft-delete bukti dukung pada form yang masih dapat diubah
+      parameters:
+        - $ref: "#/components/parameters/SubmissionId"
+        - name: evidence_id
+          in: path
+          required: true
+          schema: {$ref: "#/components/schemas/Uuid"}
+        - $ref: "#/components/parameters/CsrfToken"
+      responses:
+        "204": {description: Bukti dihapus}
+        "409": {$ref: "#/components/responses/InvalidTransition"}
+  /submissions/{submission_id}/evidence/{evidence_id}/download:
+    get:
+      tags: [Submissions]
+      operationId: downloadSubmissionEvidence
+      summary: Unduh bukti dukung privat sesuai scope
+      parameters:
+        - $ref: "#/components/parameters/SubmissionId"
+        - name: evidence_id
+          in: path
+          required: true
+          schema: {$ref: "#/components/schemas/Uuid"}
+      responses:
+        "200": {description: Isi berkas bukti dukung}
+        "403": {$ref: "#/components/responses/Forbidden"}
+        "404": {$ref: "#/components/responses/NotFound"}
+  /submissions/{submission_id}/actions/{action}:
+    post:
+      tags: [Submissions]
+      operationId: transitionSubmission
+      summary: Menjalankan transisi workflow pengiriman
+      description: |
+        Form input manual mendukung `submit`, `start-review`, `return`, dan `approve`.
+        Jalur upload berkas akan memakai `validate` dan `confirm` pada tahap berikutnya.
+      parameters:
+        - $ref: "#/components/parameters/SubmissionId"
+        - name: action
+          in: path
+          required: true
+          schema:
+            type: string
+            enum: [submit, start-review, return, approve]
+        - $ref: "#/components/parameters/CsrfToken"
+      requestBody:
+        content:
+          application/json:
+            schema: {$ref: "#/components/schemas/TransitionInput"}
+      responses:
+        "200":
+          description: Transisi sinkron berhasil
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/SubmissionDetail"}
+        "202":
+          description: Validasi berjalan asinkron
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/SubmissionDetail"}
+        "400": {$ref: "#/components/responses/InvalidTransition"}
+        "403": {$ref: "#/components/responses/Forbidden"}
+        "404": {$ref: "#/components/responses/NotFound"}
+        "409": {$ref: "#/components/responses/OpenValidationErrors"}
+  /publications:
+    get:
+      tags: [Publications]
+      operationId: listPublications
+      summary: Daftar publikasi
+      description: Membutuhkan `publication.view`; role Pimpinan hanya menerima publikasi aktif.
+      parameters:
+        - $ref: "#/components/parameters/Page"
+        - $ref: "#/components/parameters/PageSize"
+        - name: status
+          in: query
+          schema: {$ref: "#/components/schemas/PublicationStatus"}
+      responses:
+        "200":
+          description: Daftar publikasi
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/PublicationPage"}
+        "403": {$ref: "#/components/responses/Forbidden"}
+    post:
+      tags: [Publications]
+      operationId: createPublication
+      summary: Membuat publikasi draft
+      description: Membutuhkan `publication.manage`.
+      parameters:
+        - $ref: "#/components/parameters/CsrfToken"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: "#/components/schemas/PublicationCreateInput"}
+      responses:
+        "201":
+          description: Publikasi draft dibuat
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/PublicationDetail"}
+        "400": {$ref: "#/components/responses/ValidationError"}
+        "403": {$ref: "#/components/responses/Forbidden"}
+  /publications/{publication_id}/items:
+    post:
+      tags: [Publications]
+      operationId: addPublicationItems
+      summary: Menambahkan observasi yang disetujui ke publikasi draft
+      description: Membutuhkan `publication.manage`.
+      parameters:
+        - $ref: "#/components/parameters/PublicationId"
+        - $ref: "#/components/parameters/CsrfToken"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [observation_ids]
+              properties:
+                observation_ids:
+                  type: array
+                  minItems: 1
+                  uniqueItems: true
+                  items: {$ref: "#/components/schemas/Uuid"}
+      responses:
+        "200":
+          description: Item ditambahkan
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/PublicationDetail"}
+        "403": {$ref: "#/components/responses/Forbidden"}
+        "422": {$ref: "#/components/responses/BusinessRuleViolation"}
+  /publications/candidates:
+    get:
+      tags: [Publications]
+      operationId: listPublicationCandidates
+      summary: Daftar capaian approved yang dapat dikurasi
+      description: Membutuhkan `publication.manage`; publikasi aktif yang sama tidak ditawarkan kembali.
+      parameters:
+        - name: period_id
+          in: query
+          schema: {$ref: "#/components/schemas/Uuid"}
+      responses:
+        "200": {description: Daftar kandidat capaian}
+        "403": {$ref: "#/components/responses/Forbidden"}
+  /publications/{publication_id}/activate:
+    post:
+      tags: [Publications]
+      operationId: activatePublication
+      summary: Mengaktifkan publikasi
+      description: Membutuhkan `publication.activate`; mengganti publikasi aktif dengan key yang sama dalam satu transaksi.
+      parameters:
+        - $ref: "#/components/parameters/PublicationId"
+        - $ref: "#/components/parameters/CsrfToken"
+      requestBody:
+        content:
+          application/json:
+            schema: {$ref: "#/components/schemas/TransitionInput"}
+      responses:
+        "200":
+          description: Publikasi aktif
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/PublicationDetail"}
+        "403": {$ref: "#/components/responses/Forbidden"}
+        "409": {$ref: "#/components/responses/Conflict"}
+        "422": {$ref: "#/components/responses/BusinessRuleViolation"}
+  /executive/dashboard:
+    get:
+      tags: [Executive]
+      operationId: getExecutiveDashboard
+      summary: Membaca dashboard dari publikasi aktif
+      description: Membutuhkan `executive_dashboard.view`; tidak pernah membaca batch draft.
+      parameters:
+        - name: policy_focus_id
+          in: query
+          schema: {$ref: "#/components/schemas/Uuid"}
+        - name: period_id
+          in: query
+          schema: {$ref: "#/components/schemas/Uuid"}
+        - name: geography_id
+          in: query
+          schema: {$ref: "#/components/schemas/Uuid"}
+      responses:
+        "200":
+          description: Ringkasan indikator terbit beserta sumber
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/ExecutiveDashboard"}
+        "403": {$ref: "#/components/responses/Forbidden"}
+  /operations/dashboard:
+    get:
+      tags: [Operations]
+      operationId: getOperationsDashboard
+      summary: Membaca dashboard operasional sesuai scope pengguna
+      description: Membutuhkan `submission.view`; data OPD dibatasi oleh scope role dan organisasi pengguna.
+      parameters:
+        - name: period_id
+          in: query
+          schema: {$ref: "#/components/schemas/Uuid"}
+      responses:
+        "200":
+          description: Metrik, ringkasan OPD, dan aktivitas form capaian terbaru
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/OperationsDashboard"}
+        "403": {$ref: "#/components/responses/Forbidden"}
+  /assistant/sessions:
+    post:
+      tags: [Assistant]
+      operationId: createAssistantSession
+      summary: Membuat sesi Asisten AI
+      description: Membutuhkan `assistant.use` dan feature flag `assistant.enabled`.
+      parameters:
+        - $ref: "#/components/parameters/CsrfToken"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                title: {type: string, maxLength: 255}
+      responses:
+        "201":
+          description: Sesi dibuat
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/AssistantSession"}
+        "403": {$ref: "#/components/responses/Forbidden"}
+  /assistant/sessions/{session_id}/messages:
+    post:
+      tags: [Assistant]
+      operationId: sendAssistantMessage
+      summary: Mengajukan pertanyaan kepada Asisten AI
+      description: |
+        Jawaban hanya menggunakan publikasi aktif yang dapat diakses pengguna.
+        Jika data tidak cukup, respons menyatakan keterbatasan dan tidak mengarang angka.
+      parameters:
+        - name: session_id
+          in: path
+          required: true
+          schema: {$ref: "#/components/schemas/Uuid"}
+        - $ref: "#/components/parameters/CsrfToken"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [message]
+              properties:
+                message: {type: string, minLength: 1, maxLength: 4000}
+      responses:
+        "200":
+          description: Jawaban beserta sitasi data
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/AssistantAnswer"}
+        "403": {$ref: "#/components/responses/Forbidden"}
+        "422": {$ref: "#/components/responses/BusinessRuleViolation"}
+  /audit/events:
+    get:
+      tags: [Audit]
+      operationId: listAuditEvents
+      summary: Membaca audit sesuai scope
+      description: Membutuhkan `audit.view`.
+      parameters:
+        - $ref: "#/components/parameters/Page"
+        - $ref: "#/components/parameters/PageSize"
+        - name: event_type
+          in: query
+          schema: {type: string}
+        - name: entity_type
+          in: query
+          schema: {type: string}
+        - name: actor_id
+          in: query
+          schema: {$ref: "#/components/schemas/Uuid"}
+        - name: occurred_from
+          in: query
+          schema: {type: string, format: date-time}
+        - name: occurred_until
+          in: query
+          schema: {type: string, format: date-time}
+      responses:
+        "200":
+          description: Daftar audit append-only
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/AuditPage"}
+        "403": {$ref: "#/components/responses/Forbidden"}
+  /notifications:
+    get:
+      tags: [System]
+      operationId: listNotifications
+      summary: Daftar notifikasi milik pengguna aktif
+      parameters:
+        - name: unread_only
+          in: query
+          schema: {type: boolean, default: false}
+      responses:
+        "200": {description: Daftar notifikasi dan jumlah belum dibaca}
+        "401": {$ref: "#/components/responses/Unauthorized"}
+  /notifications/{notification_id}/read:
+    post:
+      tags: [System]
+      operationId: markNotificationRead
+      summary: Menandai notifikasi milik pengguna sebagai dibaca
+      parameters:
+        - name: notification_id
+          in: path
+          required: true
+          schema: {$ref: "#/components/schemas/Uuid"}
+        - $ref: "#/components/parameters/CsrfToken"
+      responses:
+        "204": {description: Notifikasi ditandai dibaca}
+        "401": {$ref: "#/components/responses/Unauthorized"}
+        "404": {$ref: "#/components/responses/NotFound"}
+  /notifications/read-all:
+    post:
+      tags: [System]
+      operationId: markAllNotificationsRead
+      summary: Menandai seluruh notifikasi pengguna sebagai dibaca
+      parameters:
+        - $ref: "#/components/parameters/CsrfToken"
+      responses:
+        "204": {description: Seluruh notifikasi ditandai dibaca}
+        "401": {$ref: "#/components/responses/Unauthorized"}
+components:
+  securitySchemes:
+    sessionCookie:
+      type: apiKey
+      in: cookie
+      name: sababuka_session
+      description: Sesi server-side; cookie wajib HttpOnly, Secure, dan SameSite=Lax.
+  parameters:
+    CsrfToken:
+      name: X-CSRF-Token
+      in: header
+      required: true
+      schema: {type: string, minLength: 20}
+      description: Token CSRF terikat ke sesi untuk seluruh operasi mutasi.
+    Page:
+      name: page
+      in: query
+      schema: {type: integer, minimum: 1, default: 1}
+    PageSize:
+      name: page_size
+      in: query
+      schema: {type: integer, minimum: 1, maximum: 100, default: 20}
+    Search:
+      name: q
+      in: query
+      schema: {type: string, maxLength: 200}
+    UserId:
+      name: user_id
+      in: path
+      required: true
+      schema: {$ref: "#/components/schemas/Uuid"}
+    InvitationToken:
+      name: token
+      in: path
+      required: true
+      schema: {type: string, minLength: 32, maxLength: 200}
+      description: Token acak sekali pakai; nilai asli tidak disimpan di database.
+    RoleId:
+      name: role_id
+      in: path
+      required: true
+      schema: {$ref: "#/components/schemas/Uuid"}
+    VersionId:
+      name: version_id
+      in: path
+      required: true
+      schema: {$ref: "#/components/schemas/Uuid"}
+    SubmissionId:
+      name: submission_id
+      in: path
+      required: true
+      schema: {$ref: "#/components/schemas/Uuid"}
+    PublicationId:
+      name: publication_id
+      in: path
+      required: true
+      schema: {$ref: "#/components/schemas/Uuid"}
+  responses:
+    Unauthorized:
+      description: Sesi tidak tersedia atau kedaluwarsa
+      content:
+        application/json:
+          schema: {$ref: "#/components/schemas/ApiError"}
+          example:
+            error: {code: AUTH_REQUIRED, message: Sesi diperlukan., request_id: 8be45d40-e437-4f44-86da-91d0cae75488}
+    Forbidden:
+      description: Permission atau scope tidak mencukupi
+      content:
+        application/json:
+          schema: {$ref: "#/components/schemas/ApiError"}
+    NotFound:
+      description: Objek tidak ditemukan atau tidak boleh diungkapkan
+      content:
+        application/json:
+          schema: {$ref: "#/components/schemas/ApiError"}
+    ValidationError:
+      description: Permintaan tidak valid
+      content:
+        application/json:
+          schema: {$ref: "#/components/schemas/ApiError"}
+    InvalidTransition:
+      description: Transisi workflow tidak valid
+      content:
+        application/json:
+          schema: {$ref: "#/components/schemas/ApiError"}
+    OpenValidationErrors:
+      description: Error validasi masih terbuka
+      content:
+        application/json:
+          schema: {$ref: "#/components/schemas/ApiError"}
+    Conflict:
+      description: Konflik kode, versi, atau data aktif
+      content:
+        application/json:
+          schema: {$ref: "#/components/schemas/ApiError"}
+    BusinessRuleViolation:
+      description: Aturan bisnis tidak terpenuhi
+      content:
+        application/json:
+          schema: {$ref: "#/components/schemas/ApiError"}
+    UploadTooLarge:
+      description: Berkas terlalu besar
+      content:
+        application/json:
+          schema: {$ref: "#/components/schemas/ApiError"}
+    UnsupportedFile:
+      description: Format berkas tidak didukung
+      content:
+        application/json:
+          schema: {$ref: "#/components/schemas/ApiError"}
+    RateLimited:
+      description: Terlalu banyak permintaan
+      headers:
+        Retry-After:
+          schema: {type: integer}
+      content:
+        application/json:
+          schema: {$ref: "#/components/schemas/ApiError"}
+    ServiceUnavailable:
+      description: Layanan atau dependensi utama tidak sehat
+      content:
+        application/json:
+          schema: {$ref: "#/components/schemas/ApiError"}
+  schemas:
+    Uuid:
+      type: string
+      format: uuid
+    Timestamp:
+      type: string
+      format: date-time
+    PageMeta:
+      type: object
+      required: [page, page_size, total_items, total_pages]
+      properties:
+        page: {type: integer, minimum: 1}
+        page_size: {type: integer, minimum: 1}
+        total_items: {type: integer, minimum: 0}
+        total_pages: {type: integer, minimum: 0}
+    PageEnvelope:
+      type: object
+      required: [data, meta]
+      properties:
+        data: {type: array, items: {}}
+        meta: {$ref: "#/components/schemas/PageMeta"}
+    ApiError:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: object
+          required: [code, message, request_id]
+          properties:
+            code: {type: string}
+            message: {type: string}
+            request_id: {$ref: "#/components/schemas/Uuid"}
+            details:
+              type: array
+              items:
+                type: object
+                additionalProperties: true
+    HealthResponse:
+      type: object
+      required: [status, version, time]
+      properties:
+        status: {type: string, enum: [ok, degraded]}
+        version: {type: string}
+        time: {$ref: "#/components/schemas/Timestamp"}
+    LoginRequest:
+      type: object
+      additionalProperties: false
+      description: "mfa_code dan recovery_code saling eksklusif; kirim salah satu ketika akun mewajibkan MFA."
+      required: [identifier, password]
+      properties:
+        identifier: {type: string, minLength: 3, maxLength: 255}
+        password: {type: string, minLength: 8, maxLength: 256, writeOnly: true}
+        mfa_code: {type: string, pattern: "^[0-9]{6}$", writeOnly: true}
+        recovery_code: {type: string, pattern: "^[A-Za-z0-9-]{16,32}$", writeOnly: true}
+    SessionResponse:
+      type: object
+      required: [user, csrf_token, expires_at]
+      properties:
+        user: {$ref: "#/components/schemas/CurrentUser"}
+        csrf_token: {type: string, writeOnly: true}
+        expires_at: {$ref: "#/components/schemas/Timestamp"}
+    InvitationInfo:
+      type: object
+      required: [email, full_name, expires_at, mfa_setup_started]
+      properties:
+        email: {type: string, format: email}
+        full_name: {type: string}
+        expires_at: {$ref: "#/components/schemas/Timestamp"}
+        mfa_setup_started: {type: boolean}
+    TotpSetupResponse:
+      type: object
+      required: [secret, provisioning_uri, issuer, account]
+      properties:
+        secret: {type: string, pattern: "^[A-Z2-7]+$", description: Nilai sensitif yang hanya ditampilkan saat enrollment.}
+        provisioning_uri: {type: string, pattern: "^otpauth://totp/"}
+        issuer: {type: string}
+        account: {type: string}
+    InvitationAcceptInput:
+      type: object
+      additionalProperties: false
+      required: [password, mfa_code]
+      properties:
+        password: {type: string, minLength: 12, maxLength: 256, writeOnly: true}
+        mfa_code: {type: string, pattern: "^[0-9]{6}$", writeOnly: true}
+    MfaConfirmInput:
+      type: object
+      additionalProperties: false
+      required: [mfa_code]
+      properties:
+        mfa_code: {type: string, pattern: "^[0-9]{6}$", writeOnly: true}
+    RecoveryCodesResponse:
+      type: object
+      required: [recovery_codes]
+      properties:
+        recovery_codes:
+          type: array
+          minItems: 8
+          maxItems: 8
+          uniqueItems: true
+          items: {type: string, pattern: "^[A-F0-9]{4}(?:-[A-F0-9]{4}){3}$"}
+    InvitationAcceptResponse:
+      allOf:
+        - $ref: "#/components/schemas/RecoveryCodesResponse"
+        - type: object
+          required: [email, status]
+          properties:
+            email: {type: string, format: email}
+            status: {type: string, const: active}
+    CurrentUser:
+      type: object
+      required: [id, email, full_name, mfa_required, roles, permissions, organizations]
+      properties:
+        id: {$ref: "#/components/schemas/Uuid"}
+        email: {type: string, format: email}
+        full_name: {type: string}
+        mfa_required: {type: boolean}
+        roles:
+          type: array
+          items: {$ref: "#/components/schemas/EffectiveRole"}
+        permissions:
+          type: array
+          uniqueItems: true
+          items: {type: string}
+        organizations:
+          type: array
+          items: {$ref: "#/components/schemas/Organization"}
+    EffectiveRole:
+      type: object
+      required: [code, scope_type]
+      properties:
+        code: {type: string}
+        scope_type: {type: string, enum: [global, organization, self, published]}
+        organization_id:
+          oneOf:
+            - $ref: "#/components/schemas/Uuid"
+            - type: "null"
+    MenuItem:
+      type: object
+      required: [code, label, display_order, children]
+      properties:
+        code: {type: string}
+        label: {type: string}
+        icon: {type: [string, "null"]}
+        route_name: {type: [string, "null"]}
+        display_order: {type: integer}
+        children:
+          type: array
+          items: {$ref: "#/components/schemas/MenuItem"}
+    OrganizationInput:
+      type: object
+      additionalProperties: false
+      required: [code, name, organization_type]
+      properties:
+        code: {type: string, pattern: "^[A-Z0-9][A-Z0-9._-]*$", maxLength: 64}
+        name: {type: string, maxLength: 255}
+        short_name: {type: [string, "null"], maxLength: 120}
+        organization_type: {type: string, maxLength: 40}
+        parent_id:
+          oneOf:
+            - $ref: "#/components/schemas/Uuid"
+            - type: "null"
+    Organization:
+      allOf:
+        - $ref: "#/components/schemas/OrganizationInput"
+        - type: object
+          required: [id, is_active, created_at, updated_at]
+          properties:
+            id: {$ref: "#/components/schemas/Uuid"}
+            is_active: {type: boolean}
+            created_at: {$ref: "#/components/schemas/Timestamp"}
+            updated_at: {$ref: "#/components/schemas/Timestamp"}
+    OrganizationPage:
+      allOf:
+        - $ref: "#/components/schemas/PageEnvelope"
+        - type: object
+          properties:
+            data:
+              type: array
+              items: {$ref: "#/components/schemas/Organization"}
+    UserCreateInput:
+      type: object
+      additionalProperties: false
+      required: [email, full_name, organization_id]
+      properties:
+        email: {type: string, format: email, maxLength: 255}
+        username: {type: [string, "null"], maxLength: 120}
+        full_name: {type: string, maxLength: 255}
+        organization_id: {$ref: "#/components/schemas/Uuid"}
+    UserSummary:
+      type: object
+      required: [id, email, full_name, status]
+      properties:
+        id: {$ref: "#/components/schemas/Uuid"}
+        email: {type: string, format: email}
+        username: {type: [string, "null"]}
+        full_name: {type: string}
+        status: {type: string, enum: [invited, active, suspended, locked, archived]}
+        mfa_required: {type: boolean}
+        organization_id:
+          oneOf:
+            - $ref: "#/components/schemas/Uuid"
+            - type: "null"
+        organization_code: {type: [string, "null"]}
+        organization_name: {type: [string, "null"]}
+        last_login_at:
+          oneOf:
+            - $ref: "#/components/schemas/Timestamp"
+            - type: "null"
+        created_at: {$ref: "#/components/schemas/Timestamp"}
+    UserInvitationCreated:
+      allOf:
+        - $ref: "#/components/schemas/UserSummary"
+        - type: object
+          required: [invitation_token, invitation_expires_at]
+          properties:
+            invitation_token:
+              type: string
+              minLength: 32
+              description: Ditampilkan sekali untuk disampaikan melalui kanal internal yang aman.
+            invitation_expires_at: {$ref: "#/components/schemas/Timestamp"}
+    UserUpdateInput:
+      type: object
+      additionalProperties: false
+      minProperties: 1
+      properties:
+        username: {type: [string, "null"], minLength: 3, maxLength: 120}
+        full_name: {type: string, minLength: 2, maxLength: 255}
+        status: {type: string, enum: [invited, active, suspended, locked, archived]}
+        mfa_required: {type: boolean}
+    RoleAssignmentInput:
+      type: object
+      additionalProperties: false
+      required: [role_id, scope_type]
+      properties:
+        role_id: {$ref: "#/components/schemas/Uuid"}
+        scope_type: {type: string, enum: [global, organization, self, published]}
+        organization_id:
+          oneOf:
+            - $ref: "#/components/schemas/Uuid"
+            - type: "null"
+        ends_at:
+          oneOf:
+            - $ref: "#/components/schemas/Timestamp"
+            - type: "null"
+    Role:
+      type: object
+      required: [id, code, name, permissions]
+      properties:
+        id: {$ref: "#/components/schemas/Uuid"}
+        code: {type: string}
+        name: {type: string}
+        permissions:
+          type: array
+          items: {type: string}
+        description: {type: [string, "null"]}
+        is_system: {type: boolean}
+        is_active: {type: boolean}
+    Permission:
+      type: object
+      required: [id, code, name, risk_level]
+      properties:
+        id: {$ref: "#/components/schemas/Uuid"}
+        code: {type: string}
+        name: {type: string}
+        description: {type: [string, "null"]}
+        risk_level: {type: string, enum: [normal, elevated, critical]}
+    RolePermissionsInput:
+      type: object
+      additionalProperties: false
+      required: [permission_ids]
+      properties:
+        permission_ids:
+          type: array
+          uniqueItems: true
+          maxItems: 500
+          items: {$ref: "#/components/schemas/Uuid"}
+    AdminMenuItem:
+      type: object
+      required: [id, code, label, display_order, is_active]
+      properties:
+        id: {$ref: "#/components/schemas/Uuid"}
+        code: {type: string}
+        parent_id:
+          oneOf:
+            - $ref: "#/components/schemas/Uuid"
+            - type: "null"
+        parent_code: {type: [string, "null"]}
+        label: {type: string}
+        icon: {type: [string, "null"]}
+        route_name: {type: [string, "null"]}
+        required_permission: {type: [string, "null"]}
+        display_order: {type: integer}
+        is_active: {type: boolean}
+    RoleMenusInput:
+      type: object
+      additionalProperties: false
+      required: [menu_ids]
+      properties:
+        menu_ids:
+          type: array
+          uniqueItems: true
+          maxItems: 200
+          items: {$ref: "#/components/schemas/Uuid"}
+    SystemSettingInput:
+      type: object
+      additionalProperties: false
+      required: [value]
+      properties:
+        value: {}
+        description: {type: [string, "null"], maxLength: 2000}
+    FeatureFlagInput:
+      type: object
+      additionalProperties: false
+      required: [is_enabled]
+      properties:
+        is_enabled: {type: boolean}
+        configuration: {type: object, additionalProperties: true}
+    SystemConfiguration:
+      type: object
+      required: [settings, feature_flags]
+      properties:
+        settings:
+          type: array
+          items:
+            type: object
+            required: [key, value, updated_at]
+            properties:
+              key: {type: string}
+              value: {}
+              description: {type: [string, "null"]}
+              updated_at: {$ref: "#/components/schemas/Timestamp"}
+        feature_flags:
+          type: array
+          items:
+            type: object
+            required: [id, code, name, is_enabled, configuration, updated_at]
+            properties:
+              id: {$ref: "#/components/schemas/Uuid"}
+              code: {type: string}
+              name: {type: string}
+              description: {type: [string, "null"]}
+              is_enabled: {type: boolean}
+              configuration: {type: object, additionalProperties: true}
+              updated_at: {$ref: "#/components/schemas/Timestamp"}
+    PolicyFocusInput:
+      type: object
+      additionalProperties: false
+      required: [code, name]
+      properties:
+        code: {type: string, maxLength: 64}
+        name: {type: string, maxLength: 255}
+        description: {type: [string, "null"]}
+        display_order: {type: integer, default: 0}
+    PolicyFocus:
+      allOf:
+        - $ref: "#/components/schemas/PolicyFocusInput"
+        - type: object
+          required: [id, is_active]
+          properties:
+            id: {$ref: "#/components/schemas/Uuid"}
+            is_active: {type: boolean}
+    PolicyFocusPage:
+      allOf:
+        - $ref: "#/components/schemas/PageEnvelope"
+        - type: object
+          properties:
+            data:
+              type: array
+              items: {$ref: "#/components/schemas/PolicyFocus"}
+    CategoryInput:
+      type: object
+      additionalProperties: false
+      required: [code, name]
+      properties:
+        code: {type: string, maxLength: 64}
+        name: {type: string, maxLength: 255}
+        description: {type: [string, "null"]}
+        policy_focus_id:
+          oneOf:
+            - $ref: "#/components/schemas/Uuid"
+            - type: "null"
+        parent_id:
+          oneOf:
+            - $ref: "#/components/schemas/Uuid"
+            - type: "null"
+        display_order: {type: integer, default: 0}
+    Category:
+      allOf:
+        - $ref: "#/components/schemas/CategoryInput"
+        - type: object
+          required: [id, is_active]
+          properties:
+            id: {$ref: "#/components/schemas/Uuid"}
+            is_active: {type: boolean}
+            policy_focus_name: {type: [string, "null"]}
+            indicator_count: {type: integer, minimum: 0}
+    CategoryPage:
+      allOf:
+        - $ref: "#/components/schemas/PageEnvelope"
+        - type: object
+          properties:
+            data:
+              type: array
+              items: {$ref: "#/components/schemas/Category"}
+    Unit:
+      type: object
+      required: [id, code, name, decimal_places]
+      properties:
+        id: {$ref: "#/components/schemas/Uuid"}
+        code: {type: string}
+        name: {type: string}
+        symbol: {type: [string, "null"]}
+        decimal_places: {type: integer, minimum: 0, maximum: 10}
+    Period:
+      type: object
+      required: [id, code, label, period_type, starts_on, ends_on]
+      properties:
+        id: {$ref: "#/components/schemas/Uuid"}
+        code: {type: string}
+        label: {type: string}
+        period_type: {type: string, enum: [annual, semester, quarter, monthly, custom]}
+        starts_on: {type: string, format: date}
+        ends_on: {type: string, format: date}
+    IndicatorStatus:
+      type: string
+      enum: [draft, in_review, approved, active, retired]
+    IndicatorCreateInput:
+      type: object
+      additionalProperties: false
+      required: [code, name, category_id, definition, unit_id, frequency, data_type, effective_from]
+      properties:
+        code: {type: string, maxLength: 80}
+        name: {type: string, maxLength: 255}
+        category_id: {$ref: "#/components/schemas/Uuid"}
+        owner_organization_id: {$ref: "#/components/schemas/Uuid"}
+        definition: {type: string, minLength: 1}
+        formula: {type: [string, "null"]}
+        unit_id: {$ref: "#/components/schemas/Uuid"}
+        frequency: {type: string, enum: [annual, semester, quarter, monthly, event, custom]}
+        data_type: {type: string, enum: [number, integer, percentage, currency, text, boolean]}
+        direction:
+          type: [string, "null"]
+          enum: [increase, decrease, maintain, null]
+        source_reference: {type: [string, "null"], maxLength: 4000}
+        dimension_schema: {type: object, additionalProperties: true}
+        access_level: {type: string, enum: [public, internal, restricted], default: internal}
+        effective_from: {type: string, format: date}
+        organizations:
+          type: array
+          items:
+            type: object
+            required: [organization_id, responsibility]
+            properties:
+              organization_id: {$ref: "#/components/schemas/Uuid"}
+              responsibility: {type: string, enum: [primary_producer, supporter, validator, curator]}
+              is_primary: {type: boolean, default: false}
+        targets:
+          type: array
+          items:
+            type: object
+            additionalProperties: false
+            required: [period_id]
+            properties:
+              period_id: {$ref: "#/components/schemas/Uuid"}
+              numeric_value: {type: [number, "null"]}
+              text_value: {type: [string, "null"]}
+              notes: {type: [string, "null"]}
+    IndicatorVersion:
+      type: object
+      required: [id, version_number, definition, unit_id, frequency, data_type, status, effective_from]
+      properties:
+        id: {$ref: "#/components/schemas/Uuid"}
+        version_number: {type: integer, minimum: 1}
+        definition: {type: string}
+        formula: {type: [string, "null"]}
+        unit_id: {$ref: "#/components/schemas/Uuid"}
+        frequency: {type: string}
+        data_type: {type: string}
+        direction:
+          type: [string, "null"]
+          enum: [increase, decrease, maintain, null]
+        source_reference: {type: [string, "null"]}
+        dimension_schema: {type: object, additionalProperties: true}
+        access_level: {type: string}
+        status: {$ref: "#/components/schemas/IndicatorStatus"}
+        effective_from: {type: string, format: date}
+    IndicatorDetail:
+      type: object
+      required: [id, code, name, category_id, category_name, version_id, version_number, definition, unit_id, unit_name, status, organizations, targets]
+      properties:
+        id: {$ref: "#/components/schemas/Uuid"}
+        code: {type: string}
+        name: {type: string}
+        category_id: {$ref: "#/components/schemas/Uuid"}
+        owner_organization_id:
+          oneOf:
+            - $ref: "#/components/schemas/Uuid"
+            - type: "null"
+        category_name: {type: string}
+        owner_organization_name: {type: [string, "null"]}
+        version_id: {$ref: "#/components/schemas/Uuid"}
+        version_number: {type: integer, minimum: 1}
+        definition: {type: string}
+        formula: {type: [string, "null"]}
+        unit_id: {$ref: "#/components/schemas/Uuid"}
+        unit_name: {type: string}
+        unit_symbol: {type: [string, "null"]}
+        frequency: {type: string}
+        data_type: {type: string}
+        direction:
+          type: [string, "null"]
+          enum: [increase, decrease, maintain, null]
+        source_reference: {type: [string, "null"]}
+        access_level: {type: string}
+        effective_from: {type: string, format: date}
+        status: {$ref: "#/components/schemas/IndicatorStatus"}
+        organizations:
+          type: array
+          items: {type: object, additionalProperties: true}
+        targets:
+          type: array
+          items: {type: object, additionalProperties: true}
+    IndicatorPage:
+      allOf:
+        - $ref: "#/components/schemas/PageEnvelope"
+        - type: object
+          properties:
+            data:
+              type: array
+              items: {$ref: "#/components/schemas/IndicatorDetail"}
+    DatasetCreateInput:
+      type: object
+      additionalProperties: false
+      required: [code, title, owner_organization_id, source_id, name, metadata_profile_id, effective_from]
+      properties:
+        code: {type: string, maxLength: 80}
+        title: {type: string, maxLength: 500}
+        owner_organization_id: {$ref: "#/components/schemas/Uuid"}
+        source_id: {$ref: "#/components/schemas/Uuid"}
+        name: {type: string, maxLength: 255}
+        notes: {type: [string, "null"]}
+        metadata_profile_id: {$ref: "#/components/schemas/Uuid"}
+        metadata: {type: object, additionalProperties: true}
+        effective_from: {type: string, format: date}
+    DatasetDetail:
+      type: object
+      required: [id, code, title, owner_organization_id, source_id, version]
+      properties:
+        id: {$ref: "#/components/schemas/Uuid"}
+        code: {type: string}
+        title: {type: string}
+        owner_organization_id: {$ref: "#/components/schemas/Uuid"}
+        source_id: {$ref: "#/components/schemas/Uuid"}
+        version:
+          type: object
+          required: [id, version_number, name, status, metadata]
+          properties:
+            id: {$ref: "#/components/schemas/Uuid"}
+            version_number: {type: integer}
+            name: {type: string}
+            status: {$ref: "#/components/schemas/IndicatorStatus"}
+            metadata: {type: object, additionalProperties: true}
+    DatasetPage:
+      allOf:
+        - $ref: "#/components/schemas/PageEnvelope"
+        - type: object
+          properties:
+            data:
+              type: array
+              items: {$ref: "#/components/schemas/DatasetDetail"}
+    SubmissionStatus:
+      type: string
+      enum: [draft, validating, ready, submitted, opd_confirmed, under_review, returned, approved, published, cancelled]
+    SubmissionCreateInput:
+      type: object
+      additionalProperties: false
+      required: [organization_id, period_id]
+      properties:
+        organization_id: {$ref: "#/components/schemas/Uuid"}
+        period_id: {$ref: "#/components/schemas/Uuid"}
+    SubmissionDetail:
+      type: object
+      required: [id, dataset_version_id, organization_id, reporting_period_id, submission_method, status, row_count, created_at]
+      properties:
+        id: {$ref: "#/components/schemas/Uuid"}
+        dataset_version_id: {$ref: "#/components/schemas/Uuid"}
+        organization_id: {$ref: "#/components/schemas/Uuid"}
+        organization_code: {type: string}
+        organization_name: {type: string}
+        reporting_period_id: {$ref: "#/components/schemas/Uuid"}
+        period_code: {type: string}
+        period_label: {type: string}
+        submission_method: {type: string}
+        source_filename: {type: [string, "null"]}
+        status: {$ref: "#/components/schemas/SubmissionStatus"}
+        row_count: {type: integer, minimum: 0}
+        validation_summary:
+          type: object
+          properties:
+            errors: {type: integer, minimum: 0}
+            warnings: {type: integer, minimum: 0}
+            information: {type: integer, minimum: 0}
+        created_at: {$ref: "#/components/schemas/Timestamp"}
+        updated_at: {$ref: "#/components/schemas/Timestamp"}
+        observations:
+          type: array
+          items: {$ref: "#/components/schemas/SubmissionObservation"}
+    ObservationInput:
+      type: object
+      additionalProperties: false
+      required: [value]
+      properties:
+        value:
+          oneOf:
+            - type: number
+            - type: string
+              minLength: 1
+              maxLength: 4000
+        notes: {type: [string, "null"], maxLength: 4000}
+    SubmissionObservation:
+      type: object
+      required: [indicator_version_id, indicator_code, indicator_name, data_type]
+      properties:
+        observation_id:
+          oneOf:
+            - $ref: "#/components/schemas/Uuid"
+            - type: "null"
+        indicator_version_id: {$ref: "#/components/schemas/Uuid"}
+        indicator_code: {type: string}
+        indicator_name: {type: string}
+        data_type: {type: string}
+        unit_name: {type: string}
+        unit_symbol: {type: [string, "null"]}
+        target_numeric_value: {type: [number, "null"]}
+        target_text_value: {type: [string, "null"]}
+        numeric_value: {type: [number, "null"]}
+        text_value: {type: [string, "null"]}
+        notes: {type: [string, "null"]}
+        quality_status: {type: [string, "null"]}
+    SubmissionPage:
+      allOf:
+        - $ref: "#/components/schemas/PageEnvelope"
+        - type: object
+          properties:
+            data:
+              type: array
+              items: {$ref: "#/components/schemas/SubmissionDetail"}
+    TransitionInput:
+      type: object
+      additionalProperties: false
+      properties:
+        notes: {type: [string, "null"], maxLength: 4000}
+    PublicationStatus:
+      type: string
+      enum: [draft, active, replaced, withdrawn]
+    PublicationCreateInput:
+      type: object
+      additionalProperties: false
+      required: [publication_key, publication_number, title]
+      properties:
+        publication_key: {type: string, maxLength: 80}
+        publication_number: {type: string, maxLength: 120}
+        title: {type: string, maxLength: 500}
+        description: {type: [string, "null"]}
+        effective_at:
+          oneOf:
+            - $ref: "#/components/schemas/Timestamp"
+            - type: "null"
+        change_notes: {type: [string, "null"]}
+    PublicationDetail:
+      allOf:
+        - $ref: "#/components/schemas/PublicationCreateInput"
+        - type: object
+          required: [id, version_number, status, items]
+          properties:
+            id: {$ref: "#/components/schemas/Uuid"}
+            version_number: {type: integer, minimum: 1}
+            status: {$ref: "#/components/schemas/PublicationStatus"}
+            items:
+              type: array
+              items:
+                type: object
+                required: [id, observation_id, dataset_version_id]
+                properties:
+                  id: {$ref: "#/components/schemas/Uuid"}
+                  observation_id: {$ref: "#/components/schemas/Uuid"}
+                  dataset_version_id: {$ref: "#/components/schemas/Uuid"}
+    PublicationPage:
+      allOf:
+        - $ref: "#/components/schemas/PageEnvelope"
+        - type: object
+          properties:
+            data:
+              type: array
+              items: {$ref: "#/components/schemas/PublicationDetail"}
+    ExecutiveDashboard:
+      type: object
+      required: [generated_at, items]
+      properties:
+        generated_at: {$ref: "#/components/schemas/Timestamp"}
+        items:
+          type: array
+          items:
+            type: object
+            required: [indicator_id, indicator_name, period_label, unit, publication_item_id, source]
+            properties:
+              indicator_id: {$ref: "#/components/schemas/Uuid"}
+              indicator_name: {type: string}
+              period_label: {type: string}
+              unit: {type: string}
+              numeric_value: {type: [number, "null"]}
+              text_value: {type: [string, "null"]}
+              publication_item_id: {$ref: "#/components/schemas/Uuid"}
+              source: {type: string}
+    OperationsDashboard:
+      type: object
+      required: [generated_at, metrics, organizations, recent]
+      properties:
+        generated_at: {$ref: "#/components/schemas/Timestamp"}
+        metrics:
+          type: object
+          required: [active_indicators, draft, pending_review, returned, approved]
+          properties:
+            active_indicators: {type: integer, minimum: 0}
+            draft: {type: integer, minimum: 0}
+            pending_review: {type: integer, minimum: 0}
+            returned: {type: integer, minimum: 0}
+            approved: {type: integer, minimum: 0}
+        organizations:
+          type: array
+          items: {type: object, additionalProperties: true}
+        recent:
+          type: array
+          items: {type: object, additionalProperties: true}
+    AssistantSession:
+      type: object
+      required: [id, status, started_at]
+      properties:
+        id: {$ref: "#/components/schemas/Uuid"}
+        title: {type: [string, "null"]}
+        status: {type: string, enum: [active, closed, archived]}
+        started_at: {$ref: "#/components/schemas/Timestamp"}
+    AssistantAnswer:
+      type: object
+      required: [message_id, answer, citations, sufficiency]
+      properties:
+        message_id: {$ref: "#/components/schemas/Uuid"}
+        answer: {type: string}
+        sufficiency: {type: string, enum: [sufficient, partial, insufficient]}
+        citations:
+          type: array
+          items:
+            type: object
+            required: [publication_item_id, label]
+            properties:
+              publication_item_id: {$ref: "#/components/schemas/Uuid"}
+              label: {type: string}
+              indicator: {type: string}
+              period: {type: string}
+              organization: {type: string}
+              source: {type: string}
+    AuditEvent:
+      type: object
+      required: [id, event_type, entity_type, occurred_at]
+      properties:
+        id: {$ref: "#/components/schemas/Uuid"}
+        actor_id:
+          oneOf:
+            - $ref: "#/components/schemas/Uuid"
+            - type: "null"
+        event_type: {type: string}
+        entity_type: {type: string}
+        entity_id:
+          oneOf:
+            - $ref: "#/components/schemas/Uuid"
+            - type: "null"
+        metadata: {type: object, additionalProperties: true}
+        request_id:
+          oneOf:
+            - $ref: "#/components/schemas/Uuid"
+            - type: "null"
+        occurred_at: {$ref: "#/components/schemas/Timestamp"}
+    AuditPage:
+      allOf:
+        - $ref: "#/components/schemas/PageEnvelope"
+        - type: object
+          properties:
+            data:
+              type: array
+              items: {$ref: "#/components/schemas/AuditEvent"}
