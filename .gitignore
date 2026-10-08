@@ -12,6 +12,7 @@ tmp/
 .env.*
 !.env.example
 !**/.env.example
+output/private/
 
 # Dependencies and generated frontend output
 node_modules/
