@@ -52,11 +52,11 @@ if [[ ! -f "$env_file" ]]; then
   install -m 600 /dev/null "$credential_file"
   printf '%s\n' \
     'Akun demo SABABUKA' \
-    'superadmin@sababuka.local' \
-    'bapperida@sababuka.local' \
-    'kominfo@sababuka.local' \
-    'opd.dkpp@sababuka.local' \
-    'pimpinan@sababuka.local' \
+    'developer@sababuka.com' \
+    'bapperida@sababuka.com' \
+    'kominfo@sababuka.com' \
+    'opd.dkpp@sababuka.com' \
+    'pimpinan@sababuka.com' \
     "PASSWORD=${demo_password}" > "$credential_file"
 else
   demo_password=$(sed -n 's/^PASSWORD=//p' "$credential_file")
