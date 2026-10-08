@@ -1,0 +1,26 @@
+[Unit]
+Description=SABABUKA Backend API
+After=network-online.target postgresql.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=sababuka
+Group=sababuka
+WorkingDirectory=/srv/sababuka/current/backend
+EnvironmentFile=/etc/sababuka/sababuka.env
+ExecStart=/usr/bin/node dist/src/server.js
+Restart=on-failure
+RestartSec=3
+TimeoutStopSec=20
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+ReadWritePaths=/var/lib/sababuka
+
+[Install]
+WantedBy=multi-user.target

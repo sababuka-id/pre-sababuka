@@ -1,7 +1,7 @@
 # Deployment VPS SABABUKA
 
-Fondasi produksi saat ini menggunakan Nginx untuk frontend statis dan
-PostgreSQL/PostGIS sebagai basis data lokal. Aplikasi dipasang di
+Fondasi produksi menggunakan Nginx untuk frontend dan reverse proxy API,
+service systemd `sababuka-api`, serta PostgreSQL/PostGIS lokal. Aplikasi dipasang di
 `/srv/sababuka/releases/<timestamp>` dan symlink `/srv/sababuka/current`
 menunjuk ke rilis aktif.
 
@@ -13,14 +13,18 @@ menunjuk ke rilis aktif.
 
 ## Jalur publik
 
-- HTTP: port 80 melalui Nginx.
-- HTTPS: port 443 telah disiapkan di firewall, tetapi sertifikat dan nama
-  domain dipasang setelah DNS Cloudflare/subdomain produksi ditentukan.
+- HTTP dan HTTPS melalui Nginx.
+- API hanya mendengarkan `127.0.0.1:3001` dan diteruskan melalui `/api/`.
+- Konfigurasi rahasia berada di `/etc/sababuka/sababuka.env` dengan mode `600`.
+- Bukti dukung disimpan persisten di `/var/lib/sababuka/evidence`, bukan di
+  direktori rilis.
 
 ## Rollback frontend
 
 Ubah `/srv/sababuka/current` ke direktori rilis sebelumnya, lalu jalankan
-`nginx -t && systemctl reload nginx` sebagai administrator sistem.
+`systemctl restart sababuka-api && nginx -t && systemctl reload nginx` sebagai
+administrator sistem. Migrasi database harus tetap kompatibel mundur; pulihkan
+dump pra-rilis hanya jika rollback juga memerlukan rollback data.
 
 ## Backup
 
@@ -30,8 +34,13 @@ Timer `sababuka-backup.timer` membuat dump PostgreSQL setiap hari sekitar
 penyimpanan di luar VPS tetap wajib ditambahkan agar kegagalan VPS tidak ikut
 menghilangkan backup.
 
-## Batas tahap ini
+## Pemeriksaan setelah rilis
 
-Frontend masih merupakan paket demonstrasi dengan data dummy. Database dan
-PostGIS telah tersedia tetapi belum berisi skema/data produksi. Kredensial
-database, token BPS, serta data OPD tidak boleh dimasukkan ke repository.
+- `systemctl is-active sababuka-api nginx postgresql`
+- `curl -fsS http://127.0.0.1:3001/api/v1/health`
+- `curl -fsS https://<domain>/api/v1/health`
+- login dengan akun uji, lalu periksa menu sesuai role dan satu alur mutasi
+  menggunakan data demo.
+
+Kredensial database, master key enkripsi, token BPS, dan kata sandi akun tidak
+boleh dimasukkan ke repository atau arsip rilis.
