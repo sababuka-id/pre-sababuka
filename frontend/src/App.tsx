@@ -16,6 +16,7 @@ import { PublicationsPage } from "./pages/PublicationsPage";
 import { AssistantPage } from "./pages/AssistantPage";
 import { AuditPage, NotificationsPage } from "./pages/MonitoringPages";
 import { OperationsPage } from "./pages/OperationsPage";
+import { ConnectorsPage } from "./pages/ConnectorsPage";
 
 const pageMeta: Record<string, { title: string; subtitle: string; permission?: string }> = {
   "/admin": { title: "Beranda Administrasi", subtitle: "Ringkasan konfigurasi, akses pengguna, dan kesiapan sistem.", permission: "system.configure" },
@@ -36,6 +37,7 @@ const pageMeta: Record<string, { title: string; subtitle: string; permission?: s
   "/submissions": { title: "Realisasi Indikator", subtitle: "Isi dan kirim capaian indikator OPD per periode pelaporan.", permission: "submission.view" },
   "/reviews": { title: "Pemeriksaan Capaian OPD", subtitle: "Periksa, kembalikan, atau setujui capaian yang dikirim perangkat daerah.", permission: "submission.review" },
   "/publications": { title: "Kurasi dan Publikasi", subtitle: "Pilih capaian yang disetujui sebelum diterbitkan ke dashboard pimpinan.", permission: "publication.view" },
+  "/connectors": { title: "Sumber Data", subtitle: "Hubungkan dataset BPS dan Satu Data Kapuas melalui mapping tahunan yang disetujui.", permission: "connector.view" },
 };
 
 function ProtectedApp() {
@@ -75,6 +77,7 @@ function ProtectedApp() {
   else if (pathname === "/notifications") content = <NotificationsPage />;
   else if (pathname === "/audit") content = <AuditPage />;
   else if (pathname === "/operations") content = <OperationsPage />;
+  else if (pathname === "/connectors") content = <ConnectorsPage />;
   else content = <ComingSoon title={meta.title} />;
 
   return <AdminLayout pathname={pathname} title={meta.title} subtitle={meta.subtitle}>{content}</AdminLayout>;

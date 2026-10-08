@@ -19,6 +19,7 @@ import { publicationRoutes } from "./routes/publications.js";
 import { assistantRoutes } from "./routes/assistant.js";
 import { monitoringRoutes } from "./routes/monitoring.js";
 import { operationRoutes } from "./routes/operations.js";
+import { connectorRoutes } from "./routes/connectors.js";
 
 export interface BuildAppOptions {
   config: AppConfig;
@@ -126,6 +127,7 @@ export async function buildApp(options: BuildAppOptions): Promise<FastifyInstanc
       await api.register(assistantRoutes);
       await api.register(monitoringRoutes);
       await api.register(operationRoutes);
+      await api.register(connectorRoutes);
     },
     { prefix: "/api/v1" },
   );

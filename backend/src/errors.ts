@@ -11,7 +11,14 @@ export type ApiErrorCode =
   | "NOT_FOUND"
   | "CONFLICT"
   | "RATE_LIMITED"
-  | "INTERNAL_ERROR";
+  | "INTERNAL_ERROR"
+  | "SOURCE_UNAVAILABLE"
+  | "SOURCE_INVALID"
+  | "CONNECTOR_WAITING_KEY"
+  | "CONNECTOR_NOT_READY"
+  | "UNSUPPORTED_FORMAT"
+  | "SOURCE_RESOURCE_NOT_FOUND"
+  | "CONFIGURATION_ERROR";
 
 export class ApiError extends Error {
   constructor(
