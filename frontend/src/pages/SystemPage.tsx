@@ -11,10 +11,13 @@ interface Configuration {
 }
 
 export function SystemPage() {
+  const { user } = useAuth();
   const result = useAsync(() => api<Configuration>("/system/configuration"), []);
   const [settingOpen, setSettingOpen] = useState(false);
   const [busyCode, setBusyCode] = useState<string | null>(null);
   const [message, setMessage] = useState<{ tone: "error" | "success"; text: string } | null>(null);
+  const [resetOpen, setResetOpen] = useState(false);
+  const [resetBusy, setResetBusy] = useState(false);
   async function toggleFlag(flag: FeatureFlag) {
     setBusyCode(flag.code); setMessage(null);
     try {
@@ -24,12 +27,25 @@ export function SystemPage() {
     } catch (reason) { setMessage({ tone: "error", text: reason instanceof Error ? reason.message : "Kendali fitur gagal diperbarui." }); }
     finally { setBusyCode(null); }
   }
+  async function resetDemo() {
+    setResetBusy(true); setMessage(null);
+    try {
+      const summary = await api<{ batches_removed: number; observations_removed: number; publications_removed: number; targets_preserved: number }>(
+        "/demo/reset", { method: "POST", mutation: true, body: jsonBody({ confirmation: "RESET_DATA_DEMO" }) },
+      );
+      setResetOpen(false);
+      setMessage({ tone: "success", text: `Data demo direset. ${summary.batches_removed} kiriman, ${summary.observations_removed} capaian, dan ${summary.publications_removed} publikasi dihapus; ${summary.targets_preserved} target demo dipertahankan.` });
+    } catch (reason) { setMessage({ tone: "error", text: reason instanceof Error ? reason.message : "Reset data demo gagal." }); }
+    finally { setResetBusy(false); }
+  }
   if (result.loading) return <div className="panel-loading"><Spinner /></div>;
   if (result.error || !result.data) return <Notice tone="error">{result.error?.message ?? "Konfigurasi tidak dapat dimuat."}</Notice>;
   return <div className="settings-layout">{message && <Notice tone={message.tone}>{message.text}</Notice>}
     <section className="panel"><header className="panel-heading"><div><span className="eyebrow">Kendali fitur</span><h2>Fitur aplikasi</h2><p>Aktifkan modul secara bertahap tanpa mengubah kode aplikasi.</p></div><Flag /></header><div className="flag-list">{result.data.feature_flags.map((flag) => <div key={flag.code}><span className={`flag-icon ${flag.is_enabled ? "on" : ""}`}><Flag /></span><span><strong>{flag.name}</strong><small>{flag.description}</small><code>{flag.code}</code></span><label className="switch"><input aria-label={`Aktifkan ${flag.name}`} type="checkbox" checked={flag.is_enabled} disabled={busyCode === flag.code} onChange={() => toggleFlag(flag)} /><i /></label></div>)}</div></section>
     <section className="panel"><header className="panel-heading"><div><span className="eyebrow">Parameter aplikasi</span><h2>Pengaturan nonrahasia</h2><p>Rahasia integrasi tidak boleh disimpan pada bagian ini.</p></div><button className="button primary" onClick={() => setSettingOpen(true)}><Plus />Tambah pengaturan</button></header>{result.data.settings.length ? <div className="setting-list">{result.data.settings.map((setting) => <div key={setting.key}><span className="setting-icon"><Settings2 /></span><span><strong>{setting.key}</strong><small>{setting.description || "Tanpa keterangan"}</small></span><code>{JSON.stringify(setting.value)}</code><small>{formatDate(setting.updated_at)}</small></div>)}</div> : <div className="empty-inline">Belum ada pengaturan khusus. Nilai bawaan aplikasi masih digunakan.</div>}</section>
+    {user?.roles.some((role) => role.code === "superadmin") && <section className="panel demo-reset-panel"><header className="panel-heading"><div><span className="eyebrow">Lingkungan demonstrasi</span><h2>Reset Data Demo</h2><p>Hapus transaksi dari dua paket demo dan kembalikan status paket ke draf. Master RPJMD dan target resminya tetap aman.</p></div><ShieldCheck /></header><div className="modal-actions"><button className="button danger" onClick={() => setResetOpen(true)}>Reset Data Demo</button></div></section>}
     {settingOpen && <SettingForm onClose={() => setSettingOpen(false)} onSaved={() => { setSettingOpen(false); result.reload(); }} />}
+    {resetOpen && <Modal title="Reset Data Demo" onClose={() => { if (!resetBusy) setResetOpen(false); }}><Notice tone="warning">Tindakan ini menghapus kiriman, capaian, bukti dukung, riwayat proses, dan publikasi dari paket presentasi serta latihan. Master RPJMD dan target resmi tidak dihapus.</Notice><p>Ketik <strong>RESET_DATA_DEMO</strong> pada konfirmasi untuk melanjutkan.</p><form className="form-stack" onSubmit={(event) => { event.preventDefault(); void resetDemo(); }}><label className="field"><span>Konfirmasi</span><input pattern="RESET_DATA_DEMO" placeholder="RESET_DATA_DEMO" required disabled={resetBusy} /></label><footer className="modal-actions"><button type="button" className="button secondary" onClick={() => setResetOpen(false)} disabled={resetBusy}>Batal</button><button className="button danger" disabled={resetBusy}>{resetBusy ? "Mereset…" : "Reset sekarang"}</button></footer></form></Modal>}
   </div>;
 }
 

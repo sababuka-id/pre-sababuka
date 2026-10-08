@@ -42,3 +42,10 @@ export function requirePermission(request: FastifyRequest, permission: string): 
     throw new ApiError(403, "PERMISSION_DENIED", "Anda tidak memiliki izin untuk tindakan ini.");
   }
 }
+
+export function requireSuperadmin(request: FastifyRequest): void {
+  if (!request.auth) throw new ApiError(401, "AUTH_REQUIRED", "Sesi diperlukan.");
+  if (!request.auth.user.roles.some((role) => role.code === "superadmin" && role.scope_type === "global")) {
+    throw new ApiError(403, "PERMISSION_DENIED", "Tindakan ini hanya tersedia untuk Superadmin.");
+  }
+}

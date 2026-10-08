@@ -1,5 +1,5 @@
 import type { FastifyInstance, FastifyRequest } from "fastify";
-import { requireCsrf, requirePermission } from "../plugins/authentication.js";
+import { requireCsrf, requirePermission, requireSuperadmin } from "../plugins/authentication.js";
 import { requestAuditContext } from "../request-context.js";
 import {
   AdminService,
@@ -8,6 +8,7 @@ import {
   type UserCreateInput,
   type UserUpdateInput,
 } from "../services/admin-service.js";
+import { DemoService } from "../services/demo-service.js";
 
 const uuid = { type: "string", format: "uuid" } as const;
 const nullableUuid = { anyOf: [uuid, { type: "null" }] } as const;
@@ -380,6 +381,24 @@ export async function administrationRoutes(app: FastifyInstance): Promise<void> 
         request.body.configuration ?? {},
         requestAuditContext(request),
       );
+    },
+  );
+
+  app.post<{ Body: { confirmation: "RESET_DATA_DEMO" } }>(
+    "/demo/reset",
+    {
+      schema: {
+        body: {
+          type: "object", additionalProperties: false, required: ["confirmation"],
+          properties: { confirmation: { type: "string", const: "RESET_DATA_DEMO" } },
+        },
+      },
+    },
+    async (request) => {
+      requireCsrf(request);
+      requireSuperadmin(request);
+      return new DemoService(request.server.db, request.server.config.evidenceStoragePath)
+        .reset(request.auth!, requestAuditContext(request));
     },
   );
 }
