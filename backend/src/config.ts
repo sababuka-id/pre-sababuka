@@ -11,6 +11,7 @@ export interface AppConfig {
   invitationTtlSeconds: number;
   mfaIssuer: string;
   mfaEncryptionKey: Buffer | null;
+  connectorEncryptionKey: Buffer | null;
   evidenceStoragePath: string;
   evidenceMaxBytes: number;
 }
@@ -54,6 +55,15 @@ export function loadConfig(): AppConfig {
     throw new Error("MFA_ENCRYPTION_KEY wajib diatur pada production.");
   }
 
+  const rawConnectorKey = process.env.CONNECTOR_ENCRYPTION_KEY;
+  let connectorEncryptionKey: Buffer | null = null;
+  if (rawConnectorKey) {
+    connectorEncryptionKey = Buffer.from(rawConnectorKey, "base64");
+    if (connectorEncryptionKey.length !== 32) {
+      throw new Error("CONNECTOR_ENCRYPTION_KEY harus berupa base64 dari tepat 32 byte.");
+    }
+  }
+
   return {
     nodeEnv: nodeEnv as AppConfig["nodeEnv"],
     host: process.env.HOST ?? "127.0.0.1",
@@ -67,6 +77,7 @@ export function loadConfig(): AppConfig {
     invitationTtlSeconds: integerEnv("INVITATION_TTL_SECONDS", 259_200, 900),
     mfaIssuer: process.env.MFA_ISSUER ?? "SABABUKA Bersinar",
     mfaEncryptionKey,
+    connectorEncryptionKey,
     evidenceStoragePath: process.env.EVIDENCE_STORAGE_PATH ?? "./storage/evidence",
     evidenceMaxBytes: integerEnv("EVIDENCE_MAX_BYTES", 10_485_760, 1_024),
   };

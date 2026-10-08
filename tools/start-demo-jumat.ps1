@@ -46,6 +46,14 @@ $env:PORT = "3001"
 $env:COOKIE_SECURE = "false"
 $env:LOG_LEVEL = "info"
 $env:MFA_ENCRYPTION_KEY = [Convert]::ToBase64String((1..32 | ForEach-Object { Get-Random -Minimum 0 -Maximum 256 }))
+$connectorKeyPath = Join-Path $backendRoot "tmp\connector-encryption-key"
+if (Test-Path $connectorKeyPath) {
+  $env:CONNECTOR_ENCRYPTION_KEY = (Get-Content $connectorKeyPath -Raw).Trim()
+} else {
+  $env:CONNECTOR_ENCRYPTION_KEY = [Convert]::ToBase64String((1..32 | ForEach-Object { Get-Random -Minimum 0 -Maximum 256 }))
+  New-Item -ItemType Directory -Force -Path (Split-Path $connectorKeyPath) | Out-Null
+  Set-Content -Path $connectorKeyPath -Value $env:CONNECTOR_ENCRYPTION_KEY -NoNewline
+}
 $env:EVIDENCE_STORAGE_PATH = Join-Path $backendRoot "tmp\evidence"
 
 Push-Location $backendRoot
