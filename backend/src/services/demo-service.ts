@@ -4,6 +4,7 @@ import type { Database } from "../database.js";
 import type { AuthContext } from "../types/auth.js";
 import { ApiError } from "../errors.js";
 import { recordAudit, type AuditContext } from "./audit-service.js";
+import { cleanupOrphanNotifications } from "./orphan-repair-service.js";
 
 export const DEMO_PACKAGE_CODES = ["DEMO_PRESENTATION", "DEMO_PRACTICE"] as const;
 const CATEGORY_CODES = ["DEMO_PRESENTATION_CATEGORY", "DEMO_PRACTICE_CATEGORY"] as const;
@@ -22,6 +23,7 @@ export interface DemoResetSummary {
   evidence_removed: number;
   workflow_actions_removed: number;
   notifications_removed: number;
+  orphan_notifications_removed: number;
   evidence_files_removed: number;
 }
 
@@ -30,7 +32,7 @@ function emptySummary(): DemoResetSummary {
     indicator_versions_reset: 0, targets_preserved: 0, publications_removed: 0,
     publication_items_removed: 0, batches_removed: 0, observations_removed: 0,
     evidence_removed: 0, workflow_actions_removed: 0, notifications_removed: 0,
-    evidence_files_removed: 0 };
+    evidence_files_removed: 0, orphan_notifications_removed: 0 };
 }
 
 export class DemoService {
@@ -88,6 +90,7 @@ export class DemoService {
       summary.workflow_actions_removed = workflowDelete.rowCount ?? 0;
       const notificationDelete = await client.query(`DELETE FROM sababuka.notifications WHERE entity_type = 'data_batch' AND entity_id = ANY($1::uuid[])`, [batchIds]);
       summary.notifications_removed = notificationDelete.rowCount ?? 0;
+      summary.orphan_notifications_removed = await cleanupOrphanNotifications(client);
       const evidenceDelete = await client.query(`DELETE FROM sababuka.submission_evidence WHERE batch_id = ANY($1::uuid[])`, [batchIds]);
       summary.evidence_removed = evidenceDelete.rowCount ?? 0;
       await client.query(`DELETE FROM sababuka.validation_issues WHERE batch_id = ANY($1::uuid[])`, [batchIds]);

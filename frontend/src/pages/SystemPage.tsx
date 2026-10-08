@@ -30,11 +30,11 @@ export function SystemPage() {
   async function resetDemo() {
     setResetBusy(true); setMessage(null);
     try {
-      const summary = await api<{ batches_removed: number; observations_removed: number; publications_removed: number; targets_preserved: number }>(
+      const summary = await api<{ batches_removed: number; observations_removed: number; publications_removed: number; orphan_notifications_removed: number; targets_preserved: number }>(
         "/demo/reset", { method: "POST", mutation: true, body: jsonBody({ confirmation: "RESET_DATA_DEMO" }) },
       );
       setResetOpen(false);
-      setMessage({ tone: "success", text: `Data demo direset. ${summary.batches_removed} kiriman, ${summary.observations_removed} capaian, dan ${summary.publications_removed} publikasi dihapus; ${summary.targets_preserved} target demo dipertahankan.` });
+      setMessage({ tone: "success", text: `Data demo direset. ${summary.batches_removed} kiriman, ${summary.observations_removed} capaian, dan ${summary.publications_removed} publikasi dihapus; ${summary.orphan_notifications_removed} notifikasi yatim dibersihkan; ${summary.targets_preserved} target demo dipertahankan.` });
     } catch (reason) { setMessage({ tone: "error", text: reason instanceof Error ? reason.message : "Reset data demo gagal." }); }
     finally { setResetBusy(false); }
   }

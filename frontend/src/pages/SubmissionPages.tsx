@@ -3,6 +3,7 @@ import { useState, type FormEvent } from "react";
 import { api, apiPath, jsonBody } from "../api";
 import { useAuth } from "../auth";
 import { Badge, capaianStatusLabel, EmptyState, Modal, Notice, Pagination, Spinner, useAsync } from "../components";
+import { navigate } from "../router";
 import type { Organization, PageResponse, Period, Submission, SubmissionEvidence, SubmissionObservation } from "../types";
 
 function formatIndicatorValue(value: string | number | null | undefined, dataType: string, unit?: string | null) {
@@ -58,7 +59,7 @@ export function SubmissionsPage({ review = false }: { review?: boolean }) {
       {submissions.data && <Pagination page={submissions.data.meta.page} totalPages={submissions.data.meta.total_pages} onChange={setPage} />}
     </section>
     {createOpen && refs.data && <CreateSubmission organizations={refs.data.organizations} periods={refs.data.periods} preferredOrganizationId={user?.organizations[0]?.id} onClose={() => setCreateOpen(false)} onCreated={(id) => { setCreateOpen(false); submissions.reload(); setSelectedId(id); }} />}
-    {selectedId && <SubmissionDetailModal id={selectedId} permissions={user?.permissions ?? []} onClose={() => setSelectedId(null)} onChanged={() => submissions.reload()} />}
+    {selectedId && <SubmissionDetailModal id={selectedId} review={review} permissions={user?.permissions ?? []} onClose={() => setSelectedId(null)} onChanged={() => submissions.reload()} />}
   </>;
 }
 
@@ -87,7 +88,7 @@ function CreateSubmission({ organizations, periods, preferredOrganizationId, onC
   </Modal>;
 }
 
-function SubmissionDetailModal({ id, permissions, onClose, onChanged }: { id: string; permissions: string[]; onClose(): void; onChanged(): void }) {
+function SubmissionDetailModal({ id, review, permissions, onClose, onChanged }: { id: string; review: boolean; permissions: string[]; onClose(): void; onChanged(): void }) {
   const detail = useAsync(() => api<Submission>(`/submissions/${id}`), [id]);
   const evidence = useAsync(() => api<{ data: SubmissionEvidence[] }>(`/submissions/${id}/evidence`), [id]);
   const [values, setValues] = useState<Record<string, string>>({});
@@ -133,8 +134,9 @@ function SubmissionDetailModal({ id, permissions, onClose, onChanged }: { id: st
     : detail.data?.status === "submitted" && permissions.includes("submission.review") ? "start-review"
     : detail.data?.status === "under_review" && permissions.includes("submission.approve") ? "approve" : null;
 
+  const staleTarget = detail.error?.message.toLowerCase().includes("tidak ditemukan") ?? false;
   return <Modal title="Rincian capaian indikator" onClose={onClose} wide>
-    {detail.loading ? <div className="panel-loading"><Spinner /></div> : detail.error ? <Notice tone="error">{detail.error}</Notice> : detail.data && <div className="submission-detail">
+    {detail.loading ? <div className="panel-loading"><Spinner /></div> : detail.error ? staleTarget ? <div className="form-stack"><Notice tone="warning">Data capaian ini sudah direset atau tidak tersedia. Daftar yang tampil sekarang berisi data terbaru.</Notice><button className="button secondary" onClick={() => { onClose(); navigate(review ? "/reviews" : "/submissions"); }}>Kembali ke daftar capaian</button></div> : <Notice tone="error">{detail.error}</Notice> : detail.data && <div className="submission-detail">
       {error && <Notice tone="error">{error}</Notice>}
       <div className="detail-grid"><div><span>OPD</span><strong>{detail.data.organization_name}</strong></div><div><span>Periode</span><strong>{detail.data.period_label}</strong></div><div><span>Status capaian</span><strong>{capaianStatusLabel(detail.data.status)}</strong></div><div><span>Terisi</span><strong>{detail.data.row_count} indikator</strong></div></div>
       {detail.data.status === "returned" && <Notice tone="warning">Catatan peninjau: {detail.data.review_notes ?? "Silakan periksa kembali data dan bukti dukung."}</Notice>}
