@@ -21,7 +21,7 @@ WHERE email = 'opd.dkpp@sababuka.local';
 UPDATE sababuka.users SET email = 'pimpinan@sababuka.com', full_name = 'Pimpinan Daerah', updated_at = now()
 WHERE email = 'pimpinan@sababuka.local';
 
-INSERT INTO sababuka.schema_migrations (version, name)
+INSERT INTO sababuka.schema_migrations (version, description)
 VALUES ('026', 'self_registration_and_developer_identity');
 
 COMMIT;
