@@ -45,9 +45,10 @@ export function NotificationsPage() {
 
 export function AuditPage() {
   const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(25);
   const [eventType, setEventType] = useState("");
   const [entityType, setEntityType] = useState("");
-  const url = `/audit/events?page=${page}&page_size=25${eventType ? `&event_type=${encodeURIComponent(eventType)}` : ""}${entityType ? `&entity_type=${encodeURIComponent(entityType)}` : ""}`;
+  const url = `/audit/events?page=${page}&page_size=${pageSize}${eventType ? `&event_type=${encodeURIComponent(eventType)}` : ""}${entityType ? `&entity_type=${encodeURIComponent(entityType)}` : ""}`;
   const result = useAsync(() => api<PageResponse<AuditEvent>>(url), [url]);
   return <>
     <div className="toolbar audit-filter">
@@ -59,7 +60,7 @@ export function AuditPage() {
       {result.loading ? <div className="panel-loading"><Spinner /></div>
         : !result.data?.data.length ? <EmptyState title="Belum ada audit">Aktivitas yang berada dalam lingkup Anda akan tampil di sini.</EmptyState>
         : <div className="table-scroll"><table><thead><tr><th>Waktu</th><th>Aktivitas</th><th>Entitas</th><th>Aktor</th><th>Organisasi</th><th>Request ID</th></tr></thead><tbody>{result.data.data.map((item) => <tr key={item.id}><td>{formatDate(item.occurred_at)} WIB</td><td><div className="identity-cell"><span className="table-icon"><ScrollText /></span><span><strong>{item.event_type}</strong><small>{item.id}</small></span></div></td><td><Badge tone="neutral">{item.entity_type}</Badge></td><td>{item.actor_name ?? "Sistem"}</td><td>{item.organization_name ?? "Global"}</td><td><code>{item.request_id?.slice(0, 8) ?? "-"}</code></td></tr>)}</tbody></table></div>}
-      {result.data && <Pagination page={result.data.meta.page} totalPages={result.data.meta.total_pages} onChange={setPage} />}
+      {result.data && <Pagination page={result.data.meta.page} pageSize={result.data.meta.page_size} totalItems={result.data.meta.total_items} totalPages={result.data.meta.total_pages} sortLabel="Aktivitas terbaru" onChange={setPage} onPageSizeChange={(size) => { setPageSize(size); setPage(1); }} />}
     </section>
   </>;
 }

@@ -9,16 +9,17 @@ export function OrganizationsPage() {
   const { user } = useAuth();
   const canManage = user?.permissions.includes("organization.manage") ?? false;
   const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(20);
   const [search, setSearch] = useState("");
   const [query, setQuery] = useState("");
   const [createOpen, setCreateOpen] = useState(false);
-  const result = useAsync(() => api<PageResponse<Organization>>(`/organizations?page=${page}&page_size=20${query ? `&q=${encodeURIComponent(query)}` : ""}`), [page, query]);
+  const result = useAsync(() => api<PageResponse<Organization>>(`/organizations?page=${page}&page_size=${pageSize}${query ? `&q=${encodeURIComponent(query)}` : ""}`), [page, pageSize, query]);
 
   return <>
     <div className="toolbar"><form className="search-box" role="search" onSubmit={(event) => { event.preventDefault(); setPage(1); setQuery(search); }}><Search aria-hidden /><input aria-label="Cari organisasi" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Cari kode atau nama organisasi" /><button className="button secondary">Cari</button></form>{canManage && <button className="button primary" onClick={() => setCreateOpen(true)}><Plus />Tambah organisasi</button>}</div>
     {result.error && <Notice tone="error">{result.error.message}</Notice>}
     <section className="panel table-panel">{result.loading ? <div className="panel-loading"><Spinner /></div> : !result.data?.data.length ? <EmptyState title="Belum ada organisasi">{canManage ? "Tambahkan OPD atau unit kerja untuk mulai mengatur pengguna dan scope data." : "Belum ada organisasi dalam lingkup yang dapat Anda lihat."}</EmptyState> : <div className="table-scroll"><table><thead><tr><th>Organisasi</th><th>Kode</th><th>Jenis</th><th>Induk</th><th>Status</th></tr></thead><tbody>{result.data.data.map((organization) => <tr key={organization.id}><td><div className="identity-cell"><span className="table-icon"><Building2 /></span><span><strong>{organization.name}</strong><small>{organization.short_name || "Nama singkat belum diisi"}</small></span></div></td><td><code>{organization.code}</code></td><td>{organization.organization_type.replaceAll("_", " ")}</td><td>{organization.parent_id ? "Unit turunan" : "Organisasi utama"}</td><td><Badge tone={organization.is_active ? "success" : "neutral"}>{organization.is_active ? "Aktif" : "Nonaktif"}</Badge></td></tr>)}</tbody></table></div>}
-      {result.data && <Pagination page={result.data.meta.page} totalPages={result.data.meta.total_pages} onChange={setPage} />}</section>
+      {result.data && <Pagination page={result.data.meta.page} pageSize={result.data.meta.page_size} totalItems={result.data.meta.total_items} totalPages={result.data.meta.total_pages} sortLabel="Nama A-Z" onChange={setPage} onPageSizeChange={(size) => { setPageSize(size); setPage(1); }} />}</section>
     {createOpen && <OrganizationForm onClose={() => setCreateOpen(false)} onCreated={() => { setCreateOpen(false); result.reload(); }} />}
   </>;
 }

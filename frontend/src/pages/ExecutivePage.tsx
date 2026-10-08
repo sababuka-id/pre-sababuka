@@ -44,7 +44,7 @@ export function ExecutivePage() {
       ? `Dashboard memisahkan data resmi dan data demo. ${verifiedCount} capaian sudah memiliki sumber resmi; kartu berlabel DEMO tetap bukan realisasi.`
       : "Ringkasan pimpinan hanya menampilkan angka dari publikasi aktif. Draf dan data yang baru dikirim tidak masuk ke kartu capaian."}</Notice>
     <section className="metric-grid executive-metrics">{cards.map(([label, value, Icon, tone]) => <article className="metric-card" key={label}><span className={`metric-icon ${tone}`}><Icon /></span><span><small>{label}</small><strong>{value}</strong></span></article>)}</section>
-    <section className="panel category-release-panel"><header><div><span className="eyebrow">Status rilis pilot</span><h2>Kesiapan kategori untuk paparan</h2></div><small>{categoryStatus.filter((category) => category.verified > 0).length} dari {categoryStatus.length} kategori sudah memuat capaian bersumber resmi</small></header>
+    <section className="panel category-release-panel"><header><div><span className="eyebrow">Cakupan data strategis</span><h2>Ketersediaan capaian per kelompok isu</h2></div><small>{categoryStatus.filter((category) => category.verified > 0).length} dari {categoryStatus.length} kelompok isu sudah memuat capaian bersumber resmi</small></header>
       <div className="category-release-grid">{categoryStatus.map((category) => <article key={category.name}>
         <span className={`badge ${category.verified > 0 ? "success" : "warning"}`}>{category.verified > 0 ? "Capaian terverifikasi" : "Demo · menunggu OPD"}</span>
         <h3>{category.name}</h3>

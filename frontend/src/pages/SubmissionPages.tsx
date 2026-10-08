@@ -21,10 +21,11 @@ function formatIndicatorValue(value: string | number | null | undefined, dataTyp
 export function SubmissionsPage({ review = false }: { review?: boolean }) {
   const { user } = useAuth();
   const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(20);
   const [status, setStatus] = useState(review ? "submitted" : "");
   const [createOpen, setCreateOpen] = useState(false);
   const [selectedId, setSelectedId] = useState<string | null>(() => new URLSearchParams(window.location.search).get("id"));
-  const url = `/submissions?page=${page}&page_size=20${status ? `&status=${status}` : ""}`;
+  const url = `/submissions?page=${page}&page_size=${pageSize}${status ? `&status=${status}` : ""}`;
   const submissions = useAsync(() => api<PageResponse<Submission>>(url), [url]);
   const refs = useAsync(async () => {
     const [periods, organizations] = await Promise.all([
@@ -56,7 +57,7 @@ export function SubmissionsPage({ review = false }: { review?: boolean }) {
             <td><Badge tone={item.status === "approved" ? "success" : item.status === "returned" ? "warning" : "neutral"}>{capaianStatusLabel(item.status)}</Badge></td>
           </tr>)}
         </tbody></table></div>}
-      {submissions.data && <Pagination page={submissions.data.meta.page} totalPages={submissions.data.meta.total_pages} onChange={setPage} />}
+      {submissions.data && <Pagination page={submissions.data.meta.page} pageSize={submissions.data.meta.page_size} totalItems={submissions.data.meta.total_items} totalPages={submissions.data.meta.total_pages} sortLabel="Terbaru diperbarui" onChange={setPage} onPageSizeChange={(size) => { setPageSize(size); setPage(1); }} />}
     </section>
     {createOpen && refs.data && <CreateSubmission organizations={refs.data.organizations} periods={refs.data.periods} preferredOrganizationId={user?.organizations[0]?.id} onClose={() => setCreateOpen(false)} onCreated={(id) => { setCreateOpen(false); submissions.reload(); setSelectedId(id); }} />}
     {selectedId && <SubmissionDetailModal id={selectedId} review={review} permissions={user?.permissions ?? []} onClose={() => setSelectedId(null)} onChanged={() => submissions.reload()} />}

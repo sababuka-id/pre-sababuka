@@ -58,12 +58,25 @@ export function Notice({ tone, children }: { tone: "error" | "success" | "warnin
   return <div className={`notice ${tone}`} role={tone === "error" ? "alert" : "status"} aria-live="polite"><Icon size={18} aria-hidden /><div>{children instanceof Error ? children.message : children}</div></div>;
 }
 
-export function Pagination({ page, totalPages, onChange }: { page: number; totalPages: number; onChange(page: number): void }) {
-  if (totalPages <= 1) return null;
+export function Pagination({ page, totalPages, totalItems, pageSize, sortLabel, onChange, onPageSizeChange }: {
+  page: number;
+  totalPages: number;
+  totalItems?: number;
+  pageSize?: number;
+  sortLabel?: string;
+  onChange(page: number): void;
+  onPageSizeChange?(pageSize: number): void;
+}) {
+  if (totalPages <= 1 && totalItems === undefined) return null;
+  const safePageSize = pageSize ?? Math.max(totalItems ?? 0, 1);
+  const firstItem = totalItems ? ((page - 1) * safePageSize) + 1 : 0;
+  const lastItem = totalItems ? Math.min(page * safePageSize, totalItems) : 0;
   return <div className="pagination">
-    <button className="button secondary" disabled={page <= 1} onClick={() => onChange(page - 1)}><ChevronLeft size={16} /> Sebelumnya</button>
-    <span>Halaman <strong>{page}</strong> dari <strong>{totalPages}</strong></span>
-    <button className="button secondary" disabled={page >= totalPages} onClick={() => onChange(page + 1)}>Berikutnya <ChevronRight size={16} /></button>
+    {totalItems !== undefined && <span className="pagination-summary">Menampilkan <strong>{firstItem}-{lastItem}</strong> dari <strong>{totalItems}</strong> data{sortLabel ? <> · Urutan: <strong>{sortLabel}</strong></> : null}</span>}
+    {onPageSizeChange && <label className="page-size">Baris<select aria-label="Jumlah baris per halaman" value={safePageSize} onChange={(event) => onPageSizeChange(Number(event.target.value))}>{[10, 20, 50, 100].map((size) => <option key={size} value={size}>{size}</option>)}</select></label>}
+    <div className="pagination-nav"><button className="button secondary" disabled={page <= 1} onClick={() => onChange(page - 1)}><ChevronLeft size={16} /> Sebelumnya</button>
+      <span>Halaman <strong>{page}</strong> dari <strong>{Math.max(totalPages, 1)}</strong></span>
+      <button className="button secondary" disabled={page >= totalPages} onClick={() => onChange(page + 1)}>Berikutnya <ChevronRight size={16} /></button></div>
   </div>;
 }
 

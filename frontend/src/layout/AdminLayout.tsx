@@ -90,9 +90,6 @@ export function AdminLayout({ pathname, title, subtitle, actions, children }: { 
     : ["/operations", "/submissions", "/reviews", "/publications"].includes(pathname) ? "Pelaporan Capaian"
     : "Ruang Kerja SABABUKA";
   const initials = user?.full_name.split(/\s+/u).slice(0, 2).map((part) => part[0]).join("").toUpperCase() || "SA";
-  const localEnvironment = ["localhost", "127.0.0.1"].includes(window.location.hostname);
-  const environmentLabel = localEnvironment ? "Lingkungan lokal" : "Development preview";
-  const environmentDetail = localEnvironment ? "Belum terhubung domain" : window.location.hostname;
 
   useEffect(() => {
     setProfileOpen(false);
@@ -134,14 +131,12 @@ export function AdminLayout({ pathname, title, subtitle, actions, children }: { 
           return <button key={entry.code} className={`nav-link ${pathname === entry.route_name ? "active" : ""}`} onClick={() => go(entry.route_name!)}><Icon /><span>{navigationLabels[entry.code] ?? entry.label}</span></button>;
         })}
       </nav>
-      <div className="sidebar-status"><span className="status-dot" /><div><strong>{environmentLabel}</strong><small>{environmentDetail}</small></div></div>
       <button className="collapse-button" onClick={() => setCollapsed((value) => !value)}>{collapsed ? <PanelLeftOpen /> : <PanelLeftClose />}<span>{collapsed ? "Perbesar" : "Perkecil sidebar"}</span></button>
     </aside>
     {mobile && <button className="mobile-overlay" onClick={() => setMobile(false)} aria-label="Tutup menu" />}
     <section className="workspace-main">
       <header className="topbar">
         <button className="icon-button mobile-trigger" aria-label="Buka menu" onClick={() => setMobile(true)}><Menu /></button>
-        <div className="topbar-context"><span>{areaLabel}</span><strong>{title}</strong></div>
         <div className="topbar-actions">
           <button className="icon-button notification" aria-label="Buka notifikasi" onClick={() => go("/notifications")}><Bell /></button>
           <div className="profile-wrap" ref={profileRef}>

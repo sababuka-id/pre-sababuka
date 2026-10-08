@@ -8,13 +8,14 @@ import type { Category, Indicator, Organization, PageResponse, Period, PolicyFoc
 export function CategoriesPage() {
   const { user } = useAuth();
   const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(20);
   const [search, setSearch] = useState("");
   const [query, setQuery] = useState("");
   const [createOpen, setCreateOpen] = useState(false);
   const [actionError, setActionError] = useState("");
   const [rowError, setRowError] = useState<Record<string, string>>({});
   const [busyCategoryId, setBusyCategoryId] = useState<string | null>(null);
-  const categories = useAsync(() => api<PageResponse<Category>>(`/categories?page=${page}&page_size=20${query ? `&q=${encodeURIComponent(query)}` : ""}`), [page, query]);
+  const categories = useAsync(() => api<PageResponse<Category>>(`/categories?page=${page}&page_size=${pageSize}${query ? `&q=${encodeURIComponent(query)}` : ""}`), [page, pageSize, query]);
   const focuses = useAsync(() => api<PageResponse<PolicyFocus>>("/policy-focuses?page_size=100"), []);
   const canManage = user?.permissions.includes("category.manage") ?? false;
   const canSubmit = user?.permissions.includes("category.submit") ?? false;
@@ -57,7 +58,7 @@ export function CategoriesPage() {
           );
         })}
       </tbody></table></div>}
-      {categories.data && <Pagination page={categories.data.meta.page} totalPages={categories.data.meta.total_pages} onChange={setPage} />}
+      {categories.data && <Pagination page={categories.data.meta.page} pageSize={categories.data.meta.page_size} totalItems={categories.data.meta.total_items} totalPages={categories.data.meta.total_pages} sortLabel="Urutan RPJMD" onChange={setPage} onPageSizeChange={(size) => { setPageSize(size); setPage(1); }} />}
     </section>
     {createOpen && focuses.data && <CategoryForm focuses={focuses.data.data} onClose={() => setCreateOpen(false)} onCreated={() => { setCreateOpen(false); categories.reload(); }} />}
   </>;
@@ -84,6 +85,7 @@ function CategoryForm({ focuses, onClose, onCreated }: { focuses: PolicyFocus[];
 export function IndicatorsPage() {
   const { user } = useAuth();
   const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(20);
   const [search, setSearch] = useState("");
   const [query, setQuery] = useState("");
   const [categoryId, setCategoryId] = useState("");
@@ -93,7 +95,7 @@ export function IndicatorsPage() {
   const [deepLinkId] = useState(() => new URLSearchParams(window.location.search).get("id"));
   const [editing, setEditing] = useState<Indicator | null>(null);
   const [actionError, setActionError] = useState("");
-  const url = `/indicators?page=${page}&page_size=20${query ? `&q=${encodeURIComponent(query)}` : ""}${categoryId ? `&category_id=${categoryId}` : ""}${status ? `&status=${status}` : ""}`;
+  const url = `/indicators?page=${page}&page_size=${pageSize}${query ? `&q=${encodeURIComponent(query)}` : ""}${categoryId ? `&category_id=${categoryId}` : ""}${status ? `&status=${status}` : ""}`;
   const indicators = useAsync(() => api<PageResponse<Indicator>>(url), [url]);
   const refs = useAsync(async () => {
     const [categories, units, periods, organizations] = await Promise.all([
@@ -127,7 +129,7 @@ export function IndicatorsPage() {
     {actionError && <div className="governance-table"><Notice tone="error">{actionError}</Notice></div>}
     <section className="panel table-panel governance-table">
       {indicators.loading ? <div className="panel-loading"><Spinner /></div> : !indicators.data?.data.length ? <EmptyState title="Belum ada indikator">Tambahkan indikator dan metadata pertamanya.</EmptyState> : <div className="table-scroll"><table><thead><tr><th>Indikator</th><th>Kategori</th><th>OPD utama</th><th>Arah</th><th>Target</th><th>Status</th></tr></thead><tbody>{indicators.data.data.map((indicator) => <tr key={indicator.id} className="clickable-row" tabIndex={0} aria-label={`Buka detail ${indicator.name}`} onClick={() => setSelected(indicator)} onKeyDown={(event) => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); setSelected(indicator); } }}><td><div className="identity-cell"><span className="table-icon"><Gauge /></span><span><strong>{indicator.name}</strong><small>{indicator.code} · {indicator.unit_symbol ?? indicator.unit_name}</small></span></div></td><td><strong>{indicator.category_name}</strong><small className="table-subtitle">{formatCategoryCode(indicator.category_code)} · kode teknis {indicator.category_code}</small></td><td>{indicator.owner_organization_name ?? "Belum ditetapkan"}</td><td>{directionLabel(indicator.direction)}</td><td>{indicator.targets.length} tahun</td><td><Badge tone={indicator.status === "active" ? "success" : "warning"}>{statusLabel(indicator.status)}</Badge></td></tr>)}</tbody></table></div>}
-      {indicators.data && <Pagination page={indicators.data.meta.page} totalPages={indicators.data.meta.total_pages} onChange={setPage} />}
+      {indicators.data && <Pagination page={indicators.data.meta.page} pageSize={indicators.data.meta.page_size} totalItems={indicators.data.meta.total_items} totalPages={indicators.data.meta.total_pages} sortLabel="Kategori dan nama" onChange={setPage} onPageSizeChange={(size) => { setPageSize(size); setPage(1); }} />}
     </section>
     {createOpen && refs.data && <IndicatorForm references={refs.data} onClose={() => setCreateOpen(false)} onCreated={() => { setCreateOpen(false); indicators.reload(); }} />}
     {editing && refs.data && <IndicatorForm references={refs.data} initial={editing} onClose={() => setEditing(null)} onCreated={() => { setEditing(null); indicators.reload(); }} />}

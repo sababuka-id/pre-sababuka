@@ -6,9 +6,6 @@ import { Notice, Spinner } from "../components";
 import { navigate } from "../router";
 
 function AuthBrand() {
-  const environmentLabel = ["localhost", "127.0.0.1"].includes(window.location.hostname)
-    ? "Lingkungan lokal"
-    : "Development preview";
   return <aside className="auth-brand">
     <div className="auth-brand-top"><div className="brand-symbol light">S</div><div><strong>SABABUKA</strong><span>BERSINAR</span></div></div>
     <div className="auth-copy">
@@ -21,7 +18,7 @@ function AuthBrand() {
       <div><Sparkles /><span><strong>Data terkurasi</strong><small>Setiap angka memiliki sumber dan status validasi.</small></span></div>
       <div><Bot /><span><strong>Asisten untuk pimpinan</strong><small>Jawaban hanya dari data yang layak tayang.</small></span></div>
     </div>
-    <small className="auth-foot">Pemerintah Kabupaten Kapuas · {environmentLabel}</small>
+    <small className="auth-foot">Pemerintah Kabupaten Kapuas</small>
   </aside>;
 }
 
