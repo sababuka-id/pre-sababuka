@@ -6,6 +6,12 @@
 
 SABABUKA sedang menyiapkan master data indikator pembangunan Kabupaten Kapuas. Tahap yang sedang dikerjakan adalah menyusun struktur fokus kebijakan, isu atau kategori, indikator, target, OPD pemilik, serta alur pemeriksaannya. Data realisasi dari BPS, Satu Data Kapuas, dan sumber OPD akan disinkronkan setelah struktur indikator dan pemilik datanya disepakati.
 
+### Pembuka paparan antara
+
+Paparan ini melanjutkan expose pendahuluan. Setelah arah produk dan kebutuhan dashboard pimpinan dibahas, tim UPR berangkat dari Matrix RPJMD Kabupaten Kapuas sebagai sumber acuan pemetaan awal di SABABUKA. Dari matrix tersebut, tim menyusun draft fokus kebijakan, isu atau kategori, indikator, target, dan OPD pemilik. Draft itu kemudian masuk ke ruang verifikasi BAPPERIDA dan pemeriksaan teknis OPD pemilik.
+
+Paparan besok belum menetapkan master final. Forum diminta mengonfirmasi resume Matrix RPJMD, daftar organisasi yang masuk, pemilik indikator, sumber data, dan urutan pekerjaan integrasi. Resume matrix dan matrix forum tersedia pada lampiran terpisah.
+
 ## 1. Posisi SABABUKA saat ini
 
 SABABUKA sudah berjalan sebagai aplikasi web untuk menguji tata kelola indikator dan alur persetujuan. Sistem ini menampung struktur indikator dan membantu mencatat siapa yang menyusun, memeriksa, menyetujui, serta menjadi pemilik data.
@@ -103,6 +109,8 @@ Sebelum pemetaan indikator diperluas, daftar OPD dan kecamatan perlu dikonfirmas
 
 Formulir konfirmasi meminta URL website atau portal data, bidang pemilik data, PIC, operator, kontak resmi, jenis data, frekuensi pembaruan, serta kebutuhan integrasi. Kontak disimpan dengan akses terbatas. Link grup koordinasi dan QR code ditampilkan setelah URL resmi dikonfirmasi.
 
+Lampiran paparan menyediakan tabel konfirmasi dengan kolom status masuk, koreksi nama atau kode, bidang pemilik data, PIC, operator, URL website atau portal data, dan kontak resmi. Ruang URL grup koordinasi dan barcode disiapkan untuk diisi setelah forum menyepakati link resmi.
+
 ## 10. Batas tahap dan pekerjaan berikutnya
 
 Paparan besok berfokus pada master data, kategori, indikator, pemilik data, serta alur persetujuan. Sinkronisasi angka dari BPS dan Satu Data Kapuas dikerjakan setelah metadata, akses resmi, kode wilayah, satuan, jadwal rilis, dan pemetaan indikator disepakati.
@@ -140,6 +148,8 @@ Paket latihan dapat direset untuk mengulangi simulasi tanpa menghapus master res
 6. Batas data yang boleh tampil di dashboard pimpinan.
 7. Dataset Satu Data dan rujukan BPS yang siap dipetakan.
 8. URL grup koordinasi dan persetujuan simulasi.
+
+Resume Matrix RPJMD dan daftar 28 perangkat daerah atau badan serta 17 kecamatan dibawa sebagai bahan kerja forum. Setiap organisasi diberi keputusan yang dapat diisi langsung: masuk, koreksi, tambah, keluarkan, atau menunggu konfirmasi.
 
 ## Penutup
 
