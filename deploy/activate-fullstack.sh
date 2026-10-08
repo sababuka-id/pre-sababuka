@@ -80,7 +80,11 @@ fi
 
 install -m 644 "$release/deploy/sababuka-api.service" "$service_file"
 ln -sfn "$release" /srv/sababuka/current
-install -m 644 "$release/deploy/nginx-sababuka.conf" "$nginx_file"
+if [[ -f /etc/letsencrypt/live/sababuka.31-97-105-154.sslip.io/fullchain.pem ]]; then
+  install -m 644 "$release/deploy/nginx-sababuka-https.conf" "$nginx_file"
+else
+  install -m 644 "$release/deploy/nginx-sababuka.conf" "$nginx_file"
+fi
 ln -sfn "$nginx_file" /etc/nginx/sites-enabled/sababuka
 
 systemctl daemon-reload
@@ -88,8 +92,20 @@ systemctl enable --now sababuka-api
 nginx -t
 systemctl reload nginx
 
-curl -fsS http://127.0.0.1:3001/api/v1/health >/dev/null
-curl -fsS -H "Host: $domain" http://127.0.0.1/api/v1/health >/dev/null
+backend_ready=false
+for _ in {1..15}; do
+  if curl -fsS http://127.0.0.1:3001/api/v1/health >/dev/null 2>&1; then
+    backend_ready=true
+    break
+  fi
+  sleep 1
+done
+test "$backend_ready" = true
+if [[ -f /etc/letsencrypt/live/sababuka.31-97-105-154.sslip.io/fullchain.pem ]]; then
+  curl -fsS "https://$domain/api/v1/health" >/dev/null
+else
+  curl -fsS -H "Host: $domain" http://127.0.0.1/api/v1/health >/dev/null
+fi
 
 echo "Rilis aktif: $release"
 echo "Domain HTTP siap: http://$domain"

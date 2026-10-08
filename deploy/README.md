@@ -14,6 +14,8 @@ menunjuk ke rilis aktif.
 ## Jalur publik
 
 - HTTP dan HTTPS melalui Nginx.
+- Konfigurasi `nginx-sababuka.conf` dipakai untuk bootstrap HTTP, lalu
+  `nginx-sababuka-https.conf` dipakai setelah sertifikat Let's Encrypt tersedia.
 - API hanya mendengarkan `127.0.0.1:3001` dan diteruskan melalui `/api/`.
 - Konfigurasi rahasia berada di `/etc/sababuka/sababuka.env` dengan mode `600`.
 - Bukti dukung disimpan persisten di `/var/lib/sababuka/evidence`, bukan di
