@@ -89,7 +89,7 @@ export class SubmissionService {
          AND ($3::uuid IS NULL OR b.organization_id = $3)
          AND ($4::uuid IS NULL OR b.reporting_period_id = $4)
          AND ($5::text IS NULL OR b.status = $5)
-       ORDER BY b.updated_at DESC LIMIT $6 OFFSET $7`,
+       ORDER BY b.updated_at DESC, b.id DESC LIMIT $6 OFFSET $7`,
       [isGlobal(auth), scope, query.organizationId ?? null, query.periodId ?? null, query.status ?? null,
        query.pageSize, (query.page - 1) * query.pageSize],
     );

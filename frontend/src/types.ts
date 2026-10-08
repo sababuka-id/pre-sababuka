@@ -176,6 +176,7 @@ export interface Indicator {
   code: string;
   name: string;
   category_id: string;
+  category_code: string;
   category_name: string;
   category_review_status: "draft" | "in_review" | "approved" | "rejected";
   owner_organization_id: string | null;

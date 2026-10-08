@@ -35,7 +35,7 @@ export function ExecutivePage() {
   }));
   const cards = [
     ["Indikator aktif", result.data.metrics.active_indicators, Gauge, "blue"],
-    ["Pengiriman disetujui", result.data.metrics.approved_submissions, BadgeCheck, "teal"],
+    ["Capaian disetujui", result.data.metrics.approved_submissions, BadgeCheck, "teal"],
     ["OPD tercakup", result.data.metrics.covered_organizations, Building2, "violet"],
     ["Publikasi aktif", result.data.metrics.active_publications, Newspaper, "amber"],
   ] as const;

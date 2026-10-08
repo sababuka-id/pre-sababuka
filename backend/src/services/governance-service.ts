@@ -108,7 +108,7 @@ export class GovernanceService {
        FROM sababuka.policy_focuses
        WHERE archived_at IS NULL
          AND ($1::text IS NULL OR code ILIKE '%' || $1 || '%' OR name ILIKE '%' || $1 || '%')
-       ORDER BY display_order, name LIMIT $2 OFFSET $3`,
+       ORDER BY display_order, name, code LIMIT $2 OFFSET $3`,
       [query.search?.trim() || null, query.pageSize, (query.page - 1) * query.pageSize],
     );
     return pageEnvelope(result.rows, query.page, query.pageSize);
@@ -143,7 +143,7 @@ export class GovernanceService {
          AND ($1::text IS NULL OR c.code ILIKE '%' || $1 || '%' OR c.name ILIKE '%' || $1 || '%')
          AND ($2::uuid IS NULL OR c.policy_focus_id = $2)
        GROUP BY c.id, pf.name
-       ORDER BY c.display_order, c.name LIMIT $3 OFFSET $4`,
+       ORDER BY c.display_order, c.code, c.name LIMIT $3 OFFSET $4`,
       [query.search?.trim() || null, query.policyFocusId ?? null, query.pageSize, (query.page - 1) * query.pageSize],
     );
     return pageEnvelope(result.rows, query.page, query.pageSize);
@@ -232,7 +232,7 @@ export class GovernanceService {
   async listIndicators(auth: AuthContext, query: GovernancePageQuery & { categoryId?: string | undefined; organizationId?: string | undefined; status?: string | undefined }) {
     const scope = organizationScope(auth);
     const result = await this.db.query<CountedRow & Record<string, unknown>>(
-      `SELECT i.id::text, i.code, i.name, i.category_id::text, c.name AS category_name,
+      `SELECT i.id::text, i.code, i.name, i.category_id::text, c.code AS category_code, c.name AS category_name,
               c.review_status AS category_review_status,
               i.owner_organization_id::text, owner.name AS owner_organization_name, i.is_active,
               iv.id::text AS version_id, iv.version_number, iv.definition, iv.formula,
@@ -271,7 +271,7 @@ export class GovernanceService {
          AND ($4::text IS NULL OR iv.status = $4)
          AND ($5::boolean OR i.owner_organization_id = ANY($6::uuid[]) OR EXISTS (
            SELECT 1 FROM sababuka.indicator_organizations x WHERE x.indicator_version_id = iv.id AND x.organization_id = ANY($6::uuid[])))
-       ORDER BY c.display_order, i.name LIMIT $7 OFFSET $8`,
+       ORDER BY c.display_order, c.code, i.name, i.code LIMIT $7 OFFSET $8`,
       [query.search?.trim() || null, query.categoryId ?? null, query.organizationId ?? null, query.status ?? null,
        isGlobal(auth), scope, query.pageSize, (query.page - 1) * query.pageSize],
     );

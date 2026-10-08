@@ -37,14 +37,14 @@ export async function operationRoutes(app: FastifyInstance): Promise<void> {
          FROM sababuka.organizations o LEFT JOIN sababuka.data_batches b ON b.organization_id = o.id
            AND ($3::uuid IS NULL OR b.reporting_period_id = $3)
          WHERE o.archived_at IS NULL AND ($1::boolean OR o.id = ANY($2::uuid[]))
-         GROUP BY o.id ORDER BY pending_review DESC, organization_name LIMIT 50`, params),
+         GROUP BY o.id ORDER BY pending_review DESC, organization_name, o.code, o.id LIMIT 50`, params),
       app.db.query(
         `SELECT b.id::text, o.code AS organization_code, COALESCE(o.short_name,o.name) AS organization_name,
                 p.label AS period_label, b.status, b.row_count, b.updated_at::text
          FROM sababuka.data_batches b JOIN sababuka.organizations o ON o.id = b.organization_id
          LEFT JOIN sababuka.periods p ON p.id = b.reporting_period_id
          WHERE ($1::boolean OR b.organization_id = ANY($2::uuid[])) AND ($3::uuid IS NULL OR b.reporting_period_id = $3)
-         ORDER BY b.updated_at DESC LIMIT 10`, params),
+         ORDER BY b.updated_at DESC, b.id DESC LIMIT 10`, params),
     ]);
     const byStatus = Object.fromEntries(status.rows.map((row) => [row.status, row.count]));
     return {

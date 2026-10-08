@@ -85,6 +85,20 @@ export function statusLabel(value: string | null | undefined): string {
   return STATUS_LABELS[value.toLowerCase()] ?? value.replaceAll("_", " ");
 }
 
+export function capaianStatusLabel(value: string | null | undefined): string {
+  const labels: Record<string, string> = {
+    draft: "Draf capaian", submitted: "Capaian dikirim", under_review: "Capaian sedang diperiksa",
+    returned: "Capaian perlu perbaikan", approved: "Capaian disetujui",
+  };
+  if (!value) return "-";
+  return labels[value.toLowerCase()] ?? statusLabel(value);
+}
+
+export function formatCategoryCode(value: string | null | undefined): string {
+  const match = value?.match(/^RPJMD_(\d+)_(\d+)$/u);
+  return match ? `Fokus ${match[1]} · Kelompok isu ${match[2]}` : value ?? "-";
+}
+
 export function riskLabel(value: string | null | undefined): string {
   const labels: Record<string, string> = { low: "Rendah", medium: "Sedang", high: "Tinggi", critical: "Kritis" };
   return value ? labels[value.toLowerCase()] ?? value : "-";

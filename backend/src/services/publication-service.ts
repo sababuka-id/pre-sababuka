@@ -22,7 +22,7 @@ export class PublicationService {
               count(*) OVER()::text AS total_count
        FROM sababuka.publications p LEFT JOIN sababuka.publication_items pi ON pi.publication_id = p.id
        WHERE ($1::text IS NULL OR p.status = $1)
-       GROUP BY p.id ORDER BY p.created_at DESC LIMIT $2 OFFSET $3`,
+       GROUP BY p.id ORDER BY p.created_at DESC, p.id DESC LIMIT $2 OFFSET $3`,
       [effectiveStatus, pageSize, (page - 1) * pageSize],
     );
     const total = Number(result.rows[0]?.total_count ?? 0);
@@ -64,7 +64,7 @@ export class PublicationService {
        JOIN sababuka.periods per ON per.id = obs.period_id JOIN sababuka.organizations org ON org.id = b.organization_id
        WHERE ($1::uuid IS NULL OR per.id = $1)
          AND NOT EXISTS (SELECT 1 FROM sababuka.publication_items pi JOIN sababuka.publications p ON p.id = pi.publication_id WHERE pi.observation_id = obs.id AND p.status = 'active')
-       ORDER BY per.starts_on DESC, i.name`, [periodId ?? null],
+       ORDER BY per.starts_on DESC, i.name, i.code, obs.id`, [periodId ?? null],
     );
     return { data: result.rows };
   }

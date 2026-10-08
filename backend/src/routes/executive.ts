@@ -39,7 +39,7 @@ export async function executiveRoutes(app: FastifyInstance): Promise<void> {
          WHERE iv.status = 'active'
            AND c.review_status = 'approved'
            AND ($1::uuid IS NULL OR pf.id = $1) AND ($2::uuid IS NULL OR per.id = $2)
-         ORDER BY c.display_order, pi.display_order, i.name`,
+         ORDER BY c.display_order, c.code, pi.display_order, i.name, i.code, pi.id`,
         [request.query.policy_focus_id ?? null, request.query.period_id ?? null],
       ),
     ]);

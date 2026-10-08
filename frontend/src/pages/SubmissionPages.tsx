@@ -2,13 +2,8 @@ import { BadgeCheck, ClipboardList, Download, FileCheck2, Plus, Save, Send, Tras
 import { useState, type FormEvent } from "react";
 import { api, apiPath, jsonBody } from "../api";
 import { useAuth } from "../auth";
-import { Badge, EmptyState, Modal, Notice, Pagination, Spinner, useAsync } from "../components";
+import { Badge, capaianStatusLabel, EmptyState, Modal, Notice, Pagination, Spinner, useAsync } from "../components";
 import type { Organization, PageResponse, Period, Submission, SubmissionEvidence, SubmissionObservation } from "../types";
-
-const statusLabel: Record<string, string> = {
-  draft: "Draf", submitted: "Dikirim", under_review: "Sedang diperiksa",
-  returned: "Perlu perbaikan", approved: "Disetujui",
-};
 
 function formatIndicatorValue(value: string | number | null | undefined, dataType: string, unit?: string | null) {
   if (value === null || value === undefined || value === "") return "-";
@@ -27,7 +22,7 @@ export function SubmissionsPage({ review = false }: { review?: boolean }) {
   const [page, setPage] = useState(1);
   const [status, setStatus] = useState(review ? "submitted" : "");
   const [createOpen, setCreateOpen] = useState(false);
-  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [selectedId, setSelectedId] = useState<string | null>(() => new URLSearchParams(window.location.search).get("id"));
   const url = `/submissions?page=${page}&page_size=20${status ? `&status=${status}` : ""}`;
   const submissions = useAsync(() => api<PageResponse<Submission>>(url), [url]);
   const refs = useAsync(async () => {
@@ -43,8 +38,8 @@ export function SubmissionsPage({ review = false }: { review?: boolean }) {
     <div className="toolbar">
       <select aria-label="Filter status capaian" value={status} onChange={(event) => { setStatus(event.target.value); setPage(1); }}>
         <option value="">Semua status</option><option value="draft">Draf</option>
-        <option value="submitted">Dikirim</option><option value="under_review">Sedang diperiksa</option>
-        <option value="returned">Perlu perbaikan</option><option value="approved">Disetujui</option>
+        <option value="submitted">Capaian dikirim</option><option value="under_review">Capaian sedang diperiksa</option>
+        <option value="returned">Capaian perlu perbaikan</option><option value="approved">Capaian disetujui</option>
       </select>
       {canCreate && <button className="button primary" onClick={() => setCreateOpen(true)}><Plus />Buat form capaian</button>}
     </div>
@@ -57,7 +52,7 @@ export function SubmissionsPage({ review = false }: { review?: boolean }) {
             <td><div className="identity-cell"><span className="table-icon"><ClipboardList /></span><span><strong>{item.organization_name}</strong><small>{item.organization_code}</small></span></div></td>
             <td>{item.period_label ?? "-"}</td><td>{item.row_count} indikator</td>
             <td>{new Date(item.updated_at).toLocaleDateString("id-ID")}</td>
-            <td><Badge tone={item.status === "approved" ? "success" : item.status === "returned" ? "warning" : "neutral"}>{statusLabel[item.status] ?? item.status}</Badge></td>
+            <td><Badge tone={item.status === "approved" ? "success" : item.status === "returned" ? "warning" : "neutral"}>{capaianStatusLabel(item.status)}</Badge></td>
           </tr>)}
         </tbody></table></div>}
       {submissions.data && <Pagination page={submissions.data.meta.page} totalPages={submissions.data.meta.total_pages} onChange={setPage} />}
@@ -141,7 +136,7 @@ function SubmissionDetailModal({ id, permissions, onClose, onChanged }: { id: st
   return <Modal title="Rincian capaian indikator" onClose={onClose} wide>
     {detail.loading ? <div className="panel-loading"><Spinner /></div> : detail.error ? <Notice tone="error">{detail.error}</Notice> : detail.data && <div className="submission-detail">
       {error && <Notice tone="error">{error}</Notice>}
-      <div className="detail-grid"><div><span>OPD</span><strong>{detail.data.organization_name}</strong></div><div><span>Periode</span><strong>{detail.data.period_label}</strong></div><div><span>Status</span><strong>{statusLabel[detail.data.status]}</strong></div><div><span>Terisi</span><strong>{detail.data.row_count} indikator</strong></div></div>
+      <div className="detail-grid"><div><span>OPD</span><strong>{detail.data.organization_name}</strong></div><div><span>Periode</span><strong>{detail.data.period_label}</strong></div><div><span>Status capaian</span><strong>{capaianStatusLabel(detail.data.status)}</strong></div><div><span>Terisi</span><strong>{detail.data.row_count} indikator</strong></div></div>
       {detail.data.status === "returned" && <Notice tone="warning">Catatan peninjau: {detail.data.review_notes ?? "Silakan periksa kembali data dan bukti dukung."}</Notice>}
       {!detail.data.observations.length ? <EmptyState title="Belum ada indikator aktif">Aktifkan definisi indikator yang telah disahkan sebelum OPD mengisi realisasi.</EmptyState>
         : <div className="realization-list">{detail.data.observations.map((item) => <section key={item.indicator_version_id} className="realization-card">

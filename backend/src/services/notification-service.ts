@@ -31,7 +31,7 @@ export class NotificationService {
       `SELECT id::text, notification_type, title, message, entity_type, entity_id::text,
               read_at::text, created_at::text
        FROM sababuka.notifications WHERE user_id = $1 AND ($2::boolean = false OR read_at IS NULL)
-       ORDER BY created_at DESC LIMIT 100`, [userId, unreadOnly],
+       ORDER BY created_at DESC, id DESC LIMIT 100`, [userId, unreadOnly],
     );
     const count = await this.db.query<{ count: number }>(`SELECT count(*)::int AS count FROM sababuka.notifications WHERE user_id = $1 AND read_at IS NULL`, [userId]);
     return { data: result.rows, unread_count: count.rows[0]?.count ?? 0 };

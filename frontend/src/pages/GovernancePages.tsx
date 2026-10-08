@@ -1,8 +1,8 @@
 import { FolderTree, Gauge, Plus, Search } from "lucide-react";
-import { useMemo, useState, type FormEvent } from "react";
+import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { api, jsonBody } from "../api";
 import { useAuth } from "../auth";
-import { Badge, EmptyState, Modal, Notice, Pagination, Spinner, statusLabel, useAsync } from "../components";
+import { Badge, EmptyState, formatCategoryCode, Modal, Notice, Pagination, Spinner, statusLabel, useAsync } from "../components";
 import type { Category, Indicator, Organization, PageResponse, Period, PolicyFocus, Unit } from "../types";
 
 export function CategoriesPage() {
@@ -32,7 +32,19 @@ export function CategoriesPage() {
     <Notice tone="warning">Fokus dan kelompok isu RPJMD pada halaman ini berstatus usulan. Bapperida dapat memperbaiki, menyetujui, atau menolaknya sebelum menjadi klasifikasi resmi.</Notice>
     {actionError && <div className="governance-table"><Notice tone="error">{actionError}</Notice></div>}
     <section className="panel table-panel governance-table">
-      {categories.loading ? <div className="panel-loading"><Spinner /></div> : !categories.data?.data.length ? <EmptyState title="Belum ada kategori">Tambahkan kategori sebagai kelompok indikator.</EmptyState> : <div className="table-scroll"><table><thead><tr><th>Kelompok isu</th><th>Usulan fokus kebijakan</th><th>Indikator</th><th>Status</th><th>Tindakan</th></tr></thead><tbody>{categories.data.data.map((category) => { const action = category.review_status === "draft" && canManage ? ["submit", "Ajukan"] as const : category.review_status === "in_review" && canApprove ? ["approve", "Setujui"] as const : category.review_status === "rejected" && canManage ? ["reopen", "Perbaiki"] as const : null; return <tr key={category.id}><td><div className="identity-cell"><span className="table-icon"><FolderTree /></span><span><strong>{category.name}</strong><small>{category.code}</small></span></div></td><td>{category.policy_focus_name ?? "-"}</td><td><strong>{category.indicator_count}</strong></td><td><Badge tone={category.review_status === "approved" ? "success" : category.review_status === "rejected" ? "danger" : "warning"}>{statusLabel(category.review_status)}</Badge></td><td>{action ? <span className="table-actions"><button className="button secondary" onClick={() => void transition(category, action[0])}>{action[1]}</button>{category.review_status === "in_review" && canApprove && <button className="button secondary" onClick={() => void transition(category, "reject")}>Tolak</button>}</span> : "-"}</td></tr>; })}</tbody></table></div>}
+      {categories.loading ? <div className="panel-loading"><Spinner /></div> : !categories.data?.data.length ? <EmptyState title="Belum ada kategori">Tambahkan kategori sebagai kelompok indikator.</EmptyState> : <div className="table-scroll"><table><thead><tr><th>Kelompok isu / kategori</th><th>Usulan fokus kebijakan</th><th>Indikator</th><th>Status kategori</th><th>Tindakan</th></tr></thead><tbody>
+        {categories.data.data.map((category) => {
+          const action = category.review_status === "draft" && canManage ? ["submit", "Ajukan"] as const : category.review_status === "in_review" && canApprove ? ["approve", "Setujui"] as const : category.review_status === "rejected" && canManage ? ["reopen", "Perbaiki"] as const : null;
+          return (
+            <tr key={category.id}>
+              <td><div className="identity-cell"><span className="table-icon"><FolderTree /></span><span><strong>{category.name}</strong><small>{formatCategoryCode(category.code)} · kode teknis {category.code}</small></span></div></td>
+              <td>{category.policy_focus_name ?? "-"}</td><td><strong>{category.indicator_count}</strong></td>
+              <td><Badge tone={category.review_status === "approved" ? "success" : category.review_status === "rejected" ? "danger" : "warning"}>{statusLabel(category.review_status)}</Badge></td>
+              <td>{action ? <span className="table-actions"><button className="button secondary" onClick={() => void transition(category, action[0])}>{action[1]}</button>{category.review_status === "in_review" && canApprove && <button className="button secondary" onClick={() => void transition(category, "reject")}>Tolak</button>}</span> : "-"}</td>
+            </tr>
+          );
+        })}
+      </tbody></table></div>}
       {categories.data && <Pagination page={categories.data.meta.page} totalPages={categories.data.meta.total_pages} onChange={setPage} />}
     </section>
     {createOpen && focuses.data && <CategoryForm focuses={focuses.data.data} onClose={() => setCreateOpen(false)} onCreated={() => { setCreateOpen(false); categories.reload(); }} />}
@@ -66,6 +78,7 @@ export function IndicatorsPage() {
   const [status, setStatus] = useState("");
   const [createOpen, setCreateOpen] = useState(false);
   const [selected, setSelected] = useState<Indicator | null>(null);
+  const [deepLinkId] = useState(() => new URLSearchParams(window.location.search).get("id"));
   const [editing, setEditing] = useState<Indicator | null>(null);
   const [actionError, setActionError] = useState("");
   const url = `/indicators?page=${page}&page_size=20${query ? `&q=${encodeURIComponent(query)}` : ""}${categoryId ? `&category_id=${categoryId}` : ""}${status ? `&status=${status}` : ""}`;
@@ -80,6 +93,9 @@ export function IndicatorsPage() {
   const canManage = user?.permissions.includes("indicator.manage") ?? false;
   const canSubmit = (user?.permissions.includes("indicator.submit") ?? false)
     && (user?.roles.some((role) => role.code === "superadmin" || role.code === "indicator_author") ?? false);
+  useEffect(() => {
+    if (deepLinkId && indicators.data?.data) setSelected(indicators.data.data.find((item) => item.id === deepLinkId) ?? null);
+  }, [deepLinkId, indicators.data]);
   const transition = async (indicator: Indicator, action: "submit" | "approve" | "verify" | "activate" | "retire") => {
     setActionError("");
     try {
@@ -98,7 +114,7 @@ export function IndicatorsPage() {
     <Notice tone="warning">Indikator hasil inventarisasi RPJMD disimpan sebagai draf Bapperida. Draf belum aktif dan belum tampil pada dashboard pimpinan.</Notice>
     {actionError && <div className="governance-table"><Notice tone="error">{actionError}</Notice></div>}
     <section className="panel table-panel governance-table">
-      {indicators.loading ? <div className="panel-loading"><Spinner /></div> : !indicators.data?.data.length ? <EmptyState title="Belum ada indikator">Tambahkan indikator dan metadata pertamanya.</EmptyState> : <div className="table-scroll"><table><thead><tr><th>Indikator</th><th>Kategori</th><th>OPD utama</th><th>Arah</th><th>Target</th><th>Status</th></tr></thead><tbody>{indicators.data.data.map((indicator) => <tr key={indicator.id} className="clickable-row" tabIndex={0} aria-label={`Buka detail ${indicator.name}`} onClick={() => setSelected(indicator)} onKeyDown={(event) => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); setSelected(indicator); } }}><td><div className="identity-cell"><span className="table-icon"><Gauge /></span><span><strong>{indicator.name}</strong><small>{indicator.code} · {indicator.unit_symbol ?? indicator.unit_name}</small></span></div></td><td>{indicator.category_name}</td><td>{indicator.owner_organization_name ?? "Belum ditetapkan"}</td><td>{directionLabel(indicator.direction)}</td><td>{indicator.targets.length} tahun</td><td><Badge tone={indicator.status === "active" ? "success" : "warning"}>{statusLabel(indicator.status)}</Badge></td></tr>)}</tbody></table></div>}
+      {indicators.loading ? <div className="panel-loading"><Spinner /></div> : !indicators.data?.data.length ? <EmptyState title="Belum ada indikator">Tambahkan indikator dan metadata pertamanya.</EmptyState> : <div className="table-scroll"><table><thead><tr><th>Indikator</th><th>Kategori</th><th>OPD utama</th><th>Arah</th><th>Target</th><th>Status</th></tr></thead><tbody>{indicators.data.data.map((indicator) => <tr key={indicator.id} className="clickable-row" tabIndex={0} aria-label={`Buka detail ${indicator.name}`} onClick={() => setSelected(indicator)} onKeyDown={(event) => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); setSelected(indicator); } }}><td><div className="identity-cell"><span className="table-icon"><Gauge /></span><span><strong>{indicator.name}</strong><small>{indicator.code} · {indicator.unit_symbol ?? indicator.unit_name}</small></span></div></td><td><strong>{indicator.category_name}</strong><small className="table-subtitle">{formatCategoryCode(indicator.category_code)} · kode teknis {indicator.category_code}</small></td><td>{indicator.owner_organization_name ?? "Belum ditetapkan"}</td><td>{directionLabel(indicator.direction)}</td><td>{indicator.targets.length} tahun</td><td><Badge tone={indicator.status === "active" ? "success" : "warning"}>{statusLabel(indicator.status)}</Badge></td></tr>)}</tbody></table></div>}
       {indicators.data && <Pagination page={indicators.data.meta.page} totalPages={indicators.data.meta.total_pages} onChange={setPage} />}
     </section>
     {createOpen && refs.data && <IndicatorForm references={refs.data} onClose={() => setCreateOpen(false)} onCreated={() => { setCreateOpen(false); indicators.reload(); }} />}

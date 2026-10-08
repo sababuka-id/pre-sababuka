@@ -16,7 +16,7 @@ export class AuditQueryService {
        WHERE ($1::boolean OR ae.organization_id = ANY($2::uuid[]))
          AND ($3::text IS NULL OR ae.event_type = $3) AND ($4::text IS NULL OR ae.entity_type = $4)
          AND ($5::uuid IS NULL OR ae.actor_id = $5)
-       ORDER BY ae.occurred_at DESC LIMIT $6 OFFSET $7`,
+       ORDER BY ae.occurred_at DESC, ae.id DESC LIMIT $6 OFFSET $7`,
       [global, organizations, query.eventType ?? null, query.entityType ?? null, query.actorId ?? null, query.pageSize, (query.page - 1) * query.pageSize],
     );
     const total = Number(result.rows[0]?.total_count ?? 0);
