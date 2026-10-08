@@ -1,4 +1,4 @@
-import { Check, Copy, KeyRound, Plus, Search, ShieldPlus, UserRound, Users } from "lucide-react";
+import { Archive, Check, Copy, KeyRound, Plus, Search, ShieldPlus, UserRound, Users } from "lucide-react";
 import { useState, type FormEvent } from "react";
 import { api, jsonBody } from "../api";
 import { useAuth } from "../auth";
@@ -30,9 +30,11 @@ const roleScopeRules: Record<string, readonly RoleScope[]> = {
 };
 
 export function UsersPage() {
-  const { user } = useAuth();
-  const canCreate = user?.permissions.includes("user.create") ?? false;
-  const canAssign = user?.permissions.includes("user.assign_role") ?? false;
+  const { user: currentUser } = useAuth();
+  const canCreate = currentUser?.permissions.includes("user.create") ?? false;
+  const canAssign = currentUser?.permissions.includes("user.assign_role") ?? false;
+  const canArchive = currentUser?.permissions.includes("user.activate") ?? false;
+  const [archiveBusy, setArchiveBusy] = useState<string | null>(null);
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
   const [search, setSearch] = useState("");
@@ -47,10 +49,23 @@ export function UsersPage() {
     api<{ data: Role[] }>("/roles"),
   ]).then(([organizations, roles]) => ({ organizations: organizations.data, roles: roles.data })), []);
 
+  async function archiveUser(target: UserSummary) {
+    if (!window.confirm(`Arsipkan akun ${target.full_name}? Akun ini langsung tidak dapat login, tetapi riwayat audit tetap dipertahankan.`)) return;
+    setArchiveBusy(target.id);
+    try {
+      await api(`/users/${target.id}`, { method: "PATCH", mutation: true, body: jsonBody({ status: "archived" }) });
+      users.reload();
+    } catch (reason) {
+      window.alert(reason instanceof Error ? reason.message : "Akun gagal diarsipkan.");
+    } finally {
+      setArchiveBusy(null);
+    }
+  }
+
   return <>
     <div className="toolbar"><div className="table-filters"><form className="search-box" role="search" onSubmit={(event) => { event.preventDefault(); setPage(1); setQuery(search); }}><Search aria-hidden /><input aria-label="Cari pengguna" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Cari nama, email, atau username" /><button className="button secondary">Cari</button></form><select aria-label="Filter organisasi pengguna" value={organizationFilter} onChange={(event) => { setOrganizationFilter(event.target.value); setPage(1); }}><option value="">Semua organisasi</option>{references.data?.organizations.map((item) => <option key={item.id} value={item.id}>{item.code} - {item.short_name ?? item.name}</option>)}</select></div>{canCreate && <button className="button primary" onClick={() => setCreateOpen(true)}><Plus />Undang pengguna</button>}</div>
     {(users.error || references.error) && <Notice tone="error">{users.error?.message ?? references.error?.message}</Notice>}
-    <section className="panel table-panel">{users.loading ? <div className="panel-loading"><Spinner /></div> : !users.data?.data.length ? <EmptyState title="Belum ada pengguna">{canCreate ? "Undang pengguna pertama dan tetapkan peran sesuai tugasnya." : "Belum ada pengguna dalam lingkup yang dapat Anda lihat."}</EmptyState> : <div className="table-scroll"><table><thead><tr><th>Pengguna</th><th>Organisasi utama</th><th>Status</th><th>MFA</th><th>Login terakhir</th>{canAssign && <th>Tindakan</th>}</tr></thead><tbody>{users.data.data.map((user) => <tr key={user.id}><td><div className="identity-cell"><span className="avatar small">{user.full_name.split(/\s+/u).slice(0, 2).map((part) => part[0]).join("")}</span><span><strong>{user.full_name}</strong><small>{user.email}</small></span></div></td><td><span className="cell-main">{user.organization_name ?? "-"}</span><small>{user.organization_code}</small></td><td><Badge tone={statusTone(user.status)}>{userStatusLabel(user)}</Badge></td><td><Badge tone={user.mfa_required ? "info" : "neutral"}>{user.mfa_required ? "Wajib" : "Opsional"}</Badge></td><td>{formatDate(user.last_login_at)}</td>{canAssign && <td><button className={`button compact ${user.status === "invited" && user.has_password ? "primary" : "secondary"}`} onClick={() => setAssignUser(user)}><ShieldPlus />{user.status === "invited" && user.has_password ? "Verifikasi" : "Tetapkan peran"}</button></td>}</tr>)}</tbody></table></div>}
+    <section className="panel table-panel">{users.loading ? <div className="panel-loading"><Spinner /></div> : !users.data?.data.length ? <EmptyState title="Belum ada pengguna">{canCreate ? "Undang pengguna pertama dan tetapkan peran sesuai tugasnya." : "Belum ada pengguna dalam lingkup yang dapat Anda lihat."}</EmptyState> : <div className="table-scroll"><table><thead><tr><th>Pengguna</th><th>Organisasi utama</th><th>Status</th><th>MFA</th><th>Login terakhir</th>{(canAssign || canArchive) && <th>Tindakan</th>}</tr></thead><tbody>{users.data.data.map((target) => <tr key={target.id}><td><div className="identity-cell"><span className="avatar small">{target.full_name.split(/\s+/u).slice(0, 2).map((part) => part[0]).join("")}</span><span><strong>{target.full_name}</strong><small>{target.email}</small></span></div></td><td><span className="cell-main">{target.organization_name ?? "-"}</span><small>{target.organization_code}</small></td><td><Badge tone={statusTone(target.status)}>{userStatusLabel(target)}</Badge></td><td><Badge tone={target.mfa_required ? "info" : "neutral"}>{target.mfa_required ? "Wajib" : "Opsional"}</Badge></td><td>{formatDate(target.last_login_at)}</td>{(canAssign || canArchive) && <td className="table-actions">{canAssign && <button className={`button compact ${target.status === "invited" && target.has_password ? "primary" : "secondary"}`} onClick={() => setAssignUser(target)}><ShieldPlus />{target.status === "invited" && target.has_password ? "Verifikasi" : "Tetapkan peran"}</button>}{canArchive && target.status !== "archived" && target.id !== currentUser?.id && <button className="button compact danger" onClick={() => void archiveUser(target)} disabled={archiveBusy === target.id}><Archive />{archiveBusy === target.id ? "Mengarsipkan…" : "Arsipkan"}</button>}</td>}</tr>)}</tbody></table></div>}
       {users.data && <Pagination page={users.data.meta.page} pageSize={users.data.meta.page_size} totalItems={users.data.meta.total_items} totalPages={users.data.meta.total_pages} sortLabel="Nama A-Z" onChange={setPage} onPageSizeChange={(size) => { setPageSize(size); setPage(1); }} />}</section>
     {createOpen && references.data && <UserInvitationForm organizations={references.data.organizations} onClose={() => setCreateOpen(false)} onCreated={(created) => { setCreateOpen(false); setInvitation(created); users.reload(); }} />}
     {assignUser && references.data && <RoleAssignmentForm user={assignUser} roles={references.data.roles} organizations={references.data.organizations} onClose={() => setAssignUser(null)} onSaved={() => { setAssignUser(null); users.reload(); }} />}

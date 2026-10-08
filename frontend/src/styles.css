@@ -43,6 +43,7 @@ code { font-family: "SFMono-Regular", Consolas, monospace; }
 .button.danger { color: #fff; background: var(--red-700); border-color: var(--red-700); }
 .button.danger:hover { background: #a61b2b; border-color: #a61b2b; }
 .button.compact { min-height: 34px; padding: 0 11px; font-size: 12px; white-space: nowrap; }
+.table-actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
 .button.full { width: 100%; }
 .icon-button { width: 40px; height: 40px; border: 1px solid var(--line); background: #fff; border-radius: 10px; display: inline-grid; place-items: center; color: var(--muted); }
 .icon-button:hover { color: var(--navy-800); background: var(--blue-100); }
