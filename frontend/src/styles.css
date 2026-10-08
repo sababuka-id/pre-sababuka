@@ -198,6 +198,9 @@ code { font-family: "SFMono-Regular", Consolas, monospace; }
 .heading-actions { display: flex; align-items: center; gap: 9px; }
 .heading-actions select { min-width: 190px; }
 .toolbar { display: flex; align-items: center; justify-content: space-between; gap: 14px; margin-bottom: 15px; }
+.table-filters { min-width: 0; display: flex; align-items: center; gap: 10px; flex: 1; }
+.table-filters .search-box { flex: 1; }
+.table-filters > select { min-width: 190px; min-height: var(--control-height); border: 1px solid #cfdae7; border-radius: 10px; background: #fff; color: var(--ink); padding: 10px 12px; }
 .search-box { min-width: min(100%, 500px); display: flex; align-items: center; padding-left: 12px; border: 1px solid var(--line); border-radius: 11px; background: #fff; }
 .search-box > svg { width: 18px; color: var(--muted); }
 .search-box input { flex: 1; min-width: 80px; height: 43px; border: 0; outline: 0; padding: 0 10px; color: var(--ink); }
@@ -449,6 +452,8 @@ td small { color: var(--muted); margin-top: 3px; }
   .role-list { display: grid; grid-template-columns: 1fr 1fr; }
   .role-list-head { grid-column: 1 / -1; }
   .toolbar { align-items: stretch; flex-direction: column; }
+  .table-filters { align-items: stretch; flex-direction: column; }
+  .table-filters > select { width: 100%; }
   .search-box { min-width: 0; }
   .connector-form { grid-template-columns: 1fr; }
   .connector-form .connector-wide { grid-column: auto; }

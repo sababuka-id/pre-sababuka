@@ -44,13 +44,13 @@ export function ExecutivePage() {
       ? `Dashboard memisahkan data resmi dan data demo. ${verifiedCount} capaian sudah memiliki sumber resmi; kartu berlabel DEMO tetap bukan realisasi.`
       : "Ringkasan pimpinan hanya menampilkan angka dari publikasi aktif. Draf dan data yang baru dikirim tidak masuk ke kartu capaian."}</Notice>
     <section className="metric-grid executive-metrics">{cards.map(([label, value, Icon, tone]) => <article className="metric-card" key={label}><span className={`metric-icon ${tone}`}><Icon /></span><span><small>{label}</small><strong>{value}</strong></span></article>)}</section>
-    <section className="panel category-release-panel"><header><div><span className="eyebrow">Cakupan data strategis</span><h2>Ketersediaan capaian per kelompok isu</h2></div><small>{categoryStatus.filter((category) => category.verified > 0).length} dari {categoryStatus.length} kelompok isu sudah memuat capaian bersumber resmi</small></header>
+    {categoryStatus.length > 0 && <section className="panel category-release-panel"><header><div><span className="eyebrow">Cakupan data strategis</span><h2>Ketersediaan capaian per kelompok isu</h2></div><small>{categoryStatus.filter((category) => category.verified > 0).length} dari {categoryStatus.length} kelompok isu sudah memuat capaian bersumber resmi</small></header>
       <div className="category-release-grid">{categoryStatus.map((category) => <article key={category.name}>
         <span className={`badge ${category.verified > 0 ? "success" : "warning"}`}>{category.verified > 0 ? "Capaian terverifikasi" : "Demo · menunggu OPD"}</span>
         <h3>{category.name}</h3>
         <p>{category.verified > 0 ? `${category.verified} indikator sudah memiliki capaian terverifikasi` : `${category.demo} indikator tersedia untuk demonstrasi alur`}</p>
       </article>)}</div>
-    </section>
+    </section>}
     <section className="panel executive-panel"><header><div><span className="eyebrow">Data terkurasi</span><h2>Capaian indikator terpublikasi</h2></div><small>Diperbarui {formatDate(result.data.generated_at)} WIB</small></header>
       {!result.data.items.length ? <EmptyState title="Belum ada publikasi aktif">Capaian yang sudah disetujui tetap menunggu proses publikasi sebelum tampil untuk pimpinan.</EmptyState>
         : <div className="executive-cards">{result.data.items.map((item) => {
