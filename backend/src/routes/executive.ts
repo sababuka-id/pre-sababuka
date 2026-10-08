@@ -16,7 +16,15 @@ export async function executiveRoutes(app: FastifyInstance): Promise<void> {
          WHERE iv.status = 'active') AS active_indicators,
         (SELECT count(*)::int FROM sababuka.data_batches WHERE status = 'approved') AS approved_submissions,
         (SELECT count(DISTINCT organization_id)::int FROM sababuka.data_batches WHERE status = 'approved') AS covered_organizations,
-        (SELECT count(*)::int FROM sababuka.publications WHERE status = 'active') AS active_publications`),
+        (SELECT count(DISTINCT pub.id)::int
+         FROM sababuka.publications pub
+         JOIN sababuka.publication_items pi ON pi.publication_id = pub.id
+         JOIN sababuka.observations obs ON obs.id = pi.observation_id
+         JOIN sababuka.data_batches b ON b.id = obs.batch_id AND b.status IN ('approved', 'published')
+         JOIN sababuka.indicator_versions iv ON iv.id = obs.indicator_version_id AND iv.status = 'active'
+         JOIN sababuka.indicators i ON i.id = iv.indicator_id AND i.is_active = true
+         JOIN sababuka.categories c ON c.id = i.category_id AND c.is_active = true AND c.review_status = 'approved'
+         WHERE pub.status = 'active') AS active_publications`),
       app.db.query(
         `SELECT i.id::text AS indicator_id, i.code AS indicator_code, i.name AS indicator_name,
                 c.name AS category_name, pf.id::text AS policy_focus_id, pf.name AS policy_focus_name,

@@ -22,6 +22,7 @@ Audit ini mencakup role, alur persetujuan, publikasi, dashboard pimpinan, notifi
 | Annual scope | Periode rilis dibatasi annual 2025-2029 | Tidak ada klaim interval bulanan/triwulanan | Lulus |
 | Build | Backend typecheck/build dan frontend typecheck/build | Keduanya berhasil | Lulus |
 | E2E | Semua suite integration pada database audit | 7/7 lulus, 0 gagal, 0 skip | Lulus |
+| Visual browser | Chrome desktop, lima role, navigasi utama, denied route, empty state, modal/form, connector settings | Smoke lintas-role lulus; console error 0; tidak ada 4xx/5xx tak terduga | Lulus |
 
 ## Temuan P0/P1 yang sudah diperbaiki
 
@@ -32,6 +33,17 @@ Audit ini mencakup role, alur persetujuan, publikasi, dashboard pimpinan, notifi
 - Dashboard pimpinan tidak lagi menghitung indikator aktif yang master-nya belum layak tampil.
 - Ringkasan operasi tidak mencampur batch konektor dengan dataset pelaporan manual OPD.
 - Pemeriksaan orphan diperluas ke audit event dan seluruh referensi typed yang dipakai notifikasi/konektor.
+- Menu `Sumber Data` ditampilkan untuk role yang berwenang dan halaman konektor diberi kartu ringkasan yang terbaca pada desktop serta responsif.
+- Metrik `Publikasi aktif` kini hanya menghitung publikasi yang memiliki item eligible, sehingga angka dashboard sama dengan daftar yang dapat ditampilkan.
+
+## Bukti audit visual browser
+
+- Superadmin, BAPPERIDA, Kominfo, OPD, dan pimpinan berhasil login pada Chrome desktop dengan akun audit sementara.
+- Sidebar diverifikasi per role. Superadmin/BAPPERIDA melihat `Sumber Data`; Kominfo dan OPD mendapat penolakan yang jelas saat membuka route yang tidak berwenang.
+- Halaman connector, publikasi, dashboard pimpinan, asisten data, notifikasi, operasi OPD, dan konfigurasi sistem terbuka tanpa error console. Empty state notifikasi dan state mapping connector terbaca.
+- Route `/connectors` untuk Kominfo dan `/reviews` untuk OPD menampilkan pesan akses ditolak tanpa crash atau blank screen.
+- Runtime log tidak menunjukkan 4xx/5xx tak terduga; respons 401 yang tersisa berasal dari pemeriksaan unauthenticated yang memang diharapkan.
+- Lima akun audit sementara sudah diarsipkan setelah smoke test; tidak ada akun audit aktif yang ditinggalkan.
 
 ## Bukti database audit
 
@@ -42,7 +54,7 @@ Database audit menunjukkan 24 migration, 0 indikator aktif tanpa kategori approv
 - Key BPS resmi belum dipasang pada environment demo. Konektor BPS belum boleh disebut connected atau dipakai impor sampai key dan profile resmi diverifikasi.
 - Endpoint website/API OPD belum diaktifkan; kontrak konektor sudah siap tetapi belum menggantikan konfirmasi OPD.
 - Cakupan release tetap annual 2025-2029. Interval bulanan, triwulanan, dan semester belum aktif.
-- Audit visual browser per halaman tetap perlu dilakukan sebagai sesi terpisah setelah alur fungsional ini disetujui.
+- Audit visual desktop sudah dilakukan. Audit mobile dan pengujian konektor eksternal nyata tetap menunggu environment serta kredensial resmi.
 
 ## Perintah validasi
 
@@ -54,4 +66,4 @@ cd ..\frontend
 pnpm build
 ```
 
-Uji integration memakai database PostgreSQL terisolasi, empat role utama, dan satu superadmin. Tidak ada push ke GitHub pada audit ini; perubahan disiapkan untuk commit lokal setelah pemeriksaan akhir.
+Uji integration memakai database PostgreSQL terisolasi, empat role utama, dan satu superadmin. Perubahan governance sebelumnya sudah tercatat pada commit `6d0c514`; perubahan audit visual dan konsistensi metrik dicatat pada commit lokal berikutnya. Push hanya boleh menuju target development/preview yang terverifikasi; tidak ada deployment produksi dari audit ini.

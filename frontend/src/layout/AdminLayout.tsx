@@ -24,6 +24,7 @@ import {
   BadgeCheck,
   ScrollText,
   Activity,
+  Plug,
 } from "lucide-react";
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useAuth } from "../auth";
@@ -46,9 +47,10 @@ const iconByCode: Record<string, typeof LayoutDashboard> = {
   assistant: Bot,
   publications: BadgeCheck,
   operations: Activity,
+  connectors: Plug,
 };
 
-const supportedRoutes = new Set(["/admin", "/dashboard", "/executive", "/assistant", "/notifications", "/audit", "/operations", "/admin/organizations", "/admin/users", "/admin/roles", "/admin/menus", "/admin/system", "/governance/categories", "/governance/indicators", "/submissions", "/reviews", "/publications"]);
+const supportedRoutes = new Set(["/admin", "/dashboard", "/executive", "/assistant", "/notifications", "/audit", "/operations", "/admin/organizations", "/admin/users", "/admin/roles", "/admin/menus", "/admin/system", "/governance/categories", "/governance/indicators", "/submissions", "/reviews", "/publications", "/connectors"]);
 
 const navigationLabels: Record<string, string> = {
   submissions: "Realisasi Indikator",
@@ -78,12 +80,13 @@ export function AdminLayout({ pathname, title, subtitle, actions, children }: { 
   const governanceEntries = useMemo(() => sectionChildren(menu, "governance"), [menu]);
   const adminEntries = useMemo(() => sectionChildren(menu, "administration"), [menu]);
   const operationalEntries = useMemo(() => menu.filter((item) => ["operations", "submissions", "reviews", "publications"].includes(item.code) && item.route_name && supportedRoutes.has(item.route_name)), [menu]);
+  const sourceEntries = useMemo(() => menu.filter((item) => item.code === "connectors" && item.route_name && supportedRoutes.has(item.route_name)), [menu]);
   const primaryEntries = useMemo(() => menu.filter((item) => ["dashboard", "assistant"].includes(item.code) && item.route_name && supportedRoutes.has(item.route_name)), [menu]);
   const auditEntries = useMemo(() => menu.filter((item) => item.code === "audit" && item.route_name && supportedRoutes.has(item.route_name)), [menu]);
   const isSuperadmin = user?.roles.some((role) => role.code === "superadmin") ?? false;
   const areaLabel = pathname.startsWith("/admin") ? "Konfigurasi Internal"
     : ["/dashboard", "/executive", "/assistant"].includes(pathname) ? "Ruang Pimpinan"
-    : pathname.startsWith("/governance") ? "Tata Kelola Data"
+    : pathname.startsWith("/governance") || pathname === "/connectors" ? "Tata Kelola Data"
     : ["/operations", "/submissions", "/reviews", "/publications"].includes(pathname) ? "Pelaporan Capaian"
     : "Ruang Kerja SABABUKA";
   const initials = user?.full_name.split(/\s+/u).slice(0, 2).map((part) => part[0]).join("").toUpperCase() || "SA";
@@ -116,6 +119,8 @@ export function AdminLayout({ pathname, title, subtitle, actions, children }: { 
           const Icon = iconByCode[entry.code] ?? Settings2;
           return <button key={entry.code} className={`nav-link ${pathname === entry.route_name ? "active" : ""}`} onClick={() => go(entry.route_name!)}><Icon /><span>{navigationLabels[entry.code] ?? entry.label}</span></button>;
         })}
+        {sourceEntries.length > 0 && <div className="nav-label">Sumber data</div>}
+        {sourceEntries.map((entry) => { const Icon = iconByCode[entry.code] ?? Plug; return <button key={entry.code} className={`nav-link ${pathname === entry.route_name ? "active" : ""}`} onClick={() => go(entry.route_name!)}><Icon /><span>{navigationLabels[entry.code] ?? entry.label}</span></button>; })}
         {operationalEntries.length > 0 && <div className="nav-label">Pelaporan capaian</div>}
         {operationalEntries.map((entry) => { const Icon = iconByCode[entry.code] ?? ClipboardList; return <button key={entry.code} className={`nav-link ${pathname === entry.route_name ? "active" : ""}`} onClick={() => go(entry.route_name!)}><Icon /><span>{navigationLabels[entry.code] ?? entry.label}</span></button>; })}
         {auditEntries.length > 0 && <div className="nav-label">Pengawasan</div>}

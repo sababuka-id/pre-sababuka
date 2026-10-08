@@ -254,6 +254,14 @@ td small { color: var(--muted); margin-top: 3px; }
 .pagination { min-height: 58px; border-top: 1px solid var(--line); display: flex; justify-content: flex-end; align-items: center; gap: 14px; padding: 9px 16px; color: var(--muted); font-size: 11px; }
 
 /* Dashboard */
+.summary-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; margin-bottom: 16px; }
+.summary-card { min-width: 0; min-height: 126px; padding: 18px; display: flex; align-items: flex-start; gap: 13px; border: 1px solid var(--line); border-radius: 14px; background: #fff; box-shadow: 0 5px 20px rgba(16,46,82,.04); }
+.summary-card > div { min-width: 0; flex: 1; }
+.summary-card small, .summary-card strong, .summary-card p { display: block; }
+.summary-card small { color: var(--muted); font-size: 12px; line-height: 1.4; }
+.summary-card strong { margin-top: 4px; color: var(--ink); font-size: 15px; line-height: 1.35; }
+.summary-card p { margin: 3px 0 0; color: var(--muted); font-size: 11px; line-height: 1.45; overflow-wrap: anywhere; }
+.summary-card .button { margin-top: 11px; }
 .metric-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-bottom: 16px; }
 .metric-card { min-height: 110px; padding: 18px; border: 1px solid var(--line); border-radius: 14px; background: #fff; display: flex; align-items: center; gap: 14px; color: var(--ink); text-align: left; box-shadow: 0 5px 20px rgba(16,46,82,.04); }
 .metric-card:hover { background: #f9fbfd; }
@@ -392,7 +400,7 @@ td small { color: var(--muted); margin-top: 3px; }
 .recovery-panel > .button { margin-top: 14px; }
 
 @media (max-width: 1100px) {
-  .metric-grid { grid-template-columns: 1fr 1fr; }
+  .summary-grid, .metric-grid { grid-template-columns: 1fr 1fr; }
   .permission-groups, .menu-tree { grid-template-columns: 1fr; }
   .auth-brand { padding: 40px; }
   .auth-copy h1 { font-size: 43px; }
@@ -414,7 +422,7 @@ td small { color: var(--muted); margin-top: 3px; }
   .profile-button > span:nth-child(2), .profile-button > svg { display: none; }
   .page-shell { padding: 22px 15px 40px; }
   .page-header { align-items: flex-start; }
-  .dashboard-grid, .access-layout { grid-template-columns: 1fr; }
+  .summary-grid, .dashboard-grid, .access-layout { grid-template-columns: 1fr; }
   .role-list { display: grid; grid-template-columns: 1fr 1fr; }
   .role-list-head { grid-column: 1 / -1; }
   .toolbar { align-items: stretch; flex-direction: column; }
