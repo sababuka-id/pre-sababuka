@@ -67,6 +67,13 @@ const roleLabels: Record<string, string> = {
   opd: "Operator OPD",
 };
 
+const demoRoleOptions = [
+  { label: "BAPPERIDA", email: "bapperida@sababuka.com" },
+  { label: "OPD DKPP", email: "opd.dkpp@sababuka.com" },
+  { label: "Kominfo baca-saja", email: "kominfo@sababuka.com" },
+  { label: "Pimpinan", email: "pimpinan@sababuka.com" },
+] as const;
+
 function sectionChildren(menu: MenuItem[], code: string): MenuItem[] {
   return menu.find((item) => item.code === code)?.children.filter((item) => item.route_name && supportedRoutes.has(item.route_name)) ?? [];
 }
@@ -106,6 +113,7 @@ export function AdminLayout({ pathname, title, subtitle, actions, children }: { 
 
   const go = (path: string) => { navigate(path); setMobile(false); setProfileOpen(false); };
   const doLogout = async () => { await logout(); navigate("/login"); };
+  const chooseDemoRole = (email: string) => { window.localStorage.setItem("sababuka.demo.identifier", email); go("/login"); };
 
   return <div className={`workspace ${collapsed ? "collapsed" : ""}`}>
     <aside className={`sidebar ${mobile ? "mobile-open" : ""}`}>
@@ -143,7 +151,7 @@ export function AdminLayout({ pathname, title, subtitle, actions, children }: { 
           <button className="icon-button notification" aria-label="Buka notifikasi" onClick={() => go("/notifications")}><Bell /></button>
           <div className="profile-wrap" ref={profileRef}>
             <button className="profile-button" aria-haspopup="menu" aria-expanded={profileOpen} onClick={() => setProfileOpen((value) => !value)}><span className="avatar">{initials}</span><span><strong>{user?.full_name}</strong><small>{roleLabels[user?.roles[0]?.code ?? ""] ?? "Pengguna"}</small></span><ChevronDown /></button>
-            {profileOpen && <div className="profile-popover"><div><UserRound /><span><strong>{user?.email}</strong><small>{user?.organizations[0]?.name ?? "Lingkup global"}</small></span></div><button onClick={() => go("/admin/profile")}><ShieldCheck />Keamanan akun</button><button className="danger-text" onClick={doLogout}><LogOut />Keluar</button></div>}
+            {profileOpen && <div className="profile-popover"><div><UserRound /><span><strong>{user?.email}</strong><small>{user?.organizations[0]?.name ?? "Lingkup global"}</small></span></div><button onClick={() => go("/admin/profile")}><ShieldCheck />Keamanan akun</button>{isSuperadmin && import.meta.env.DEV && <div className="profile-demo"><small>Mode Simulasi</small>{demoRoleOptions.map((option) => <button key={option.email} onClick={() => chooseDemoRole(option.email)}><Users />Masuk sebagai {option.label}</button>)}</div>}<button className="danger-text" onClick={doLogout}><LogOut />Keluar</button></div>}
           </div>
         </div>
       </header>

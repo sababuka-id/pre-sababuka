@@ -184,6 +184,9 @@ code { font-family: "SFMono-Regular", Consolas, monospace; }
 .profile-popover button:hover { background: var(--soft); }
 .profile-popover button svg { width: 17px; }
 .profile-popover .danger-text { color: var(--red-700); }
+.profile-demo { margin: 4px 0; padding: 7px 0 2px; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+.profile-demo > small { display: block; padding: 2px 11px 5px; color: var(--muted); font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; }
+.profile-demo button { height: 34px; font-size: 11px; }
 .page-shell { padding: 28px clamp(20px, 3.2vw, 46px) 50px; max-width: 1540px; margin: 0 auto; }
 .registration-card { width: min(100%, 560px); max-height: calc(100vh - 48px); overflow-y: auto; }
 .auth-card-heading.centered { text-align: center; }

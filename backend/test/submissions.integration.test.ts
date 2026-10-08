@@ -22,9 +22,9 @@ test("form capaian OPD mendukung isi, submit, return, dan approve", { skip: !dat
       const roleCookie = String(response.headers["set-cookie"]).split(";", 1)[0]!;
       return { cookie: roleCookie, "x-csrf-token": response.json().csrf_token as string };
     };
-    const bapperidaHeaders = await loginAs("bapperida@sababuka.local");
-    const opdHeaders = await loginAs("opd.dkpp@sababuka.local");
-    const pimpinanHeaders = await loginAs("pimpinan@sababuka.local");
+    const bapperidaHeaders = await loginAs("bapperida@sababuka.com");
+    const opdHeaders = await loginAs("opd.dkpp@sababuka.com");
+    const pimpinanHeaders = await loginAs("pimpinan@sababuka.com");
 
     const indicators = await app.inject({ method: "GET", url: "/api/v1/indicators?q=IKP", headers: { cookie } });
     assert.equal(indicators.statusCode, 200, indicators.body);

@@ -119,8 +119,11 @@ if ($lanAddress) {
   Write-Host "Buka dari laptop lain: http://${lanAddress}:5173/" -ForegroundColor Cyan
   Write-Host "Pastikan kedua laptop memakai jaringan Wi-Fi yang sama."
 }
-Write-Host "Akun Pimpinan: pimpinan@sababuka.local"
-Write-Host "Akun BAPPERIDA: bapperida@sababuka.local"
+Write-Host "Akun Developer/Superadmin: developer@sababuka.com"
+Write-Host "Akun BAPPERIDA: bapperida@sababuka.com"
+Write-Host "Akun Kominfo baca-saja: kominfo@sababuka.com"
+Write-Host "Akun OPD DKPP: opd.dkpp@sababuka.com"
+Write-Host "Akun Pimpinan: pimpinan@sababuka.com"
 if ($ResetDemoUsers) {
   Write-Host "Password akun demo sudah diatur ulang."
 } else {

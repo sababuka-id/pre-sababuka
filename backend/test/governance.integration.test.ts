@@ -25,8 +25,8 @@ test("master kategori dan indikator pilot dapat dibaca dan ditambah sebagai draf
         "x-csrf-token": response.json().csrf_token as string,
       };
     };
-    const bapperidaHeaders = await loginAs("bapperida@sababuka.local");
-    const opdHeaders = await loginAs("opd.dkpp@sababuka.local");
+    const bapperidaHeaders = await loginAs("bapperida@sababuka.com");
+    const opdHeaders = await loginAs("opd.dkpp@sababuka.com");
 
     const categories = await app.inject({ method: "GET", url: "/api/v1/categories?page_size=100", headers: { cookie } });
     assert.equal(categories.statusCode, 200, categories.body);

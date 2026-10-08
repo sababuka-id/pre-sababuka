@@ -24,13 +24,15 @@ function AuthBrand() {
 
 export function LoginPage() {
   const { login } = useAuth();
-  const [identifier, setIdentifier] = useState("");
+  const [identifier, setIdentifier] = useState(() => window.localStorage.getItem("sababuka.demo.identifier") ?? "");
   const [password, setPassword] = useState("");
   const [mfaMode, setMfaMode] = useState<"totp" | "recovery" | null>(null);
   const [mfaValue, setMfaValue] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => { window.localStorage.removeItem("sababuka.demo.identifier"); }, []);
 
   async function submit(event: FormEvent) {
     event.preventDefault();

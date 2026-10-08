@@ -13,9 +13,9 @@ SABABUKA sudah berjalan sebagai aplikasi web MVP yang menghubungkan autentikasi 
 - 15 indikator pilot aktif dengan target 2025–2029.
 - 6 capaian indikator telah ditelusuri ke sumber pemerintah dan dipublikasikan sebagai data resmi.
 - 9 indikator masih menunggu data atau konfirmasi OPD dan hanya dipakai untuk demonstrasi alur.
-- 5 role sudah tersedia: Superadmin, BAPPERIDA, Kominfo, OPD, dan Pimpinan.
-- 13 migration database telah diterapkan secara berurutan.
-- Production build frontend dan backend lulus; unit/service test backend lulus 6 dari 6 skenario yang dapat berjalan tanpa database integration.
+- 5 role sudah tersedia: Developer/Superadmin, BAPPERIDA, Kominfo baca-saja, OPD, dan Pimpinan.
+- 27 migration database telah diterapkan secara berurutan pada database lokal terbaru.
+- Production build frontend dan backend lulus; unit/service test backend terbaru lulus 13 dari 20 test, dengan 7 test integration dilewati saat database integration tidak disiapkan.
 
 ## Status lima kategori
 
@@ -38,6 +38,7 @@ Istilah **rilis data resmi terpilih** berarti kategori tersebut sudah memiliki m
 5. Buka Asisten Data dan ajukan pertanyaan tentang IKP, kemiskinan, atau stunting; tunjukkan sitasinya.
 6. Login sebagai **BAPPERIDA** untuk memperlihatkan review, kurasi, dan publikasi.
 7. Bila waktu cukup, login sebagai **OPD** untuk memperlihatkan pengisian capaian dan bukti dukung sesuai scope.
+8. Gunakan **Mode Simulasi** untuk memperlihatkan urutan BAPPERIDA, OPD, Kominfo baca-saja, lalu Pimpinan jika paket latihan sudah disiapkan.
 
 ## Kalimat yang disarankan
 

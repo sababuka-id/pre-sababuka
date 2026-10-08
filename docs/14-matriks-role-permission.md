@@ -44,14 +44,18 @@ Superadmin dapat memiliki lingkup seluruh organisasi. Role lain menggunakan ling
 | Organisasi, pengguna, role, menu | Ya | Lihat | Lihat terbatas | Anggota sendiri sesuai delegasi | - |
 | Fokus dan kategori | Ya/override | Ya | Lihat | Lihat | Lihat |
 | Definisi dan versi indikator | Ya/override | Ya | Lihat | Lihat/usul melalui proses | Lihat aktif |
-| Dataset dan metadata | Ya | Ya | Ya | Milik OPD | Lihat terbit |
-| Input dan revisi data | Ya/override | Lihat | Impor teknis | Milik OPD | - |
+| Dataset dan metadata | Ya | Lihat dan kurasi substansi | Baca status sumber dan alur | Milik OPD | Lihat terbit |
+| Input dan revisi data | Ya/override | Lihat | - | Milik OPD | - |
 | Konfirmasi internal OPD | Ya/override | - | - | Lingkup OPD | - |
 | Review dan persetujuan | Ya/override | Ya | - | - | - |
 | Aktivasi publikasi | Ya/override | Ya | - | - | - |
 | Dashboard pimpinan | Ya | Ya | Terbatas | Terbatas | Ya |
 | Asisten AI | Ya | Opsional | - | - pada MVP | Ya |
-| Audit | Penuh | Substantif | Teknis | Aktivitas sendiri | - |
+| Audit | Penuh | Substantif | Teknis dan baca-saja | Aktivitas sendiri | - |
+
+Kominfo memantau kesehatan layanan, status konektor, alur data, dan keterbukaan data. Kominfo tidak memvalidasi indikator, tidak menyetujui observasi, tidak mengimpor data, dan tidak mengaktifkan publikasi. Operator yang berasal dari organisasi Kominfo tetap dapat memakai role `opd` dengan scope organisasi jika Kominfo menjadi pemilik indikator dan harus melakukan verifikasi teknis.
+
+Mapping teknis dan aksi sinkronisasi dijalankan oleh Superadmin/developer pada environment yang ditetapkan. BAPPERIDA melihat status mapping untuk pemeriksaan substansi, sedangkan OPD pemilik mengonfirmasi sumber dan definisinya.
 
 ## 4. Scope data
 

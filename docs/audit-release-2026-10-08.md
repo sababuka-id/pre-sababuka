@@ -7,7 +7,7 @@ Audit ini mencakup role, alur persetujuan, publikasi, dashboard pimpinan, notifi
 | Area | Pemeriksaan | Hasil | Status |
 | --- | --- | --- | --- |
 | Migrasi | Migration 001-024 pada database audit | 24 migration berhasil diterapkan berurutan | Lulus |
-| Role dan menu | Superadmin, BAPPERIDA, Kominfo, OPD, pimpinan | Matriks permission dan menu mengikuti scope; connector secret hanya superadmin | Lulus |
+| Role dan menu | Superadmin, BAPPERIDA, Kominfo, OPD, pimpinan | BAPPERIDA memegang keputusan substansi; OPD memegang verifikasi teknis; Kominfo hanya baca status layanan dan alur data; connector secret hanya superadmin | Lulus |
 | Anti self-approval | Pengaju kategori/indikator tidak boleh menyetujui objek yang sama | Backend mengembalikan konflik dan menyimpan actor audit | Lulus |
 | Verifikasi OPD | Verifikasi indikator wajib dilakukan oleh OPD pemilik | Global role tidak dapat melewati scope organisasi | Lulus |
 | State machine | Kategori disetujui sebelum indikator, lalu approve BAPPERIDA, verifikasi OPD, aktivasi | Diuji dalam workflow lintas peran | Lulus |
@@ -23,6 +23,7 @@ Audit ini mencakup role, alur persetujuan, publikasi, dashboard pimpinan, notifi
 | Build | Backend typecheck/build dan frontend typecheck/build | Keduanya berhasil | Lulus |
 | E2E | Semua suite integration pada database audit | 7/7 lulus, 0 gagal, 0 skip | Lulus |
 | Visual browser | Chrome desktop, lima role, navigasi utama, denied route, empty state, modal/form, connector settings | Smoke lintas-role lulus; console error 0; tidak ada 4xx/5xx tak terduga | Lulus |
+| RBAC Kominfo | Kominfo melihat status sumber/alur data tanpa aksi mapping, import, atau persetujuan | Migration 026 memisahkan akses baca dari keputusan substansi | Lulus |
 
 ## Temuan P0/P1 yang sudah diperbaiki
 
