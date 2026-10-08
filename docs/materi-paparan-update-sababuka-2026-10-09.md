@@ -4,242 +4,154 @@
 
 ### Pesan utama
 
-SABABUKA sedang membangun master data indikator pembangunan Kabupaten Kapuas. Tahap saat ini berfokus pada penataan fokus kebijakan, isu atau kategori, indikator, target, pemilik data, serta alur persetujuan. Integrasi realisasi dari BPS, Satu Data Kapuas, dan sumber data OPD menjadi tahap lanjutan setelah struktur indikator disepakati.
+SABABUKA sedang menyiapkan master data indikator pembangunan Kabupaten Kapuas. Tahap yang sedang dikerjakan adalah menyusun struktur fokus kebijakan, isu atau kategori, indikator, target, OPD pemilik, serta alur pemeriksaannya. Data realisasi dari BPS, Satu Data Kapuas, dan sumber OPD akan disinkronkan setelah struktur indikator dan pemilik datanya disepakati.
 
 ## 1. Posisi SABABUKA saat ini
 
-SABABUKA sudah berjalan sebagai aplikasi web demo/UAT lokal dengan autentikasi lintas role, master indikator, alur pengiriman data, pemeriksaan BAPPERIDA, publikasi, dashboard pimpinan, konektor sumber, notifikasi, dan audit.
+SABABUKA sudah berjalan sebagai aplikasi web untuk menguji tata kelola indikator dan alur persetujuan. Sistem ini menampung struktur indikator dan membantu mencatat siapa yang menyusun, memeriksa, menyetujui, serta menjadi pemilik data.
 
-Angka yang aman untuk disampaikan:
+Yang sudah tersedia:
 
-- 5 kategori pilot dan 15 indikator pilot pada paket demo yang sudah tersedia.
-- Target indikator berada pada cakupan tahunan 2025-2029.
-- 5 role aplikasi: Developer/Superadmin, BAPPERIDA, Kominfo baca-saja, OPD, dan Pimpinan.
-- Struktur database telah melalui 27 migration berurutan pada versi lokal terbaru.
-- Integrasi konektor Satu Data dan profil BPS sudah tersedia pada level teknis untuk discovery, mapping, preview, staging, dan import terkontrol.
-- Data yang belum memiliki sumber resmi tetap berlabel demo atau menunggu konfirmasi OPD.
+- 5 kategori pilot dan 15 indikator pilot.
+- Target tahunan 2025-2029.
+- Role Developer atau Superadmin, BAPPERIDA, OPD, Kominfo baca-saja, dan Pimpinan.
+- Alur draft, review, verifikasi teknis, persetujuan, dan publikasi.
+- Dashboard pimpinan yang hanya membaca data yang sudah disetujui.
+- Koneksi teknis ke Satu Data Kapuas dan profil BPS untuk tahap mapping berikutnya.
 
-SABABUKA belum boleh disebut sebagai layanan produksi penuh atau sebagai sumber data resmi tunggal sebelum UAT, kredensial sumber, dan persetujuan pemilik data selesai.
+Angka pada paket pilot masih berlabel demo sampai OPD dan sumber resmi mengonfirmasi definisi serta nilainya.
 
-## 2. Sumber draft tahap sekarang
+## 2. Bahan penyusunan draft
 
-Tim UPR menyusun draft awal hanya dari Matrix RPJMD. Draft tersebut memuat usulan fokus kebijakan, isu atau kategori, indikator, target, OPD pemilik, dan keterangan sumber jika sudah diketahui.
+Tim UPR menyusun draft awal hanya dari Matrix RPJMD. Draft memuat usulan fokus kebijakan, isu atau kategori, indikator, target, dan OPD pemilik jika sudah dapat diidentifikasi.
 
-Renstra OPD dan dokumen teknis lain dapat memperkaya definisi, rumus, dan metadata pada tahap berikutnya. Dokumen tersebut belum menjadi dasar utama paket draft yang dipresentasikan pada tahap ini.
+Renstra OPD dan dokumen teknis digunakan pada tahap berikutnya untuk memperjelas definisi, rumus, satuan, sumber, serta penanggung jawab teknis. Renstra belum menjadi dasar utama paket draft yang dipaparkan besok.
 
 ## 3. Struktur master data
 
 ```text
 Matrix RPJMD
-    ↓
-Fokus kebijakan
-    ↓
-Isu atau kategori strategis
-    ↓
-Indikator dan versi definisi
-    ↓
-Target tahunan
-    ↓
-OPD pemilik dan bidang pengelola
-    ↓
-Sumber data dan realisasi
+    -> Fokus kebijakan
+    -> Isu atau kategori strategis
+    -> Indikator dan definisi
+    -> Target tahunan
+    -> OPD pemilik dan bidang pengelola
+    -> Sumber data dan realisasi
 ```
 
-Fokus kebijakan dipakai sebagai pengelompokan strategis. Kategori atau isu menjadi unit pengelolaan utama. Indikator menjadi unit yang memiliki definisi, satuan, periode, target, pemilik, sumber, dan status verifikasi.
+Fokus kebijakan menjadi pengelompokan strategis. Isu atau kategori menjadi unit pengelolaan. Indikator menjadi unit yang memiliki definisi, satuan, periode, target, pemilik, sumber, dan status verifikasi.
 
 ## 4. Pembagian peran
 
 | Peran | Tanggung jawab |
 | --- | --- |
-| Tim UPR | Menyusun draft dari Matrix RPJMD dan memasukkan metadata awal |
-| Admin BAPPERIDA | Menilai fokus, isu atau kategori, indikator, target, sumber yang diusulkan, dan kelayakan tayang |
-| Operator OPD | Memeriksa kewenangan, definisi, satuan, target, periode, sumber, dan nilai data milik organisasinya |
-| Superadmin atau developer | Menjaga aplikasi, akun, konfigurasi teknis, konektor, backup, keamanan, dan reset demo |
-| Kominfo | Memantau layanan, kesehatan konektor, alur data, audit teknis, dan keterbukaan data dalam mode baca saja |
+| Tim UPR | Menyusun draft dari Matrix RPJMD dan mengisi metadata awal |
+| BAPPERIDA | Menilai fokus, isu atau kategori, indikator, target, OPD pemilik, dan kelayakan tayang |
+| OPD pemilik | Memeriksa kewenangan, definisi, satuan, target, periode, sumber, dan nilai data |
+| Pengelola sistem | Menjaga layanan, akun, keamanan, konektor, dan reset demo |
+| Kominfo | Memantau kesehatan layanan, alur data, dan keterbukaan dalam mode baca-saja |
 | Pimpinan | Membaca data yang sudah disetujui dan dipublikasikan |
 
-Kominfo tidak menyetujui kategori, indikator, observasi, sumber data, atau publikasi. Jika Kominfo menjadi pemilik indikator tertentu, operator Kominfo dapat memakai role OPD dengan scope organisasinya untuk melakukan verifikasi teknis.
+Kominfo tidak memvalidasi kategori, indikator, nilai, sumber, atau publikasi. Jika suatu indikator menjadi kewenangan Kominfo, verifikasi teknis tetap mengikuti alur OPD pemilik.
 
 ## 5. Alur persetujuan indikator
 
 ```text
 UPR membuat draft
-    ↓
-BAPPERIDA menilai fokus, isu, indikator, dan target
-    ↓
-Disetujui untuk verifikasi OPD
-    ↓
-OPD pemilik memeriksa sisi teknis
-    ↓
-BAPPERIDA memberi keputusan akhir
-    ↓
-Master indikator aktif
+    -> BAPPERIDA menilai fokus, isu, indikator, dan target
+    -> OPD pemilik memeriksa sisi teknis
+    -> BAPPERIDA memberi persetujuan akhir
+    -> Indikator aktif dan data dapat diperiksa
+    -> Data yang disetujui dipublikasikan untuk Pimpinan
 ```
 
-Jika BAPPERIDA menemukan masalah, mereka dapat mengembalikan draft dengan catatan atau menolaknya dengan alasan. Jika OPD menemukan masalah teknis, OPD mengembalikan indikator kepada BAPPERIDA dan menyertakan koreksi atau keterangan sumber.
-
-Persetujuan awal BAPPERIDA belum berarti indikator langsung tayang. Persetujuan akhir dilakukan setelah verifikasi teknis OPD selesai.
+BAPPERIDA dapat mengembalikan atau menolak draft dengan catatan. OPD mengembalikan indikator bila definisi, sumber, periode, atau pemilik teknis belum benar. Persetujuan awal BAPPERIDA belum membuat indikator langsung tayang.
 
 ## 6. Jika OPD mengusulkan indikator
 
-OPD dapat mengusulkan fokus, isu, kategori, atau indikator baru. Usulan tersebut tetap masuk sebagai draft. BAPPERIDA memeriksa kesesuaian dengan RPJMD dan kebijakan daerah, lalu OPD memvalidasi aspek teknisnya. BAPPERIDA melakukan persetujuan akhir sebelum indikator aktif.
+OPD dapat mengusulkan fokus, isu, kategori, atau indikator baru. Usulan tetap berstatus draft. BAPPERIDA memeriksa kesesuaiannya dengan RPJMD dan kebijakan daerah. Setelah itu OPD memeriksa aspek teknis, lalu BAPPERIDA memberikan persetujuan akhir.
 
-Alur ini menjaga agar OPD dapat mengusulkan kebutuhan lapangan tanpa menetapkan sendiri struktur strategis kabupaten.
+Dengan alur ini, OPD dapat mengusulkan kebutuhan lapangan tanpa menetapkan sendiri struktur strategis kabupaten.
 
-## 7. Pemeriksaan data masuk
+## 7. Validasi data sebelum tayang
 
-Dashboard pemeriksaan data masuk menjadi antrean BAPPERIDA untuk memeriksa data yang berasal dari Satu Data, BPS, unggahan OPD, atau input manual.
+Data dapat berasal dari Satu Data Kapuas, BPS, unggahan OPD, formulir SABABUKA, atau dokumen resmi OPD. Sistem memeriksa tahun, wilayah, satuan, tipe nilai, kelengkapan, duplikasi, rentang nilai, sumber, dan waktu pengambilan.
 
-BAPPERIDA memeriksa:
+BAPPERIDA menentukan apakah data disetujui untuk publikasi, dikembalikan untuk koreksi, atau ditolak dengan catatan. Data yang belum disetujui tidak masuk dashboard pimpinan.
 
-- indikator dan versi definisi yang digunakan;
-- tahun, periode, dan wilayah;
-- satuan dan tipe nilai;
-- kelengkapan dan duplikasi;
-- kewajaran nilai;
-- sumber dan URL;
-- waktu pengambilan;
-- status validasi OPD;
-- kesesuaian data dengan target.
+## 8. OPD yang belum memiliki dataset atau website
 
-Sistem menjalankan validasi otomatis lebih dahulu. BAPPERIDA memeriksa antrean yang perlu keputusan, kemudian memilih setujui, kembalikan, atau tolak. Data yang belum disetujui tidak masuk publikasi pimpinan.
+OPD tetap dapat menjadi pemilik indikator. Data dapat dimasukkan melalui:
 
-## 8. Contoh simulasi end-to-end
+- Form SABABUKA.
+- Template CSV atau XLSX.
+- Dokumen resmi yang disahkan OPD.
+- Dataset Satu Data Kapuas jika sudah tersedia.
+- Data BPS atau sumber resmi lain yang disepakati.
 
-Paket simulasi menggunakan contoh berikut:
+Setiap nilai tetap harus memiliki pemilik, periode, satuan, wilayah, waktu pembaruan, sumber, dan status verifikasi. Label sumber dibuat jelas, misalnya Manual OPD, Dokumen resmi OPD, Satu Data Kapuas, atau BPS.
 
-- Fokus kebijakan: Ketahanan Pangan Daerah
-- Isu atau kategori: Ketersediaan Pangan
-- Indikator: Indeks Ketahanan Pangan
-- OPD pemilik: DKPP
-- Target latihan: tahun 2026
-- Sumber simulasi: dataset Satu Data Kapuas
+## 9. Konfirmasi organisasi dan kontak
 
-Urutan simulasi:
+Sebelum pemetaan indikator diperluas, daftar OPD dan kecamatan perlu dikonfirmasi. Status yang digunakan:
 
-1. UPR membuat kategori dan indikator dalam status draft.
-2. Admin BAPPERIDA menyetujui kategori.
-3. Admin BAPPERIDA memeriksa indikator dan menunjuk DKPP sebagai pemilik.
-4. Operator DKPP memeriksa definisi, satuan, target, periode, dan sumber data.
-5. BAPPERIDA menyetujui indikator secara final.
-6. Superadmin atau developer mengatur mapping teknis sumber data.
-7. Sistem mengambil preview dan menahan nilai di staging.
-8. Operator DKPP mengonfirmasi data teknis.
-9. BAPPERIDA memeriksa data masuk dan menyetujui publikasi.
-10. Pimpinan melihat indikator dan realisasi pada dashboard.
+- Masuk SABABUKA.
+- Tidak masuk.
+- Perlu koreksi nama atau kode.
+- Perlu digabung.
+- Menunggu forum.
 
-Sinkronisasi pada simulasi berarti SABABUKA membaca data dari Satu Data. SABABUKA tidak menulis balik ke Satu Data tanpa API dan persetujuan resmi.
+Formulir konfirmasi meminta URL website atau portal data, bidang pemilik data, PIC, operator, kontak resmi, jenis data, frekuensi pembaruan, serta kebutuhan integrasi. Kontak disimpan dengan akses terbatas. Link grup koordinasi dan QR code ditampilkan setelah URL resmi dikonfirmasi.
 
-## 9. Kebutuhan integrasi BPS
+## 10. Batas tahap dan pekerjaan berikutnya
 
-Integrasi BPS membutuhkan:
+Paparan besok berfokus pada master data, kategori, indikator, pemilik data, serta alur persetujuan. Sinkronisasi angka dari BPS dan Satu Data Kapuas dikerjakan setelah metadata, akses resmi, kode wilayah, satuan, jadwal rilis, dan pemetaan indikator disepakati.
 
-- endpoint atau WebAPI resmi;
-- API key jika diwajibkan;
-- daftar tabel atau publikasi yang digunakan;
-- pemetaan kode indikator;
-- kode wilayah dan satuan;
-- periode dan frekuensi rilis;
-- definisi metadata;
-- batas penggunaan data;
-- jadwal pembaruan;
-- prosedur bila angka BPS berbeda dari data OPD.
+SABABUKA membaca data dari sumber. Sistem tidak menulis balik ke Satu Data tanpa API dan persetujuan resmi.
 
-Target RPJMD tetap tersimpan sebagai target perencanaan. Angka BPS menjadi salah satu sumber realisasi. Sistem menyimpan URL sumber, waktu pengambilan, checksum, status kualitas, dan status verifikasi.
+## 11. Simulasi yang ditunjukkan
 
-## 10. OPD tanpa dataset Satu Data atau website
+Gunakan satu contoh yang sederhana:
 
-OPD tetap dapat menggunakan SABABUKA melalui:
+- Fokus kebijakan: Ketahanan Pangan Daerah.
+- Isu atau kategori: Ketersediaan Pangan.
+- Indikator: Indeks Ketahanan Pangan.
+- OPD pemilik: DKPP.
 
-- input manual;
-- form capaian;
-- template CSV atau XLSX;
-- dokumen resmi OPD;
-- endpoint internal jika tersedia;
-- dataset Satu Data jika sudah dipublikasikan;
-- publikasi BPS jika menjadi sumber yang disepakati.
+Urutannya:
 
-Sumber diberi label yang jelas, misalnya `Manual OPD`, `Dokumen resmi OPD`, `Satu Data Kapuas`, atau `BPS`. Setiap nilai tetap membutuhkan periode, satuan, wilayah, pemilik, waktu pembaruan, dan bukti verifikasi.
+1. UPR membuat kategori dan indikator sebagai draft.
+2. BAPPERIDA menyetujui kategori.
+3. BAPPERIDA mengirim indikator kepada OPD pemilik.
+4. OPD memeriksa definisi, satuan, target, periode, dan sumber.
+5. BAPPERIDA memberi persetujuan akhir.
+6. Data masuk melalui sumber yang disepakati, lalu BAPPERIDA memeriksa sebelum publikasi.
+7. Pimpinan melihat hasil yang sudah disetujui.
 
-## 11. Konfirmasi daftar organisasi
+Paket latihan dapat direset untuk mengulangi simulasi tanpa menghapus master resmi.
 
-SABABUKA perlu menampilkan daftar seluruh organisasi yang sudah terdaftar. OPD dan kecamatan dipisahkan berdasarkan jenis organisasinya.
+## 12. Keputusan yang diminta dari forum
 
-Setiap organisasi diberi status konfirmasi:
-
-- Masuk SABABUKA;
-- Tidak masuk;
-- Nama atau kode perlu diperbaiki;
-- Organisasi perlu digabung;
-- Menunggu keputusan forum.
-
-Daftar ini menjadi bahan konfirmasi awal kepada OPD sebelum indikator dan sumber data dipetakan lebih jauh.
-
-## 12. Formulir konfirmasi OPD
-
-Formulir dapat meminta:
-
-- kode dan nama OPD;
-- URL website resmi;
-- URL portal data atau API;
-- nama bidang pemilik data;
-- nama penanggung jawab;
-- nama operator;
-- email dinas dan kontak resmi;
-- jenis data yang tersedia;
-- frekuensi pembaruan;
-- status dataset di Satu Data;
-- status ketersediaan data BPS;
-- catatan kebutuhan integrasi.
-
-Data kontak disimpan pada akses terbatas dan tidak ditampilkan pada dashboard publik. Link grup koordinasi SABABUKA dan QR code digunakan setelah URL grup resmi dikonfirmasi.
-
-## 13. Mode simulasi lintas role
-
-Superadmin mendapat tombol **Mode Simulasi** untuk memilih akun demo BAPPERIDA, OPD, Kominfo baca-saja, dan Pimpinan. Tombol ini hanya mengisi akun demo pada halaman login; autentikasi tetap dilakukan dengan kredensial akun demo masing-masing.
-
-Mode tersebut harus:
-
-- hanya aktif pada development atau demo;
-- memakai akun demo yang terpisah;
-- menampilkan keterangan bahwa akun yang dipilih adalah akun demo;
-- mencatat tindakan pada audit;
-- tidak membuka akun pengguna nyata;
-- dapat dikembalikan ke Superadmin;
-- dapat direset tanpa menghapus master RPJMD.
-
-## 14. Perlindungan IP dan keamanan
-
-Browser selalu menerima sebagian kode frontend sehingga tidak mungkin membuat aplikasi web sepenuhnya tidak dapat di-inspect. Perlindungan utama ditempatkan pada backend dan repository.
-
-Kontrol yang diterapkan atau diwajibkan:
-
-- aturan bisnis dan keputusan workflow diproses di backend;
-- secret, API key, dan kredensial tidak dikirim ke frontend;
-- source map produksi dimatikan;
-- build produksi diminifikasi;
-- endpoint development dan seed demo dinonaktifkan pada produksi;
-- CORS, CSP, cookie, rate limit, dan audit log dikunci;
-- repository dan credential deployment dibatasi;
-- data resmi tidak ditanam pada bundle JavaScript;
-- akses Kominfo hanya menampilkan status yang diperlukan;
-- data kontak OPD tidak ditampilkan untuk umum.
-
-## 15. Keputusan yang dibutuhkan dari forum
-
-1. Daftar OPD dan kecamatan yang masuk SABABUKA.
-2. Fokus dan kategori yang disepakati BAPPERIDA.
-3. Indikator pilot yang menjadi prioritas.
-4. OPD pemilik dan bidang pengelola setiap indikator.
-5. Sumber data utama setiap indikator.
+1. OPD dan kecamatan yang masuk SABABUKA.
+2. Fokus dan kategori strategis.
+3. Indikator pilot dan OPD pemilik.
+4. Bidang, PIC, dan operator.
+5. Sumber data serta jadwal pembaruan.
 6. Batas data yang boleh tampil di dashboard pimpinan.
-7. Jadwal pembaruan dan batas waktu verifikasi.
-8. PIC dan operator setiap OPD.
-9. Endpoint atau kredensial integrasi BPS.
-10. Dataset Satu Data yang siap dipetakan.
-11. URL grup koordinasi SABABUKA.
-12. Persetujuan untuk uji simulasi lintas role.
+7. Dataset Satu Data dan rujukan BPS yang siap dipetakan.
+8. URL grup koordinasi dan persetujuan simulasi.
 
-## Kalimat penutup
+## Penutup
 
-SABABUKA saat ini sedang menata fondasi tata kelola indikator. Sistem menyiapkan satu master data yang menghubungkan kebijakan, indikator, pemilik data, sumber, dan status verifikasi. Setelah struktur tersebut disepakati oleh BAPPERIDA dan OPD, SABABUKA siap melanjutkan sinkronisasi terukur dengan BPS, Satu Data Kapuas, dan sumber data OPD.
+Fondasi sistem sudah disiapkan. Tahap berikutnya adalah menetapkan master dan sumber resmi bersama. BAPPERIDA menetapkan arah dan kelayakan, OPD memastikan data, dan SABABUKA menjaga alur serta bukti pemeriksaannya.
+
+## Catatan internal presenter
+
+Bagian berikut tidak perlu ditampilkan pada paparan utama karena terlalu teknis atau belum diperlukan untuk keputusan OPD:
+
+- Detail perlindungan IP, source map, CSP, CORS, secret, dan repository.
+- Detail endpoint API BPS, API key, checksum, dan struktur staging.
+- Tombol internal untuk berpindah akun demo.
+- Detail migration database dan konfigurasi server.
+
+Jika ditanya tentang keamanan, cukup jawab bahwa aturan workflow dan akses diproses di backend, secret tidak dikirim ke frontend, dan setiap perubahan dicatat pada audit. Jika ditanya tentang integrasi BPS, sampaikan bahwa konektor teknis sudah disiapkan, sedangkan akses resmi dan mapping indikator masih menunggu kesepakatan sumber data.
