@@ -54,6 +54,7 @@ export interface UserSummary {
   full_name: string;
   status: "invited" | "active" | "suspended" | "locked" | "archived";
   mfa_required: boolean;
+  has_password: boolean;
   organization_id: string | null;
   organization_code: string | null;
   organization_name: string | null;

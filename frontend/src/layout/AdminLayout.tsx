@@ -60,7 +60,7 @@ const navigationLabels: Record<string, string> = {
 };
 
 const roleLabels: Record<string, string> = {
-  superadmin: "Administrator Utama",
+  superadmin: "Developer",
   pimpinan: "Pimpinan",
   bapperida: "Bapperida",
   kominfo: "Kominfo",
@@ -94,7 +94,7 @@ export function AdminLayout({ pathname, title, subtitle, actions, children }: { 
   useEffect(() => {
     setProfileOpen(false);
     window.scrollTo({ top: 0, left: 0 });
-    requestAnimationFrame(() => document.querySelector<HTMLElement>(".page-header h1")?.focus());
+    requestAnimationFrame(() => document.querySelector<HTMLElement>(".topbar-context strong")?.focus());
   }, [pathname]);
   useEffect(() => {
     const close = (event: MouseEvent) => { if (!profileRef.current?.contains(event.target as Node)) setProfileOpen(false); };
@@ -137,7 +137,9 @@ export function AdminLayout({ pathname, title, subtitle, actions, children }: { 
     <section className="workspace-main">
       <header className="topbar">
         <button className="icon-button mobile-trigger" aria-label="Buka menu" onClick={() => setMobile(true)}><Menu /></button>
+        <nav className="topbar-context" aria-label="Lokasi halaman" title={subtitle}><span>{areaLabel}</span><i aria-hidden>/</i><strong tabIndex={-1}>{title}</strong></nav>
         <div className="topbar-actions">
+          {actions}
           <button className="icon-button notification" aria-label="Buka notifikasi" onClick={() => go("/notifications")}><Bell /></button>
           <div className="profile-wrap" ref={profileRef}>
             <button className="profile-button" aria-haspopup="menu" aria-expanded={profileOpen} onClick={() => setProfileOpen((value) => !value)}><span className="avatar">{initials}</span><span><strong>{user?.full_name}</strong><small>{roleLabels[user?.roles[0]?.code ?? ""] ?? "Pengguna"}</small></span><ChevronDown /></button>
@@ -146,7 +148,6 @@ export function AdminLayout({ pathname, title, subtitle, actions, children }: { 
         </div>
       </header>
       <main className="page-shell">
-        <header className="page-header"><div><span className="eyebrow">{areaLabel}</span><h1 tabIndex={-1}>{title}</h1><p>{subtitle}</p></div>{actions && <div className="page-actions">{actions}</div>}</header>
         {children}
       </main>
     </section>

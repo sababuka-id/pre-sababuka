@@ -4,7 +4,7 @@ import { LoadingScreen, Notice } from "./components";
 import { AdminLayout, ComingSoon } from "./layout/AdminLayout";
 import { navigate, usePathname } from "./router";
 import { RolesPage, MenusPage } from "./pages/AccessPages";
-import { InvitationPage, LoginPage } from "./pages/AuthPages";
+import { InvitationPage, LoginPage, RegistrationPage } from "./pages/AuthPages";
 import { DashboardPage } from "./pages/DashboardPage";
 import { OrganizationsPage } from "./pages/OrganizationsPage";
 import { SecurityPage, SystemPage } from "./pages/SystemPage";
@@ -27,7 +27,7 @@ const pageMeta: Record<string, { title: string; subtitle: string; permission?: s
   "/audit": { title: "Audit Aktivitas", subtitle: "Jejak perubahan permanen sesuai lingkup organisasi.", permission: "audit.view" },
   "/operations": { title: "Dashboard Operasional", subtitle: "Pantau form pelaporan capaian OPD per periode, antrean pemeriksaan, koreksi, dan persetujuan.", permission: "submission.view" },
   "/admin/organizations": { title: "Organisasi dan OPD", subtitle: "Kelola struktur organisasi yang menjadi lingkup pengguna dan pemilik data.", permission: "organization.view" },
-  "/admin/users": { title: "Pengguna", subtitle: "Undang pengguna, pantau status akun, dan tetapkan peran sesuai tugas.", permission: "user.view" },
+  "/admin/users": { title: "Pengguna", subtitle: "Verifikasi pendaftaran, pantau status akun, dan tetapkan peran sesuai tugas.", permission: "user.view" },
   "/admin/roles": { title: "Peran dan Hak Akses", subtitle: "Atur kewenangan setiap peran dengan prinsip akses minimum.", permission: "role.view" },
   "/admin/menus": { title: "Pengaturan Menu", subtitle: "Tentukan menu yang tampil untuk setiap peran.", permission: "menu.manage" },
   "/admin/system": { title: "Konfigurasi Sistem", subtitle: "Kelola kendali fitur dan parameter aplikasi yang tidak bersifat rahasia.", permission: "system.configure" },
@@ -44,8 +44,8 @@ function ProtectedApp() {
   const { user, loading } = useAuth();
   const pathname = usePathname();
   useEffect(() => {
-    if (!loading && !user && pathname !== "/login" && pathname !== "/activate") navigate("/login");
-    if (!loading && user && (pathname === "/" || pathname === "/login")) {
+    if (!loading && !user && !["/login", "/activate", "/register"].includes(pathname)) navigate("/login");
+    if (!loading && user && (pathname === "/" || pathname === "/login" || pathname === "/register")) {
       const landing = user.roles.some((role) => role.code === "superadmin") ? "/admin"
         : user.roles.some((role) => role.code === "pimpinan") ? "/dashboard"
         : user.permissions.includes("submission.view") ? "/operations" : "/dashboard";
@@ -54,6 +54,7 @@ function ProtectedApp() {
   }, [loading, user, pathname]);
 
   if (pathname === "/activate") return <InvitationPage />;
+  if (pathname === "/register") return <RegistrationPage />;
   if (loading) return <LoadingScreen />;
   if (!user || pathname === "/login") return <LoginPage />;
   const meta = pageMeta[pathname] ?? { title: "Modul SABABUKA", subtitle: "Modul sedang disiapkan." };

@@ -70,7 +70,7 @@ try {
     [userId, JSON.stringify({ environment: config.nodeEnv, mfa_enrollment_pending: true })],
   );
   await client.query("COMMIT");
-  console.log(`Superadmin development siap: ${email}`);
+  console.log(`Akun Developer siap: ${email}`);
   console.warn("MFA belum diaktifkan; akun ini tidak boleh digunakan pada production.");
 } catch (error) {
   await client.query("ROLLBACK");

@@ -40,7 +40,7 @@ export class DemoService {
 
   async reset(auth: AuthContext, audit: AuditContext): Promise<DemoResetSummary> {
     if (!auth.user.roles.some((role) => role.code === "superadmin" && role.scope_type === "global")) {
-      throw new ApiError(403, "PERMISSION_DENIED", "Reset data demo hanya tersedia untuk Superadmin.");
+      throw new ApiError(403, "PERMISSION_DENIED", "Reset data demo hanya tersedia untuk Developer.");
     }
     const client = await this.db.connect();
     const summary = emptySummary();

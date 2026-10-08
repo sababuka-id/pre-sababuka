@@ -30,6 +30,14 @@ interface MfaRow extends QueryResultRow {
   last_used_counter: string | null;
 }
 
+export interface SelfRegistrationInput {
+  email: string;
+  username?: string | null;
+  full_name: string;
+  organization_id: string;
+  password: string;
+}
+
 export class AccountService {
   constructor(
     private readonly db: Database,
@@ -41,6 +49,70 @@ export class AccountService {
       throw new ApiError(503, "INTERNAL_ERROR", "Konfigurasi enkripsi MFA belum tersedia.");
     }
     return this.config.mfaEncryptionKey;
+  }
+
+  async registrationOrganizations() {
+    const result = await this.db.query<QueryResultRow & Record<string, unknown>>(
+      `SELECT id::text, code, name, short_name
+       FROM sababuka.organizations
+       WHERE is_active = true AND archived_at IS NULL
+       ORDER BY name, code`,
+    );
+    return { data: result.rows };
+  }
+
+  async register(input: SelfRegistrationInput, audit: AuditContext) {
+    const passwordHash = await hashPassword(input.password);
+    const client = await this.db.connect();
+    try {
+      await client.query("BEGIN");
+      const organization = await client.query<{ id: string } & QueryResultRow>(
+        `SELECT id::text FROM sababuka.organizations
+         WHERE id = $1 AND is_active = true AND archived_at IS NULL
+         FOR SHARE`,
+        [input.organization_id],
+      );
+      if (!organization.rowCount) throw new ApiError(404, "NOT_FOUND", "Organisasi tidak ditemukan atau sudah tidak aktif.");
+
+      const result = await client.query<QueryResultRow & Record<string, unknown>>(
+        `INSERT INTO sababuka.users
+           (email, username, full_name, password_hash, status, must_change_password, mfa_required)
+         VALUES ($1, $2, $3, $4, 'invited', false, false)
+         RETURNING id::text, email::text, username::text, full_name, status, created_at::text`,
+        [input.email.trim().toLowerCase(), input.username?.trim() || null, input.full_name.trim(), passwordHash],
+      );
+      const user = result.rows[0]!;
+      await client.query(
+        `INSERT INTO sababuka.organization_memberships
+           (user_id, organization_id, membership_type, is_primary)
+         VALUES ($1, $2, 'applicant', true)`,
+        [user.id, input.organization_id],
+      );
+      await recordAudit(client, {
+        ...audit,
+        actorId: user.id as string,
+        eventType: "user.registration_requested",
+        entityType: "user",
+        entityId: user.id as string,
+        organizationId: input.organization_id,
+        afterData: { ...user, organization_id: input.organization_id },
+      });
+      await client.query("COMMIT");
+      return {
+        email: user.email,
+        status: "pending_approval",
+        message: "Pendaftaran berhasil. Akun akan dapat digunakan setelah diverifikasi Developer SABABUKA.",
+      };
+    } catch (error) {
+      await client.query("ROLLBACK");
+      if ((error as { code?: string }).code === "23505") {
+        throw new ApiError(409, "CONFLICT", "Email atau username sudah terdaftar.");
+      }
+      if (error instanceof ApiError) throw error;
+      throw error;
+    } finally {
+      client.release();
+    }
   }
 
   private async validInvitation(executor: unknown, token: string, lock = false) {

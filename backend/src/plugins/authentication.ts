@@ -5,7 +5,12 @@ import { AuthService } from "../services/auth-service.js";
 
 export const SESSION_COOKIE_NAME = "sababuka_session";
 
-const PUBLIC_PATHS = new Set(["/api/v1/health", "/api/v1/auth/login"]);
+const PUBLIC_PATHS = new Set([
+  "/api/v1/health",
+  "/api/v1/auth/login",
+  "/api/v1/auth/register",
+  "/api/v1/auth/registration-organizations",
+]);
 
 function isPublicRequest(request: FastifyRequest): boolean {
   const path = request.url.split("?", 1)[0]!;
@@ -46,6 +51,6 @@ export function requirePermission(request: FastifyRequest, permission: string): 
 export function requireSuperadmin(request: FastifyRequest): void {
   if (!request.auth) throw new ApiError(401, "AUTH_REQUIRED", "Sesi diperlukan.");
   if (!request.auth.user.roles.some((role) => role.code === "superadmin" && role.scope_type === "global")) {
-    throw new ApiError(403, "PERMISSION_DENIED", "Tindakan ini hanya tersedia untuk Superadmin.");
+    throw new ApiError(403, "PERMISSION_DENIED", "Tindakan ini hanya tersedia untuk Developer SABABUKA.");
   }
 }

@@ -96,6 +96,15 @@ export class AuthService {
       return null;
     }
 
+    if (user.status === "invited" && user.password_hash) {
+      const passwordValid = await verifyPassword(user.password_hash, input.password);
+      if (passwordValid) {
+        throw new ApiError(403, "ACCOUNT_PENDING", "Akun masih menunggu verifikasi Developer SABABUKA.");
+      }
+      await this.recordLoginFailure(user, input, "invalid_password");
+      return null;
+    }
+
     if (
       user.status !== "active" ||
       (user.locked_until !== null && user.locked_until.getTime() > Date.now()) ||

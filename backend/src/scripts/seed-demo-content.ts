@@ -7,7 +7,7 @@ const db = createDatabase(config.databaseUrl);
 const client = await db.connect();
 try {
   await client.query("BEGIN");
-  const actor = await client.query<{ id: string }>(`SELECT id::text FROM sababuka.users WHERE email = 'superadmin@sababuka.local' LIMIT 1`);
+  const actor = await client.query<{ id: string }>(`SELECT id::text FROM sababuka.users WHERE email = 'developer@sababuka.com' LIMIT 1`);
   const actorId = actor.rows[0]?.id ?? null;
   await client.query(`
     INSERT INTO sababuka.policy_focuses (code, name, description, display_order, is_active, created_by)

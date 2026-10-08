@@ -13,11 +13,11 @@ if (!password || password.length < 16) {
 }
 
 const demoUsers = [
-  { email: "superadmin@sababuka.local", name: "Superadmin Lokal", role: "superadmin", organization: "KAPUAS", scope: "global" },
-  { email: "bapperida@sababuka.local", name: "Admin Bapperida", role: "bapperida", organization: "BAPPERIDA", scope: "global" },
-  { email: "kominfo@sababuka.local", name: "Admin Kominfo", role: "kominfo", organization: "KAPUAS", scope: "global" },
-  { email: "opd.dkpp@sababuka.local", name: "Operator DKPP", role: "opd", organization: "DKPP", scope: "organization" },
-  { email: "pimpinan@sababuka.local", name: "Pimpinan Kabupaten", role: "pimpinan", organization: "KAPUAS", scope: "published" },
+  { email: "developer@sababuka.com", name: "Developer SABABUKA", role: "superadmin", organization: "KAPUAS", scope: "global" },
+  { email: "bapperida@sababuka.com", name: "Admin BAPPERIDA", role: "bapperida", organization: "BAPPERIDA", scope: "global" },
+  { email: "kominfo@sababuka.com", name: "Admin KOMINFO", role: "kominfo", organization: "KAPUAS", scope: "global" },
+  { email: "opd.dkpp@sababuka.com", name: "Operator OPD DKPP", role: "opd", organization: "DKPP", scope: "organization" },
+  { email: "pimpinan@sababuka.com", name: "Pimpinan Daerah", role: "pimpinan", organization: "KAPUAS", scope: "published" },
 ] as const;
 
 const db = createDatabase(config.databaseUrl);

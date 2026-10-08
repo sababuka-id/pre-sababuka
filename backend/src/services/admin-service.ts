@@ -196,7 +196,8 @@ export class AdminService {
     const scope = organizationScope(auth);
     const result = await this.db.query<CountedRow & Record<string, unknown>>(
       `SELECT u.id::text, u.email::text, u.username::text, u.full_name, u.status,
-              u.mfa_required, u.last_login_at::text, u.created_at::text,
+              u.mfa_required, (u.password_hash IS NOT NULL) AS has_password,
+              u.last_login_at::text, u.created_at::text,
               po.id::text AS organization_id, po.code AS organization_code,
               po.name AS organization_name, count(*) OVER()::text AS total_count
        FROM sababuka.users u
@@ -281,7 +282,7 @@ export class AdminService {
   async updateUser(auth: AuthContext, userId: string, input: UserUpdateInput, audit: AuditContext) {
     requireGlobal(auth);
     if (userId === auth.user.id && input.status && input.status !== "active") {
-      throw new ApiError(409, "CONFLICT", "Superadmin tidak dapat menonaktifkan akunnya sendiri.");
+      throw new ApiError(409, "CONFLICT", "Developer tidak dapat menonaktifkan akunnya sendiri.");
     }
     const client = await this.db.connect();
     try {
@@ -345,6 +346,68 @@ export class AdminService {
       });
       await client.query("COMMIT");
       return user;
+    } catch (error) {
+      await client.query("ROLLBACK");
+      if (error instanceof ApiError) throw error;
+      translateDatabaseError(error);
+    } finally {
+      client.release();
+    }
+  }
+
+  async approveRegistration(auth: AuthContext, userId: string, input: RoleAssignmentInput, audit: AuditContext) {
+    requireGlobal(auth);
+    const client = await this.db.connect();
+    try {
+      await client.query("BEGIN");
+      const user = await client.query<QueryResultRow & { status: string; has_password: boolean }>(
+        `SELECT status, (password_hash IS NOT NULL) AS has_password
+         FROM sababuka.users
+         WHERE id = $1 AND archived_at IS NULL
+         FOR UPDATE`,
+        [userId],
+      );
+      if (!user.rowCount) throw new ApiError(404, "NOT_FOUND", "Pengguna tidak ditemukan.");
+      if (user.rows[0]!.status !== "invited" || !user.rows[0]!.has_password) {
+        throw new ApiError(409, "CONFLICT", "Hanya pendaftaran mandiri yang masih menunggu verifikasi yang dapat disetujui.");
+      }
+      const role = await client.query<{ code: string } & QueryResultRow>(
+        "SELECT code FROM sababuka.roles WHERE id = $1 AND is_active = true",
+        [input.role_id],
+      );
+      if (!role.rows[0]) throw new ApiError(404, "NOT_FOUND", "Peran tidak ditemukan.");
+      assertRoleScope(role.rows[0].code, input.scope_type, input.organization_id);
+
+      const assignment = await client.query<QueryResultRow & Record<string, unknown>>(
+        `INSERT INTO sababuka.user_role_assignments
+           (user_id, role_id, organization_id, scope_type, ends_at, assigned_by)
+         VALUES ($1, $2, $3, $4, $5, $6)
+         RETURNING id::text, role_id::text, organization_id::text, scope_type`,
+        [userId, input.role_id, input.organization_id ?? null, input.scope_type, input.ends_at ?? null, auth.user.id],
+      );
+      await client.query(
+        `UPDATE sababuka.users
+         SET status = 'active', failed_login_count = 0, locked_until = NULL, updated_at = now()
+         WHERE id = $1`,
+        [userId],
+      );
+      await client.query(
+        `UPDATE sababuka.organization_memberships
+         SET membership_type = CASE WHEN $2 = 'opd' THEN 'operator' ELSE 'member' END
+         WHERE user_id = $1 AND ends_at IS NULL`,
+        [userId, role.rows[0].code],
+      );
+      await recordAudit(client, {
+        ...audit,
+        eventType: "user.registration_approved",
+        entityType: "user",
+        entityId: userId,
+        organizationId: input.organization_id ?? null,
+        beforeData: { status: "invited" },
+        afterData: { status: "active", role_code: role.rows[0].code, assignment: assignment.rows[0]! },
+      });
+      await client.query("COMMIT");
+      return { id: userId, status: "active", role_code: role.rows[0].code };
     } catch (error) {
       await client.query("ROLLBACK");
       if (error instanceof ApiError) throw error;
@@ -440,7 +503,7 @@ export class AdminService {
       if (role.rows[0]!.code === "superadmin") {
         const missing = PROTECTED_SUPERADMIN_PERMISSIONS.filter((code) => !codes.includes(code));
         if (missing.length) {
-          throw new ApiError(409, "CONFLICT", `Permission inti Superadmin wajib dipertahankan: ${missing.join(", ")}.`);
+          throw new ApiError(409, "CONFLICT", `Hak akses inti Developer wajib dipertahankan: ${missing.join(", ")}.`);
         }
       }
       const before = await client.query<QueryResultRow & { code: string }>(
@@ -530,7 +593,7 @@ export class AdminService {
       if (role.rows[0]!.code === "superadmin") {
         const missing = PROTECTED_SUPERADMIN_MENUS.filter((code) => !codes.includes(code));
         if (missing.length) {
-          throw new ApiError(409, "CONFLICT", `Menu inti Superadmin wajib dipertahankan: ${missing.join(", ")}.`);
+          throw new ApiError(409, "CONFLICT", `Menu inti Developer wajib dipertahankan: ${missing.join(", ")}.`);
         }
       }
       const before = await client.query<QueryResultRow & { code: string }>(

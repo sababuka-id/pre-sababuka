@@ -186,6 +186,42 @@ export async function administrationRoutes(app: FastifyInstance): Promise<void> 
   );
 
   app.post<{ Params: { user_id: string }; Body: RoleAssignmentInput }>(
+    "/users/:user_id/approve-registration",
+    {
+      schema: {
+        params: {
+          type: "object",
+          additionalProperties: false,
+          required: ["user_id"],
+          properties: { user_id: uuid },
+        },
+        body: {
+          type: "object",
+          additionalProperties: false,
+          required: ["role_id", "scope_type"],
+          properties: {
+            role_id: uuid,
+            scope_type: { type: "string", enum: ["global", "organization", "self", "published"] },
+            organization_id: nullableUuid,
+            ends_at: { type: ["string", "null"], format: "date-time" },
+          },
+        },
+      },
+    },
+    async (request) => {
+      requireCsrf(request);
+      requirePermission(request, "user.activate");
+      requirePermission(request, "user.assign_role");
+      return service(request).approveRegistration(
+        request.auth!,
+        request.params.user_id,
+        request.body,
+        requestAuditContext(request),
+      );
+    },
+  );
+
+  app.post<{ Params: { user_id: string }; Body: RoleAssignmentInput }>(
     "/users/:user_id/role-assignments",
     {
       schema: {

@@ -1,4 +1,4 @@
-import { ArrowRight, Bot, Check, Copy, Eye, EyeOff, KeyRound, LockKeyhole, ShieldCheck, Sparkles } from "lucide-react";
+import { ArrowRight, Bot, Check, Copy, Eye, EyeOff, KeyRound, LockKeyhole, ShieldCheck, Sparkles, UserRoundPlus } from "lucide-react";
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { api, ApiClientError, jsonBody } from "../api";
 import { useAuth } from "../auth";
@@ -59,7 +59,7 @@ export function LoginPage() {
     <AuthBrand />
     <section className="auth-panel">
       <form className="auth-card" onSubmit={submit}>
-        <div className="auth-card-heading"><span className="eyebrow">Akses aman</span><h2>{mfaMode ? "Verifikasi dua langkah" : "Masuk ke SABABUKA"}</h2><p>{mfaMode ? "Masukkan kode dari aplikasi Authenticator Anda." : "Gunakan akun yang telah diberikan oleh Superadmin."}</p></div>
+        <div className="auth-card-heading"><span className="eyebrow">Akses aman</span><h2>{mfaMode ? "Verifikasi dua langkah" : "Masuk ke SABABUKA"}</h2><p>{mfaMode ? "Masukkan kode dari aplikasi Authenticator Anda." : "Masuk menggunakan akun SABABUKA yang telah diverifikasi."}</p></div>
         {error && <Notice tone="error">{error}</Notice>}
         {!mfaMode ? <>
           <label className="field"><span>Email atau username</span><input autoFocus autoComplete="username" value={identifier} onChange={(event) => setIdentifier(event.target.value)} placeholder="nama@kapuaskab.go.id" required /></label>
@@ -71,8 +71,76 @@ export function LoginPage() {
           <button className="text-button muted" type="button" onClick={() => { setMfaMode(null); setMfaValue(""); }}>Kembali ke login</button>
         </>}
         <button className="button primary full" disabled={busy}>{busy ? <Spinner label="Memeriksa" /> : <>{mfaMode ? "Verifikasi" : "Masuk"}<ArrowRight size={17} /></>}</button>
+        {!mfaMode && <button className="button secondary full" type="button" onClick={() => navigate("/register")}><UserRoundPlus size={17} />Daftar akun baru</button>}
         <div className="security-note"><ShieldCheck size={17} /><span>Session dilindungi cookie HttpOnly, CSRF, dan pencatatan audit.</span></div>
       </form>
+    </section>
+  </main>;
+}
+
+interface RegistrationOrganization {
+  id: string;
+  code: string;
+  name: string;
+  short_name: string | null;
+}
+
+export function RegistrationPage() {
+  const [organizations, setOrganizations] = useState<RegistrationOrganization[]>([]);
+  const [fullName, setFullName] = useState("");
+  const [email, setEmail] = useState("");
+  const [username, setUsername] = useState("");
+  const [organizationId, setOrganizationId] = useState("");
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [busy, setBusy] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [complete, setComplete] = useState(false);
+
+  useEffect(() => {
+    api<{ data: RegistrationOrganization[] }>("/auth/registration-organizations")
+      .then((result) => { setOrganizations(result.data); setOrganizationId(result.data[0]?.id ?? ""); })
+      .catch((reason: unknown) => setError(reason instanceof Error ? reason.message : "Daftar OPD gagal dimuat."))
+      .finally(() => setBusy(false));
+  }, []);
+
+  async function submit(event: FormEvent) {
+    event.preventDefault();
+    if (password !== confirmPassword) { setError("Konfirmasi kata sandi tidak sama."); return; }
+    setBusy(true); setError(null);
+    try {
+      await api("/auth/register", { method: "POST", body: jsonBody({
+        email, username: username || null, full_name: fullName,
+        organization_id: organizationId, password,
+      }) });
+      setComplete(true);
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : "Pendaftaran tidak berhasil.");
+    } finally { setBusy(false); }
+  }
+
+  return <main className="auth-layout">
+    <AuthBrand />
+    <section className="auth-panel">
+      <div className="auth-card registration-card">
+        {complete ? <>
+          <div className="success-symbol"><Check /></div>
+          <div className="auth-card-heading centered"><span className="eyebrow">Pendaftaran terkirim</span><h2>Menunggu verifikasi</h2><p>Developer SABABUKA akan memeriksa OPD dan menetapkan peran Anda. Setelah disetujui, akun dapat langsung digunakan untuk masuk.</p></div>
+          <button className="button primary full" onClick={() => navigate("/login")}>Kembali ke halaman masuk</button>
+        </> : <form className="form-stack" onSubmit={submit}>
+          <div className="auth-card-heading"><span className="eyebrow">Pendaftaran mandiri</span><h2>Buat akun SABABUKA</h2><p>Isi identitas sesuai OPD. Hak akses baru aktif setelah diverifikasi Developer SABABUKA.</p></div>
+          {error && <Notice tone="error">{error}</Notice>}
+          <label className="field"><span>Nama lengkap</span><input autoFocus value={fullName} onChange={(event) => setFullName(event.target.value)} autoComplete="name" required /></label>
+          <label className="field"><span>Email aktif</span><input type="email" value={email} onChange={(event) => setEmail(event.target.value)} autoComplete="email" placeholder="nama@kapuaskab.go.id" required /></label>
+          <label className="field"><span>Username opsional</span><input value={username} onChange={(event) => setUsername(event.target.value)} autoComplete="username" pattern="[A-Za-z0-9._-]+" minLength={3} /></label>
+          <label className="field"><span>Organisasi/OPD</span><select value={organizationId} onChange={(event) => setOrganizationId(event.target.value)} required><option value="">Pilih organisasi</option>{organizations.map((item) => <option key={item.id} value={item.id}>{item.code} - {item.short_name ?? item.name}</option>)}</select></label>
+          <label className="field"><span>Kata sandi</span><input type="password" value={password} onChange={(event) => setPassword(event.target.value)} autoComplete="new-password" minLength={12} required /><small>Minimal 12 karakter.</small></label>
+          <label className="field"><span>Ulangi kata sandi</span><input type="password" value={confirmPassword} onChange={(event) => setConfirmPassword(event.target.value)} autoComplete="new-password" minLength={12} required /></label>
+          <Notice tone="success">Authenticator bersifat opsional untuk akun biasa dan dapat diaktifkan setelah akun disetujui.</Notice>
+          <button className="button primary full" disabled={busy || !organizationId}>{busy ? <Spinner label="Mendaftarkan" /> : <>Kirim pendaftaran <ArrowRight size={17} /></>}</button>
+          <button className="text-button auth-back-link" type="button" onClick={() => navigate("/login")}>Sudah punya akun? Masuk</button>
+        </form>}
+      </div>
     </section>
   </main>;
 }

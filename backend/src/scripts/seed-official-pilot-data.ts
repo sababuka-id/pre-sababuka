@@ -85,7 +85,7 @@ const client = await db.connect();
 
 try {
   await client.query("BEGIN");
-  const actor = await client.query<{ id: string }>("SELECT id::text FROM sababuka.users WHERE email = 'superadmin@sababuka.local'");
+  const actor = await client.query<{ id: string }>("SELECT id::text FROM sababuka.users WHERE email = 'developer@sababuka.com'");
   const actorId = actor.rows[0]?.id;
   if (!actorId) throw new Error("Jalankan dev:seed-users terlebih dahulu.");
 

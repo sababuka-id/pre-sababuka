@@ -6,7 +6,7 @@ import {
   SESSION_COOKIE_NAME,
 } from "../plugins/authentication.js";
 import { requestAuditContext } from "../request-context.js";
-import { AccountService } from "../services/account-service.js";
+import { AccountService, type SelfRegistrationInput } from "../services/account-service.js";
 
 interface LoginBody {
   identifier: string;
@@ -29,6 +29,40 @@ const loginBodySchema = {
 } as const;
 
 export async function authenticationRoutes(app: FastifyInstance): Promise<void> {
+  app.get(
+    "/auth/registration-organizations",
+    { config: { rateLimit: { max: 30, timeWindow: "1 minute" } } },
+    async () => new AccountService(app.db, app.config).registrationOrganizations(),
+  );
+
+  app.post<{ Body: SelfRegistrationInput }>(
+    "/auth/register",
+    {
+      schema: {
+        body: {
+          type: "object",
+          additionalProperties: false,
+          required: ["email", "full_name", "organization_id", "password"],
+          properties: {
+            email: { type: "string", format: "email", maxLength: 255 },
+            username: { type: ["string", "null"], minLength: 3, maxLength: 120, pattern: "^[A-Za-z0-9._-]+$" },
+            full_name: { type: "string", minLength: 2, maxLength: 255 },
+            organization_id: { type: "string", format: "uuid" },
+            password: { type: "string", minLength: 12, maxLength: 256 },
+          },
+        },
+      },
+      config: { rateLimit: { max: 5, timeWindow: "15 minutes" } },
+    },
+    async (request, reply) => {
+      const result = await new AccountService(app.db, app.config).register(
+        request.body,
+        requestAuditContext(request),
+      );
+      return reply.code(201).send(result);
+    },
+  );
+
   app.post<{ Body: LoginBody }>(
     "/auth/login",
     {
