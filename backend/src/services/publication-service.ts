@@ -59,8 +59,10 @@ export class PublicationService {
               obs.numeric_value, obs.text_value, u.name AS unit_name, u.symbol AS unit_symbol,
               org.name AS organization_name, b.approved_at::text
        FROM sababuka.observations obs JOIN sababuka.data_batches b ON b.id = obs.batch_id AND b.status = 'approved'
-       JOIN sababuka.indicator_versions iv ON iv.id = obs.indicator_version_id
-       JOIN sababuka.indicators i ON i.id = iv.indicator_id JOIN sababuka.units u ON u.id = iv.unit_id
+       JOIN sababuka.indicator_versions iv ON iv.id = obs.indicator_version_id AND iv.status IN ('approved', 'active')
+       JOIN sababuka.indicators i ON i.id = iv.indicator_id AND i.is_active = true
+       JOIN sababuka.categories c ON c.id = i.category_id AND c.is_active = true AND c.review_status = 'approved'
+       JOIN sababuka.units u ON u.id = iv.unit_id
        JOIN sababuka.periods per ON per.id = obs.period_id JOIN sababuka.organizations org ON org.id = b.organization_id
        WHERE ($1::uuid IS NULL OR per.id = $1)
          AND NOT EXISTS (SELECT 1 FROM sababuka.publication_items pi JOIN sababuka.publications p ON p.id = pi.publication_id WHERE pi.observation_id = obs.id AND p.status = 'active')
@@ -101,6 +103,9 @@ export class PublicationService {
          SELECT $1, obs.id, b.dataset_version_id,
                 COALESCE((SELECT max(display_order) FROM sababuka.publication_items WHERE publication_id = $1), 0) + row_number() OVER()
          FROM sababuka.observations obs JOIN sababuka.data_batches b ON b.id = obs.batch_id
+         JOIN sababuka.indicator_versions iv ON iv.id = obs.indicator_version_id AND iv.status IN ('approved', 'active')
+         JOIN sababuka.indicators i ON i.id = iv.indicator_id AND i.is_active = true
+         JOIN sababuka.categories c ON c.id = i.category_id AND c.is_active = true AND c.review_status = 'approved'
          WHERE obs.id = ANY($2::uuid[]) AND b.status = 'approved'
          ON CONFLICT DO NOTHING`, [id, observationIds],
       );

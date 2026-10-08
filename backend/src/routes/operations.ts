@@ -36,12 +36,15 @@ export async function operationRoutes(app: FastifyInstance): Promise<void> {
                 count(b.id) FILTER (WHERE b.status = 'approved')::int AS approved
          FROM sababuka.organizations o LEFT JOIN sababuka.data_batches b ON b.organization_id = o.id
            AND ($3::uuid IS NULL OR b.reporting_period_id = $3)
+           AND EXISTS (SELECT 1 FROM sababuka.dataset_versions dv JOIN sababuka.datasets d ON d.id = dv.dataset_id
+                       WHERE dv.id = b.dataset_version_id AND d.code = 'SABABUKA.CAPAIAN_MANUAL')
          WHERE o.archived_at IS NULL AND ($1::boolean OR o.id = ANY($2::uuid[]))
          GROUP BY o.id ORDER BY pending_review DESC, organization_name, o.code, o.id LIMIT 50`, params),
       app.db.query(
         `SELECT b.id::text, o.code AS organization_code, COALESCE(o.short_name,o.name) AS organization_name,
                 p.label AS period_label, b.status, b.row_count, b.updated_at::text
          FROM sababuka.data_batches b JOIN sababuka.organizations o ON o.id = b.organization_id
+         JOIN sababuka.dataset_versions dv ON dv.id = b.dataset_version_id JOIN sababuka.datasets d ON d.id = dv.dataset_id AND d.code = 'SABABUKA.CAPAIAN_MANUAL'
          LEFT JOIN sababuka.periods p ON p.id = b.reporting_period_id
          WHERE ($1::boolean OR b.organization_id = ANY($2::uuid[])) AND ($3::uuid IS NULL OR b.reporting_period_id = $3)
          ORDER BY b.updated_at DESC, b.id DESC LIMIT 10`, params),

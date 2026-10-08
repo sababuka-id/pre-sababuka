@@ -121,7 +121,7 @@ test(
 
       const menus = await app.inject({ method: "GET", url: "/api/v1/menus", headers: { cookie } });
       assert.equal(menus.statusCode, 200, menus.body);
-      assert.equal(menus.json().data.length, 20);
+      assert.equal(menus.json().data.length, 21);
       assert.ok(menus.json().data.some((menu: { code: string }) => menu.code === "operations"));
 
       const roleMenus = await app.inject({
@@ -131,7 +131,7 @@ test(
       });
       assert.equal(roleMenus.statusCode, 200, roleMenus.body);
       assert.equal(roleMenus.json().role_id, superadminRole.id);
-      assert.equal(roleMenus.json().menu_ids.length, 20);
+      assert.equal(roleMenus.json().menu_ids.length, 21);
 
       const protectedMenus = await app.inject({
         method: "PUT",

@@ -68,7 +68,7 @@ test("alur kategori, indikator, OPD, publikasi, dan dashboard berjalan lintas pe
     const period = { id: periodResult.rows[0]!.id };
 
     const category = await app.inject({
-      method: "POST", url: "/api/v1/categories", headers: bapperida,
+      method: "POST", url: "/api/v1/categories", headers: superadmin,
       payload: { code: `FLOW_${suffix}`, name: `Kategori Alur ${suffix}` },
     });
     assert.equal(category.statusCode, 201, category.body);
@@ -91,12 +91,14 @@ test("alur kategori, indikator, OPD, publikasi, dan dashboard berjalan lintas pe
     });
     assert.equal(blocked.statusCode, 403, blocked.body);
 
-    for (const action of ["submit", "approve"] as const) {
-      const response = await app.inject({
-        method: "POST", url: `/api/v1/categories/${category.json().id}/actions/${action}`, headers: bapperida,
-      });
-      assert.equal(response.statusCode, 200, response.body);
-    }
+    const categorySubmitted = await app.inject({
+      method: "POST", url: `/api/v1/categories/${category.json().id}/actions/submit`, headers: superadmin,
+    });
+    assert.equal(categorySubmitted.statusCode, 200, categorySubmitted.body);
+    const categoryApproved = await app.inject({
+      method: "POST", url: `/api/v1/categories/${category.json().id}/actions/approve`, headers: bapperida,
+    });
+    assert.equal(categoryApproved.statusCode, 200, categoryApproved.body);
     const reviewerSubmit = await app.inject({
       method: "POST", url: `/api/v1/indicator-versions/${indicator.json().version_id}/actions/submit`, headers: bapperida,
     });

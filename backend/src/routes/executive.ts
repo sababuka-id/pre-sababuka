@@ -10,7 +10,10 @@ export async function executiveRoutes(app: FastifyInstance): Promise<void> {
     requirePermission(request, "executive_dashboard.view");
     const [metrics, items] = await Promise.all([
       app.db.query(`SELECT
-        (SELECT count(*)::int FROM sababuka.indicator_versions WHERE status = 'active') AS active_indicators,
+        (SELECT count(*)::int FROM sababuka.indicator_versions iv
+         JOIN sababuka.indicators i ON i.id = iv.indicator_id AND i.is_active = true
+         JOIN sababuka.categories c ON c.id = i.category_id AND c.is_active = true AND c.review_status = 'approved'
+         WHERE iv.status = 'active') AS active_indicators,
         (SELECT count(*)::int FROM sababuka.data_batches WHERE status = 'approved') AS approved_submissions,
         (SELECT count(DISTINCT organization_id)::int FROM sababuka.data_batches WHERE status = 'approved') AS covered_organizations,
         (SELECT count(*)::int FROM sababuka.publications WHERE status = 'active') AS active_publications`),

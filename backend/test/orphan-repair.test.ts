@@ -13,7 +13,7 @@ test("orphan repair reports typed references and deletes only ephemeral notifica
   const db: Pick<Database, "query"> = {
     async query<R extends QueryResultRow>(text: string) {
       statements.push(text);
-      if (text.trimStart().startsWith("SELECT")) return result<R>([({ notifications: 2, publication_items: 0, workflow_actions: 1, submission_evidence: 0 } as unknown) as R]);
+      if (text.trimStart().startsWith("SELECT")) return result<R>([({ notifications: 2, publication_items: 0, workflow_actions: 1, submission_evidence: 0, audit_events: 0 } as unknown) as R]);
       return result<R>([], 2);
     },
   };
@@ -23,10 +23,12 @@ test("orphan repair reports typed references and deletes only ephemeral notifica
     publication_items: 0,
     workflow_actions: 1,
     submission_evidence: 0,
+    audit_events: 0,
   });
   assert.equal(await cleanupOrphanNotifications(db), 2);
   assert.match(statements[0]!, /data_batches/);
   assert.match(statements[1]!, /DELETE FROM sababuka\.notifications/);
   assert.match(statements[1]!, /indicator_versions/);
   assert.match(statements[1]!, /categories/);
+  assert.match(statements[1]!, /connector_runs/);
 });

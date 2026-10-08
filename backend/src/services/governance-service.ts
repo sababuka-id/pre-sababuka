@@ -185,13 +185,16 @@ export class GovernanceService {
     try {
       await client.query("BEGIN");
       const current = await client.query<QueryResultRow & { id: string; review_status: string }>(
-        `SELECT id::text, review_status FROM sababuka.categories
+        `SELECT id::text, review_status, submitted_by::text FROM sababuka.categories
          WHERE id = $1 AND archived_at IS NULL FOR UPDATE`,
         [categoryId],
       );
       if (!current.rowCount) throw new ApiError(404, "NOT_FOUND", "Kategori tidak ditemukan.");
       if (current.rows[0]!.review_status !== transition.from) {
         throw new ApiError(409, "CONFLICT", `Aksi ${action} hanya dapat dijalankan dari status ${transition.from}.`);
+      }
+      if (["approve", "reject"].includes(action) && current.rows[0]!.submitted_by === auth.user.id) {
+        throw new ApiError(409, "CONFLICT", "Pengaju kategori tidak boleh menjadi pengambil keputusan pada kategori yang sama.");
       }
       const result = await client.query<QueryResultRow & Record<string, unknown>>(
         `UPDATE sababuka.categories
@@ -425,9 +428,10 @@ export class GovernanceService {
     try {
       await client.query("BEGIN");
       const current = await client.query<QueryResultRow & {
-        id: string; indicator_id: string; status: string; owner_organization_id: string | null; category_review_status: string;
+        id: string; indicator_id: string; status: string; owner_organization_id: string | null; category_review_status: string; submitted_by: string | null; bapperida_reviewed_by: string | null;
       }>(
         `SELECT iv.id::text, iv.indicator_id::text, iv.status,
+                iv.submitted_by::text, iv.bapperida_reviewed_by::text,
                 i.owner_organization_id::text, c.review_status AS category_review_status
          FROM sababuka.indicator_versions iv
          JOIN sababuka.indicators i ON i.id = iv.indicator_id
@@ -441,7 +445,7 @@ export class GovernanceService {
         requireIndicatorDrafter(auth);
       } else if (action === "verify") {
         const scope = organizationScope(auth);
-        if (!isGlobal(auth) && (!currentVersion.owner_organization_id || !scope.includes(currentVersion.owner_organization_id))) {
+        if (!currentVersion.owner_organization_id || !scope.includes(currentVersion.owner_organization_id)) {
           throw new ApiError(403, "SCOPE_DENIED", "Verifikasi hanya dapat dilakukan oleh OPD pemilik indikator.");
         }
       } else {
@@ -455,6 +459,12 @@ export class GovernanceService {
       }
       if (action === "approve" && !currentVersion.owner_organization_id) {
         throw new ApiError(409, "CONFLICT", "OPD pemilik harus ditetapkan sebelum indikator dikirim untuk verifikasi teknis.");
+      }
+      if (action === "approve" && currentVersion.submitted_by === auth.user.id) {
+        throw new ApiError(409, "CONFLICT", "Pengaju indikator tidak boleh menyetujui review indikator yang sama.");
+      }
+      if (action === "verify" && currentVersion.bapperida_reviewed_by === auth.user.id) {
+        throw new ApiError(409, "CONFLICT", "Reviewer BAPPERIDA tidak boleh menjadi verifikator teknis OPD yang sama.");
       }
       if (action === "activate") {
         await client.query(

@@ -17,6 +17,16 @@ test("master kategori dan indikator pilot dapat dibaca dan ditambah sebagai draf
     assert.equal(login.statusCode, 200, login.body);
     const cookie = String(login.headers["set-cookie"]).split(";", 1)[0]!;
     const headers = { cookie, "x-csrf-token": login.json().csrf_token as string };
+    const loginAs = async (identifier: string) => {
+      const response = await app.inject({ method: "POST", url: "/api/v1/auth/login", payload: { identifier, password } });
+      assert.equal(response.statusCode, 200, response.body);
+      return {
+        cookie: String(response.headers["set-cookie"]).split(";", 1)[0]!,
+        "x-csrf-token": response.json().csrf_token as string,
+      };
+    };
+    const bapperidaHeaders = await loginAs("bapperida@sababuka.local");
+    const opdHeaders = await loginAs("opd.dkpp@sababuka.local");
 
     const categories = await app.inject({ method: "GET", url: "/api/v1/categories?page_size=100", headers: { cookie } });
     assert.equal(categories.statusCode, 200, categories.body);
@@ -41,17 +51,20 @@ test("master kategori dan indikator pilot dapat dibaca dan ditambah sebagai draf
     });
     assert.equal(category.statusCode, 201, category.body);
     assert.equal(category.json().review_status, "draft");
-    for (const [action, expected] of [["submit", "in_review"], ["approve", "approved"]] as const) {
-      const transition = await app.inject({
-        method: "POST", url: `/api/v1/categories/${category.json().id}/actions/${action}`, headers,
-      });
-      assert.equal(transition.statusCode, 200, transition.body);
-      assert.equal(transition.json().review_status, expected);
-    }
+    const submittedCategory = await app.inject({
+      method: "POST", url: `/api/v1/categories/${category.json().id}/actions/submit`, headers,
+    });
+    assert.equal(submittedCategory.statusCode, 200, submittedCategory.body);
+    assert.equal(submittedCategory.json().review_status, "in_review");
+    const approvedCategory = await app.inject({
+      method: "POST", url: `/api/v1/categories/${category.json().id}/actions/approve`, headers: bapperidaHeaders,
+    });
+    assert.equal(approvedCategory.statusCode, 200, approvedCategory.body);
+    assert.equal(approvedCategory.json().review_status, "approved");
 
     const unit = units.json().data.find((item: { code: string }) => item.code === "PERCENT");
     const period = periods.json().data.find((item: { code: string }) => item.code === "2025");
-    const organization = organizations.json().data.find((item: { code: string }) => item.code === "BAPPERIDA");
+    const organization = organizations.json().data.find((item: { code: string }) => item.code === "DKPP");
     const indicator = await app.inject({
       method: "POST", url: "/api/v1/indicators", headers,
       payload: {
@@ -84,13 +97,25 @@ test("master kategori dan indikator pilot dapat dibaca dan ditambah sebagai draf
     assert.equal(filtered.statusCode, 200, filtered.body);
     assert.equal(Number(filtered.json().data[0].targets[0].numeric_value), 11);
 
-    for (const [action, expected] of [["submit", "in_review"], ["approve", "opd_verification"], ["verify", "approved"], ["activate", "active"]] as const) {
-      const transition = await app.inject({
-        method: "POST", url: `/api/v1/indicator-versions/${indicator.json().version_id}/actions/${action}`, headers,
-      });
-      assert.equal(transition.statusCode, 200, transition.body);
-      assert.equal(transition.json().status, expected);
-    }
+    const submittedIndicator = await app.inject({
+      method: "POST", url: `/api/v1/indicator-versions/${indicator.json().version_id}/actions/submit`, headers,
+    });
+    assert.equal(submittedIndicator.statusCode, 200, submittedIndicator.body);
+    assert.equal(submittedIndicator.json().status, "in_review");
+    const approvedIndicator = await app.inject({
+      method: "POST", url: `/api/v1/indicator-versions/${indicator.json().version_id}/actions/approve`, headers: bapperidaHeaders,
+    });
+    assert.equal(approvedIndicator.statusCode, 200, approvedIndicator.body);
+    assert.equal(approvedIndicator.json().status, "opd_verification");
+    const verifiedIndicator = await app.inject({
+      method: "POST", url: `/api/v1/indicator-versions/${indicator.json().version_id}/actions/verify`, headers: opdHeaders,
+    });
+    assert.equal(verifiedIndicator.statusCode, 200, verifiedIndicator.body);
+    assert.equal(verifiedIndicator.json().status, "approved");
+    const activatedIndicator = await app.inject({
+      method: "POST", url: `/api/v1/indicator-versions/${indicator.json().version_id}/actions/activate`, headers: bapperidaHeaders,
+    });
+    assert.equal(activatedIndicator.statusCode, 200, activatedIndicator.body);
 
     const editActive = await app.inject({
       method: "PATCH", url: `/api/v1/indicators/${indicator.json().id}`, headers,

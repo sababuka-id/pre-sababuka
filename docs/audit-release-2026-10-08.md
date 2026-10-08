@@ -1,31 +1,57 @@
-# Audit release SABABUKA — 8 Oktober 2026
+# Audit release SABABUKA - 8 Oktober 2026
 
-Audit ini memakai pembacaan kode, migration lokal, query read-only ke database demo, test backend, build, dan smoke test health. Tidak ada data master atau transaksi yang diubah saat audit.
+Audit ini mencakup role, alur persetujuan, publikasi, dashboard pimpinan, notifikasi, konektor sumber data, provenance, orphan reference, reset demo, build, dan uji lintas-peran. Database produksi lokal hanya dibaca. Uji transaksi dijalankan pada database audit terisolasi yang kemudian dapat dihapus.
 
-| Area | Expected | Actual / evidence | Status |
+## Hasil gate
+
+| Area | Pemeriksaan | Hasil | Status |
 | --- | --- | --- | --- |
-| Role dan secret | Hanya Superadmin membaca atau mengubah API key BPS | Endpoint secret memakai `requireSuperadmin` dan permission `connector_secret.view/manage`; BAPPERIDA hanya mendapat permission konektor umum | Lulus |
-| Penyimpanan secret | Ciphertext at rest, tanpa plaintext di response/audit/log | AES-256-GCM dengan `CONNECTOR_ENCRYPTION_KEY`; response hanya status/mask; test round-trip dan non-plaintext lulus | Lulus |
-| Master governance | Matching hanya memakai kategori approved dan indikator approved/active | Query `matchCandidates` memfilter `review_status='approved'`, `is_active=true`, dan versi indikator approved/active; database lokal saat audit masih 36 kategori draft dan 71 versi indikator draft, sehingga kandidat sah = 0 | Lulus / menunggu keputusan BAPPERIDA |
-| CKAN | Discovery live, profile, mapping eksplisit, staging, preview, import terpisah | Satu Data Kapuas terdaftar pada migration 023; resource tidak diimpor tanpa mapping; URL resource dibatasi HTTPS dan host sumber | Lulus |
-| BPS | Test koneksi aman dan hanya aktif setelah key tersedia | Sumber BPS terdaftar dengan domain 6203; status tanpa key tetap menunggu konfigurasi; key baru diuji sebelum disimpan | Lulus / menunggu key resmi |
-| Provenance | Import tidak menimpa manual, menyimpan checksum, URL, waktu, sumber, geografi | Batch `api_import` terpisah, checksum run, source status `verified_direct`, geografi wajib ada di master | Lulus |
-| Annual scope | Release hanya annual 2025-2029 | Mapping, staging, UI, dan dokumentasi membatasi rentang tersebut | Lulus |
-| Auth/session | Endpoint terlindungi dan mutasi memakai CSRF | Health 200; endpoint secret tanpa sesi menghasilkan 401; test security dan auth lulus | Lulus |
-| Demo/reset | Master RPJMD tidak ikut terhapus | Reset tetap memakai isolasi paket demo dari migration 021; tidak disentuh pada audit ini | Lulus berdasarkan test existing |
-| Build dan test | Backend/frontend dapat dibangun | Backend test 13 lulus, 7 skip; build backend/frontend lulus | Lulus |
+| Migrasi | Migration 001-024 pada database audit | 24 migration berhasil diterapkan berurutan | Lulus |
+| Role dan menu | Superadmin, BAPPERIDA, Kominfo, OPD, pimpinan | Matriks permission dan menu mengikuti scope; connector secret hanya superadmin | Lulus |
+| Anti self-approval | Pengaju kategori/indikator tidak boleh menyetujui objek yang sama | Backend mengembalikan konflik dan menyimpan actor audit | Lulus |
+| Verifikasi OPD | Verifikasi indikator wajib dilakukan oleh OPD pemilik | Global role tidak dapat melewati scope organisasi | Lulus |
+| State machine | Kategori disetujui sebelum indikator, lalu approve BAPPERIDA, verifikasi OPD, aktivasi | Diuji dalam workflow lintas peran | Lulus |
+| Publication gate | Kandidat dan item publikasi hanya menerima batch approved, indikator approved/active, dan kategori approved/active | Query kandidat dan add item memakai gate yang sama | Lulus |
+| Dashboard | Metrik indikator aktif hanya menghitung master yang aktif dan kategorinya approved | Query executive diselaraskan dengan publication gate | Lulus |
+| Data operasi | Ringkasan OPD hanya menghitung dataset manual capaian SABABUKA | Batch konektor tidak tercampur ke ringkasan pelaporan OPD | Lulus |
+| CKAN/Satu Data | Discovery, profile, mapping eksplisit, staging, preview, import | Tidak ada auto-import atau fuzzy auto-approve | Lulus |
+| BPS | Profile BPS, secret terenkripsi, URL publik tanpa query key | Endpoint secret tanpa sesi 401; belum connected tanpa key resmi | Lulus / menunggu key |
+| Provenance | Source, URL publik, checksum, waktu ambil, status kualitas, geografi | Import eksternal terpisah dari input manual | Lulus |
+| Orphan reference | Notification, publication item, workflow, evidence, audit event, connector run | Query integritas audit menghasilkan 0 orphan | Lulus |
+| Demo/reset | Data demo dapat dibuat ulang tanpa menghapus master RPJMD | Seed/reset tetap terisolasi | Lulus |
+| Annual scope | Periode rilis dibatasi annual 2025-2029 | Tidak ada klaim interval bulanan/triwulanan | Lulus |
+| Build | Backend typecheck/build dan frontend typecheck/build | Keduanya berhasil | Lulus |
+| E2E | Semua suite integration pada database audit | 7/7 lulus, 0 gagal, 0 skip | Lulus |
 
-## Temuan dan perbaikan
+## Temuan P0/P1 yang sudah diperbaiki
 
-- **P1 diperbaiki:** URL BPS yang membawa query key tidak lagi disimpan ke run, staging, batch, provenance, atau audit. Database hanya menerima URL publik tanpa secret.
-- **P1 diperbaiki:** resource URL konektor harus HTTPS dan hostname-nya sama dengan sumber resmi, sehingga mapping tidak menjadi SSRF bebas.
-- **P1 diperbaiki:** impor eksternal sekarang mengisi `geography_id` dari master geografi dan menolak kode wilayah yang belum terdaftar.
-- **P2 diperbaiki:** nama sumber pada observasi diambil dari data source, bukan selalu dilabeli Satu Data Kapuas.
-- **P2 diperbaiki:** profile koneksi menyimpan waktu respons, identitas platform, jumlah dataset/resource, publisher, tahun, error tersanitasi, dan kandidat master; tidak ada auto-approve atau auto-import fuzzy.
+- Pengaju kategori dan pengaju indikator tidak dapat menjadi approver pada objek yang sama.
+- Reviewer BAPPERIDA tidak dapat sekaligus menjadi verifikator teknis OPD.
+- Verifikasi indikator selalu dibatasi ke organisasi pemilik; superadmin tidak lagi mendapat bypass global.
+- Kandidat publikasi tidak dapat mengambil versi indikator draft atau kategori yang belum disetujui.
+- Dashboard pimpinan tidak lagi menghitung indikator aktif yang master-nya belum layak tampil.
+- Ringkasan operasi tidak mencampur batch konektor dengan dataset pelaporan manual OPD.
+- Pemeriksaan orphan diperluas ke audit event dan seluruh referensi typed yang dipakai notifikasi/konektor.
 
-## Residual risk dan batas release
+## Bukti database audit
 
-- Key BPS resmi belum dipasang pada environment demo, sehingga konektor BPS belum dapat disebut connected atau dipakai mengimpor data.
-- Test integration lintas database dilewati ketika `INTEGRATION_DATABASE_URL` tidak tersedia. Unit, smoke health, typecheck, dan build tetap dijalankan.
-- Endpoint website/API OPD belum diaktifkan; kontrak profile koneksi baru disiapkan agar konektor berikutnya mengikuti pola yang sama.
-- Cakupan data release tetap annual 2025-2029. Interval bulanan, triwulanan, atau semester belum boleh diklaim aktif.
+Database audit menunjukkan 24 migration, 0 indikator aktif tanpa kategori approved, 0 duplikasi versi aktif, 0 duplikasi target, 0 orphan publication item, 0 publikasi aktif tanpa item, 0 orphan connector run, dan 0 connector secret tersimpan. Dua kategori tanpa policy focus yang muncul saat pemeriksaan adalah kategori sementara yang dibuat oleh test lintas-peran, bukan data produksi.
+
+## Sisa risiko sebelum rilis eksternal
+
+- Key BPS resmi belum dipasang pada environment demo. Konektor BPS belum boleh disebut connected atau dipakai impor sampai key dan profile resmi diverifikasi.
+- Endpoint website/API OPD belum diaktifkan; kontrak konektor sudah siap tetapi belum menggantikan konfirmasi OPD.
+- Cakupan release tetap annual 2025-2029. Interval bulanan, triwulanan, dan semester belum aktif.
+- Audit visual browser per halaman tetap perlu dilakukan sebagai sesi terpisah setelah alur fungsional ini disetujui.
+
+## Perintah validasi
+
+```powershell
+cd backend
+pnpm check
+pnpm build
+cd ..\frontend
+pnpm build
+```
+
+Uji integration memakai database PostgreSQL terisolasi, empat role utama, dan satu superadmin. Tidak ada push ke GitHub pada audit ini; perubahan disiapkan untuk commit lokal setelah pemeriksaan akhir.
