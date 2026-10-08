@@ -81,7 +81,9 @@ export async function governanceRoutes(app: FastifyInstance): Promise<void> {
       } } },
     },
     async (request) => {
-      const permission = ["approve", "reject"].includes(request.params.action) ? "category.approve" : "category.manage";
+      const permission = ["approve", "reject"].includes(request.params.action)
+        ? "category.approve"
+        : ["submit", "reopen"].includes(request.params.action) ? "category.submit" : "category.manage";
       mutate(request, permission);
       return service(request).transitionCategory(request.auth!, request.params.category_id, request.params.action, requestAuditContext(request));
     },

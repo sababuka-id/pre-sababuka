@@ -231,6 +231,7 @@ td small { color: var(--muted); margin-top: 3px; }
 .notice { display: flex; align-items: flex-start; gap: 9px; padding: 11px 13px; border: 1px solid; border-radius: 10px; font-size: 12px; line-height: 1.5; }
 .notice > svg { flex: 0 0 18px; margin-top: 1px; }
 .notice.error { color: #8d242a; background: #fff2f3; border-color: #f2c9cc; }
+.field-error { display: block; max-width: 24rem; margin-top: 8px; color: #8d242a; font-size: var(--text-xs); line-height: 1.35; }
 .notice.success { color: #086753; background: #edfaf6; border-color: #bce6d8; }
 .notice.warning { color: #7b540e; background: #fff9eb; border-color: #ecdcae; }
 .governance-table { margin-top: 14px; }

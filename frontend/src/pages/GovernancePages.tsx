@@ -12,16 +12,25 @@ export function CategoriesPage() {
   const [query, setQuery] = useState("");
   const [createOpen, setCreateOpen] = useState(false);
   const [actionError, setActionError] = useState("");
+  const [rowError, setRowError] = useState<Record<string, string>>({});
+  const [busyCategoryId, setBusyCategoryId] = useState<string | null>(null);
   const categories = useAsync(() => api<PageResponse<Category>>(`/categories?page=${page}&page_size=20${query ? `&q=${encodeURIComponent(query)}` : ""}`), [page, query]);
   const focuses = useAsync(() => api<PageResponse<PolicyFocus>>("/policy-focuses?page_size=100"), []);
   const canManage = user?.permissions.includes("category.manage") ?? false;
+  const canSubmit = user?.permissions.includes("category.submit") ?? false;
   const canApprove = user?.permissions.includes("category.approve") ?? false;
   const transition = async (category: Category, action: "submit" | "approve" | "reject" | "reopen") => {
     setActionError("");
+    setRowError((current) => ({ ...current, [category.id]: "" }));
+    setBusyCategoryId(category.id);
     try {
       await api(`/categories/${category.id}/actions/${action}`, { method: "POST", mutation: true });
       categories.reload();
-    } catch (cause) { setActionError(cause instanceof Error ? cause.message : "Status kategori gagal diubah."); }
+    } catch (cause) {
+      const message = cause instanceof Error ? cause.message : "Status kategori gagal diubah.";
+      setActionError(message);
+      setRowError((current) => ({ ...current, [category.id]: message }));
+    } finally { setBusyCategoryId(null); }
   };
 
   return <>
@@ -34,13 +43,16 @@ export function CategoriesPage() {
     <section className="panel table-panel governance-table">
       {categories.loading ? <div className="panel-loading"><Spinner /></div> : !categories.data?.data.length ? <EmptyState title="Belum ada kategori">Tambahkan kategori sebagai kelompok indikator.</EmptyState> : <div className="table-scroll"><table><thead><tr><th>Kelompok isu / kategori</th><th>Usulan fokus kebijakan</th><th>Indikator</th><th>Status kategori</th><th>Tindakan</th></tr></thead><tbody>
         {categories.data.data.map((category) => {
-          const action = category.review_status === "draft" && canManage ? ["submit", "Ajukan"] as const : category.review_status === "in_review" && canApprove ? ["approve", "Setujui"] as const : category.review_status === "rejected" && canManage ? ["reopen", "Perbaiki"] as const : null;
+          const selfSubmitted = category.submitted_by === user?.id;
+          const action = category.review_status === "draft" && canSubmit ? ["submit", "Ajukan ke BAPPERIDA"] as const
+            : category.review_status === "in_review" && canApprove && !selfSubmitted ? ["approve", "Setujui"] as const
+            : category.review_status === "rejected" && canSubmit ? ["reopen", "Perbaiki"] as const : null;
           return (
             <tr key={category.id}>
               <td><div className="identity-cell"><span className="table-icon"><FolderTree /></span><span><strong>{category.name}</strong><small>{formatCategoryCode(category.code)} · kode teknis {category.code}</small></span></div></td>
               <td>{category.policy_focus_name ?? "-"}</td><td><strong>{category.indicator_count}</strong></td>
               <td><Badge tone={category.review_status === "approved" ? "success" : category.review_status === "rejected" ? "danger" : "warning"}>{statusLabel(category.review_status)}</Badge></td>
-              <td>{action ? <span className="table-actions"><button className="button secondary" onClick={() => void transition(category, action[0])}>{action[1]}</button>{category.review_status === "in_review" && canApprove && <button className="button secondary" onClick={() => void transition(category, "reject")}>Tolak</button>}</span> : "-"}</td>
+              <td>{action ? <><span className="table-actions"><button className="button secondary" disabled={busyCategoryId === category.id} onClick={() => void transition(category, action[0])}>{busyCategoryId === category.id ? "Memproses…" : action[1]}</button>{category.review_status === "in_review" && canApprove && !selfSubmitted && <button className="button secondary" disabled={busyCategoryId === category.id} onClick={() => void transition(category, "reject")}>Tolak</button>}</span>{rowError[category.id] && <small className="field-error">{rowError[category.id]}</small>}</> : selfSubmitted && category.review_status === "in_review" ? <small className="table-subtitle">Menunggu keputusan akun BAPPERIDA lain.</small> : "-"}</td>
             </tr>
           );
         })}

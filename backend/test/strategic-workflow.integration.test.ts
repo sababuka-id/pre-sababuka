@@ -91,6 +91,11 @@ test("alur kategori, indikator, OPD, publikasi, dan dashboard berjalan lintas pe
     });
     assert.equal(blocked.statusCode, 403, blocked.body);
 
+    const blockedCategorySubmit = await app.inject({
+      method: "POST", url: `/api/v1/categories/${category.json().id}/actions/submit`, headers: bapperida,
+    });
+    assert.equal(blockedCategorySubmit.statusCode, 403, blockedCategorySubmit.body);
+
     const categorySubmitted = await app.inject({
       method: "POST", url: `/api/v1/categories/${category.json().id}/actions/submit`, headers: superadmin,
     });

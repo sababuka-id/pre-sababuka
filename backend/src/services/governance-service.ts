@@ -83,6 +83,13 @@ function requireGlobal(auth: AuthContext): void {
 }
 
 const INDICATOR_DRAFTER_ROLES = new Set(["superadmin", "indicator_author"]);
+const CATEGORY_DRAFTER_ROLES = new Set(["superadmin", "category_author"]);
+
+function requireCategoryDrafter(auth: AuthContext): void {
+  if (!auth.user.roles.some((role) => CATEGORY_DRAFTER_ROLES.has(role.code))) {
+    throw new ApiError(403, "PERMISSION_DENIED", "Hanya akun penyusun kategori yang dapat mengajukan kategori ke BAPPERIDA.");
+  }
+}
 
 function requireIndicatorDrafter(auth: AuthContext): void {
   if (!auth.user.roles.some((role) => INDICATOR_DRAFTER_ROLES.has(role.code))) {
@@ -174,6 +181,7 @@ export class GovernanceService {
     audit: AuditContext,
   ) {
     requireGlobal(auth);
+    if (["submit", "reopen"].includes(action)) requireCategoryDrafter(auth);
     const transitions = {
       submit: { from: "draft", to: "in_review" },
       approve: { from: "in_review", to: "approved" },
