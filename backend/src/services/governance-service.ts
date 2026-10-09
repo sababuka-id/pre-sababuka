@@ -566,8 +566,8 @@ export class GovernanceService {
             const versionNumber = (previous.rows[0]?.version_number ?? 0) + 1;
             const publication = await client.query<{ id: string }>(
               `INSERT INTO sababuka.publications
-                 (publication_key, version_number, publication_number, title, description, status, effective_at, change_notes, created_by, activated_by, activated_at)
-               VALUES ($1, $2, $3, $4, $5, 'active', now(), $6, $7, $7, now()) RETURNING id::text`,
+                 (publication_key, version_number, publication_number, title, description, status, effective_at, change_notes, created_by)
+               VALUES ($1, $2, $3, $4, $5, 'draft', now(), $6, $7) RETURNING id::text`,
               [publicationKey, versionNumber, `SABABUKA-AUTO-${versionNumber.toString().padStart(3, "0")}`,
                `Rilis otomatis — ${indicator.indicator_name}`,
                "Capaian bersumber dari observasi resmi yang telah lolos validasi teknis OPD.",
@@ -579,6 +579,13 @@ export class GovernanceService {
                JOIN sababuka.observations o ON o.id = selected.id
                JOIN sababuka.data_batches b ON b.id = o.batch_id`,
               [publication.rows[0]!.id, observations.rows.map((row) => row.id)],
+            );
+            await client.query(
+              `UPDATE sababuka.publications
+               SET status = 'active', activated_by = $2, activated_at = now(),
+                   effective_at = COALESCE(effective_at, now()), updated_at = now()
+               WHERE id = $1`,
+              [publication.rows[0]!.id, auth.user.id],
             );
             await recordAudit(client, { ...audit, eventType: "publication.auto_activated", entityType: "publication", entityId: publication.rows[0]!.id, afterData: { publication_key: publicationKey, observation_count: observations.rows.length } });
             await notifyRole(client, "pimpinan", {
