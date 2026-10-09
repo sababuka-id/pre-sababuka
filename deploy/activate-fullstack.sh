@@ -37,7 +37,7 @@ if [[ ! -f "$env_file" ]]; then
     'PORT=3001' \
     'LOG_LEVEL=info' \
     "DATABASE_URL=postgresql://sababuka_app:${db_password}@127.0.0.1:5432/sababuka" \
-    'COOKIE_SECURE=false' \
+    'COOKIE_SECURE=true' \
     'SESSION_TTL_SECONDS=43200' \
     'LOGIN_MAX_FAILURES=5' \
     'LOGIN_LOCK_SECONDS=900' \
