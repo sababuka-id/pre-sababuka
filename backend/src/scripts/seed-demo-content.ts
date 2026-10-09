@@ -98,10 +98,11 @@ try {
       const version = (previous.rows[0]?.version_number ?? 0) + 1;
       const publication = await client.query<{ id: string }>(`
         INSERT INTO sababuka.publications
-          (publication_key, version_number, publication_number, title, description, status, effective_at, change_notes, created_by, activated_by, activated_at)
-        VALUES ($1, $2, $3, $4, $5, 'active', now(), $6, $7, $7, now()) RETURNING id::text`,
+          (publication_key, version_number, publication_number, title, description, status, effective_at, change_notes, created_by)
+        VALUES ($1, $2, $3, $4, $5, 'draft', now(), $6, $7) RETURNING id::text`,
         [publicationKey, version, `SABABUKA-AUTO-${version.toString().padStart(3, "0")}`, `Rilis otomatis — ${item.indicator_name}`, "Capaian bersumber dari observasi resmi yang telah lolos validasi teknis OPD.", "Dipulihkan oleh seed paket demo.", actorId]);
       await client.query(`INSERT INTO sababuka.publication_items (publication_id, observation_id, dataset_version_id, display_order) VALUES ($1, $2, $3, 1)`, [publication.rows[0]!.id, item.observation_id, item.dataset_version_id]);
+      await client.query(`UPDATE sababuka.publications SET status = 'active', activated_by = $2, activated_at = now(), effective_at = COALESCE(effective_at, now()), updated_at = now() WHERE id = $1`, [publication.rows[0]!.id, actorId]);
     }
   }
   await client.query("COMMIT");
