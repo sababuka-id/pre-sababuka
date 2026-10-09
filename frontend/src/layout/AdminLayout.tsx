@@ -30,6 +30,7 @@ import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useAuth } from "../auth";
 import { navigate } from "../router";
 import type { MenuItem } from "../types";
+import { api } from "../api";
 
 const iconByCode: Record<string, typeof LayoutDashboard> = {
   organizations: Building2,
@@ -83,6 +84,7 @@ export function AdminLayout({ pathname, title, subtitle, actions, children }: { 
   const [collapsed, setCollapsed] = useState(false);
   const [mobile, setMobile] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
+  const [unreadNotifications, setUnreadNotifications] = useState(0);
   const profileRef = useRef<HTMLDivElement>(null);
   const governanceEntries = useMemo(() => sectionChildren(menu, "governance"), [menu]);
   const adminEntries = useMemo(() => sectionChildren(menu, "administration"), [menu]);
@@ -110,6 +112,19 @@ export function AdminLayout({ pathname, title, subtitle, actions, children }: { 
     document.addEventListener("keydown", escape);
     return () => { document.removeEventListener("mousedown", close); document.removeEventListener("keydown", escape); };
   }, []);
+
+  useEffect(() => {
+    let active = true;
+    const loadUnread = async () => {
+      try {
+        const result = await api<{ unread_count: number }>("/notifications?unread_only=true");
+        if (active) setUnreadNotifications(result.unread_count);
+      } catch { if (active) setUnreadNotifications(0); }
+    };
+    void loadUnread();
+    const timer = window.setInterval(() => { void loadUnread(); }, 30_000);
+    return () => { active = false; window.clearInterval(timer); };
+  }, [user?.id, pathname]);
 
   const go = (path: string) => { navigate(path); setMobile(false); setProfileOpen(false); };
   const doLogout = async () => { await logout(); navigate("/login"); };
@@ -148,7 +163,7 @@ export function AdminLayout({ pathname, title, subtitle, actions, children }: { 
         <nav className="topbar-context" aria-label="Lokasi halaman" title={subtitle}><span>{areaLabel}</span><i aria-hidden>/</i><strong tabIndex={-1}>{title}</strong></nav>
         <div className="topbar-actions">
           {actions}
-          <button className="icon-button notification" aria-label="Buka notifikasi" onClick={() => go("/notifications")}><Bell /></button>
+          <button className="icon-button notification" aria-label={`Buka notifikasi${unreadNotifications ? `, ${unreadNotifications} belum dibaca` : ""}`} onClick={() => go("/notifications")}><Bell />{unreadNotifications > 0 && <span className="notification-count">{unreadNotifications > 99 ? "99+" : unreadNotifications}</span>}</button>
           <div className="profile-wrap" ref={profileRef}>
             <button className="profile-button" aria-haspopup="menu" aria-expanded={profileOpen} onClick={() => setProfileOpen((value) => !value)}><span className="avatar">{initials}</span><span><strong>{user?.full_name}</strong><small>{roleLabels[user?.roles[0]?.code ?? ""] ?? "Pengguna"}</small></span><ChevronDown /></button>
             {profileOpen && <div className="profile-popover"><div className="profile-identity"><UserRound /><span><strong>{user?.email}</strong><small>{user?.organizations[0]?.name ?? "Lingkup global"}</small></span></div><button onClick={() => go("/admin/profile")}><ShieldCheck />Keamanan akun</button>{isSuperadmin && import.meta.env.DEV && <div className="profile-demo"><small>Mode simulasi</small>{demoRoleOptions.map((option) => <button key={option.email} onClick={() => chooseDemoRole(option.email)}><Users />Masuk sebagai {option.label}</button>)}</div>}<button className="danger-text" onClick={doLogout}><LogOut />Keluar</button></div>}

@@ -2,6 +2,7 @@ import type { Database, QueryResultRow } from "../database.js";
 import { ApiError } from "../errors.js";
 import type { AuthContext } from "../types/auth.js";
 import { recordAudit, type AuditContext } from "./audit-service.js";
+import { notifyOrganization, notifyRole, notifyUser } from "./notification-service.js";
 
 interface CountedRow extends QueryResultRow { total_count: string }
 
@@ -192,8 +193,8 @@ export class GovernanceService {
     const client = await this.db.connect();
     try {
       await client.query("BEGIN");
-      const current = await client.query<QueryResultRow & { id: string; review_status: string }>(
-        `SELECT id::text, review_status, submitted_by::text FROM sababuka.categories
+      const current = await client.query<QueryResultRow & { id: string; code: string; name: string; review_status: string; submitted_by: string | null }>(
+        `SELECT id::text, code, name, review_status, submitted_by::text FROM sababuka.categories
          WHERE id = $1 AND archived_at IS NULL FOR UPDATE`,
         [categoryId],
       );
@@ -221,6 +222,23 @@ export class GovernanceService {
         ...audit, eventType: `category.${action}`, entityType: "category", entityId: categoryId,
         beforeData: { review_status: transition.from }, afterData: result.rows[0]!,
       });
+      const category = current.rows[0]!;
+      const categoryEntity = { entityType: "category", entityId: categoryId };
+      if (action === "submit") {
+        await notifyRole(client, "bapperida", {
+          ...categoryEntity, type: "category.submitted", title: "Kategori menunggu verifikasi BAPPERIDA",
+          message: `Kategori ${category.name} diajukan untuk ditinjau.`,
+        }, auth.user.id);
+      } else if ((action === "approve" || action === "reject") && category.submitted_by) {
+        await notifyUser(client, category.submitted_by, {
+          ...categoryEntity,
+          type: `category.${action}`,
+          title: action === "approve" ? "Kategori disetujui BAPPERIDA" : "Kategori perlu diperbaiki",
+          message: action === "approve"
+            ? `Kategori ${category.name} telah disetujui. Indikator di dalamnya kini dapat diajukan.`
+            : `Kategori ${category.name} dikembalikan untuk diperbaiki.`,
+        });
+      }
       await client.query("COMMIT");
       return result.rows[0]!;
     } catch (error) {
@@ -436,13 +454,14 @@ export class GovernanceService {
     try {
       await client.query("BEGIN");
       const current = await client.query<QueryResultRow & {
-        id: string; indicator_id: string; status: string; owner_organization_id: string | null; category_review_status: string; submitted_by: string | null; bapperida_reviewed_by: string | null;
+        id: string; indicator_id: string; indicator_name: string; status: string; owner_organization_id: string | null; owner_organization_name: string | null; category_review_status: string; submitted_by: string | null; bapperida_reviewed_by: string | null;
       }>(
-        `SELECT iv.id::text, iv.indicator_id::text, iv.status,
+        `SELECT iv.id::text, iv.indicator_id::text, i.name AS indicator_name, iv.status,
                 iv.submitted_by::text, iv.bapperida_reviewed_by::text,
-                i.owner_organization_id::text, c.review_status AS category_review_status
+                i.owner_organization_id::text, owner.name AS owner_organization_name, c.review_status AS category_review_status
          FROM sababuka.indicator_versions iv
          JOIN sababuka.indicators i ON i.id = iv.indicator_id
+         LEFT JOIN sababuka.organizations owner ON owner.id = i.owner_organization_id
          JOIN sababuka.categories c ON c.id = i.category_id
          WHERE iv.id = $1 FOR UPDATE OF iv`,
         [versionId],
@@ -505,6 +524,35 @@ export class GovernanceService {
         ...audit, eventType: `indicator.${action}`, entityType: "indicator_version", entityId: versionId,
         beforeData: { status: transition.from }, afterData: result.rows[0]!,
       });
+      const indicator = current.rows[0]!;
+      const indicatorEntity = { entityType: "indicator_version", entityId: versionId };
+      if (action === "submit") {
+        await notifyRole(client, "bapperida", {
+          ...indicatorEntity, type: "indicator.submitted", title: "Indikator menunggu review BAPPERIDA",
+          message: `Indikator ${indicator.indicator_name} diajukan untuk ditinjau.`,
+        }, auth.user.id);
+      } else if (action === "approve" && indicator.owner_organization_id) {
+        await notifyOrganization(client, indicator.owner_organization_id, {
+          ...indicatorEntity, type: "indicator.opd_verification", title: "Indikator menunggu verifikasi OPD",
+          message: `Indikator ${indicator.indicator_name} perlu diverifikasi oleh ${indicator.owner_organization_name ?? "OPD pemilik"}.`,
+        }, auth.user.id);
+      } else if (action === "verify") {
+        await notifyRole(client, "bapperida", {
+          ...indicatorEntity, type: "indicator.verified", title: "Verifikasi teknis OPD selesai",
+          message: `Indikator ${indicator.indicator_name} telah diverifikasi OPD dan menunggu aktivasi.`,
+        }, auth.user.id);
+      } else if (action === "activate") {
+        if (indicator.owner_organization_id) {
+          await notifyOrganization(client, indicator.owner_organization_id, {
+            ...indicatorEntity, type: "indicator.activated", title: "Indikator telah diaktifkan",
+            message: `Indikator ${indicator.indicator_name} sudah aktif di SABABUKA.`,
+          }, auth.user.id);
+        }
+        await notifyRole(client, "pimpinan", {
+          ...indicatorEntity, type: "indicator.activated", title: "Indikator baru tersedia",
+          message: `Indikator ${indicator.indicator_name} sudah tersedia untuk dipantau.`,
+        }, auth.user.id);
+      }
       await client.query("COMMIT");
       return result.rows[0]!;
     } catch (error) {

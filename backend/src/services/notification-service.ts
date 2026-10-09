@@ -1,7 +1,9 @@
 import type { Database, QueryResultRow } from "../database.js";
 import { ApiError } from "../errors.js";
 
-export async function notifyRole(db: Database, roleCode: string, notification: { type: string; title: string; message: string; entityType: string; entityId: string }, excludeUserId?: string) {
+type Queryable = Pick<Database, "query">;
+
+export async function notifyRole(db: Queryable, roleCode: string, notification: { type: string; title: string; message: string; entityType: string; entityId: string }, excludeUserId?: string) {
   await db.query(
     `INSERT INTO sababuka.notifications (user_id, notification_type, title, message, entity_type, entity_id)
      SELECT DISTINCT ura.user_id, $2::varchar, $3::varchar, $4::text, $5::varchar, $6::uuid
@@ -13,7 +15,7 @@ export async function notifyRole(db: Database, roleCode: string, notification: {
   );
 }
 
-export async function notifyOrganization(db: Database, organizationId: string, notification: { type: string; title: string; message: string; entityType: string; entityId: string }, excludeUserId?: string) {
+export async function notifyOrganization(db: Queryable, organizationId: string, notification: { type: string; title: string; message: string; entityType: string; entityId: string }, excludeUserId?: string) {
   await db.query(
     `INSERT INTO sababuka.notifications (user_id, notification_type, title, message, entity_type, entity_id)
      SELECT DISTINCT om.user_id, $2::varchar, $3::varchar, $4::text, $5::varchar, $6::uuid
@@ -21,6 +23,16 @@ export async function notifyOrganization(db: Database, organizationId: string, n
      WHERE om.organization_id = $1::uuid AND om.starts_at <= now() AND (om.ends_at IS NULL OR om.ends_at > now())
        AND ($7::uuid IS NULL OR om.user_id <> $7::uuid)`,
     [organizationId, notification.type, notification.title, notification.message, notification.entityType, notification.entityId, excludeUserId ?? null],
+  );
+}
+
+export async function notifyUser(db: Queryable, userId: string, notification: { type: string; title: string; message: string; entityType: string; entityId: string }) {
+  await db.query(
+    `INSERT INTO sababuka.notifications (user_id, notification_type, title, message, entity_type, entity_id)
+     SELECT id, $2::varchar, $3::varchar, $4::text, $5::varchar, $6::uuid
+     FROM sababuka.users
+     WHERE id = $1::uuid AND status = 'active'`,
+    [userId, notification.type, notification.title, notification.message, notification.entityType, notification.entityId],
   );
 }
 

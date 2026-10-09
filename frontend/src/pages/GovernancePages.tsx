@@ -108,7 +108,9 @@ export function IndicatorsPage() {
   const canSubmit = (user?.permissions.includes("indicator.submit") ?? false)
     && (user?.roles.some((role) => role.code === "superadmin" || role.code === "indicator_author") ?? false);
   useEffect(() => {
-    if (deepLinkId && indicators.data?.data) setSelected(indicators.data.data.find((item) => item.id === deepLinkId) ?? null);
+    if (deepLinkId && indicators.data?.data) {
+      setSelected(indicators.data.data.find((item) => item.id === deepLinkId || item.version_id === deepLinkId) ?? null);
+    }
   }, [deepLinkId, indicators.data]);
   const transition = async (indicator: Indicator, action: "submit" | "approve" | "verify" | "activate" | "retire") => {
     setActionError("");

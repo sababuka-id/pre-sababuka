@@ -23,7 +23,7 @@ const pageMeta: Record<string, { title: string; subtitle: string; permission?: s
   "/dashboard": { title: "Beranda SABABUKA", subtitle: "Ringkasan data yang aman untuk pembacaan pimpinan.", permission: "executive_dashboard.view" },
   "/executive": { title: "Ringkasan Pimpinan", subtitle: "Capaian terkurasi dari data yang telah disetujui dan dipublikasikan.", permission: "executive_dashboard.view" },
   "/assistant": { title: "Asisten Data", subtitle: "Asisten pimpinan berbasis data SABABUKA yang telah dipublikasikan.", permission: "assistant.use" },
-  "/notifications": { title: "Notifikasi", subtitle: "Pembaruan pengiriman, koreksi, persetujuan, dan publikasi." },
+  "/notifications": { title: "Notifikasi", subtitle: "Pembaruan kategori, indikator, verifikasi OPD, pengiriman, dan publikasi." },
   "/audit": { title: "Audit Aktivitas", subtitle: "Jejak perubahan permanen sesuai lingkup organisasi.", permission: "audit.view" },
   "/operations": { title: "Dashboard Operasional", subtitle: "Pantau form pelaporan capaian OPD per periode, antrean pemeriksaan, koreksi, dan persetujuan.", permission: "submission.view" },
   "/admin/organizations": { title: "Organisasi dan OPD", subtitle: "Kelola struktur organisasi yang menjadi lingkup pengguna dan pemilik data.", permission: "organization.view" },
