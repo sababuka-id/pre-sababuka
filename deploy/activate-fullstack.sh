@@ -75,9 +75,12 @@ user_count=$(sudo -u postgres psql -d sababuka -Atc \
   "SELECT count(*) FROM sababuka.users")
 if [[ "$user_count" == "0" ]]; then
   NODE_ENV=development DEMO_PASSWORD="$demo_password" pnpm dev:seed-users
-  NODE_ENV=development pnpm dev:seed-content
   NODE_ENV=development pnpm dev:seed-official
 fi
+
+# Menjaga paket demo dan observasi sumber resmi tetap tersedia setelah reset
+# atau rilis ulang, tanpa mengubah status workflow yang sedang disimulasikan.
+NODE_ENV=development pnpm dev:seed-content
 
 # Akun Dinkes dipakai untuk simulasi end-to-end. Jika belum ada, dibuat dengan
 # password awal demo dan wajib menggantinya saat login pertama.

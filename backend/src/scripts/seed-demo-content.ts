@@ -80,6 +80,30 @@ try {
     FROM sababuka.indicator_versions iv JOIN sababuka.indicators i ON i.id = iv.indicator_id
     WHERE i.code = 'DEMO_PRESENTATION_INDICATOR' AND iv.version_number = 1
     ON CONFLICT (indicator_version_id, source_name, source_period) DO UPDATE SET audit_status = EXCLUDED.audit_status, source_url = EXCLUDED.source_url, notes = EXCLUDED.notes, retrieved_at = now()`);
+  const demoReady = await client.query<{ indicator_version_id: string; indicator_code: string; indicator_name: string; observation_id: string; dataset_version_id: string }>(`
+    SELECT iv.id::text AS indicator_version_id, i.code AS indicator_code, i.name AS indicator_name,
+           o.id::text AS observation_id, b.dataset_version_id::text AS dataset_version_id
+    FROM sababuka.indicator_versions iv
+    JOIN sababuka.indicators i ON i.id = iv.indicator_id
+    JOIN sababuka.observations o ON o.indicator_version_id = iv.id AND o.quality_status = 'valid' AND o.source_status IN ('verified_direct', 'verified_calculated')
+    JOIN sababuka.data_batches b ON b.id = o.batch_id
+    WHERE i.code = 'DEMO_PRESENTATION_INDICATOR' AND iv.status = 'active'
+    ORDER BY o.created_at DESC LIMIT 1`);
+  if (demoReady.rows[0]) {
+    const item = demoReady.rows[0];
+    const publicationKey = `AUTO_${item.indicator_code}`;
+    const active = await client.query<{ id: string }>(`SELECT id::text FROM sababuka.publications WHERE publication_key = $1 AND status = 'active' LIMIT 1`, [publicationKey]);
+    if (!active.rows[0]) {
+      const previous = await client.query<{ version_number: number }>(`SELECT version_number FROM sababuka.publications WHERE publication_key = $1 ORDER BY version_number DESC LIMIT 1`, [publicationKey]);
+      const version = (previous.rows[0]?.version_number ?? 0) + 1;
+      const publication = await client.query<{ id: string }>(`
+        INSERT INTO sababuka.publications
+          (publication_key, version_number, publication_number, title, description, status, effective_at, change_notes, created_by, activated_by, activated_at)
+        VALUES ($1, $2, $3, $4, $5, 'active', now(), $6, $7, $7, now()) RETURNING id::text`,
+        [publicationKey, version, `SABABUKA-AUTO-${version.toString().padStart(3, "0")}`, `Rilis otomatis — ${item.indicator_name}`, "Capaian bersumber dari observasi resmi yang telah lolos validasi teknis OPD.", "Dipulihkan oleh seed paket demo.", actorId]);
+      await client.query(`INSERT INTO sababuka.publication_items (publication_id, observation_id, dataset_version_id, display_order) VALUES ($1, $2, $3, 1)`, [publication.rows[0]!.id, item.observation_id, item.dataset_version_id]);
+    }
+  }
   await client.query("COMMIT");
   console.log("Paket demo terisolasi siap: presentasi dan latihan. Tidak ada submission atau publikasi yang dibuat.");
 } catch (error) { await client.query("ROLLBACK"); throw error; }

@@ -54,7 +54,13 @@ export class DemoService {
       const versionIds = versions.rows.map((row) => row.id);
       const batches = await client.query<{ id: string }>(
         `SELECT DISTINCT b.id::text FROM sababuka.data_batches b LEFT JOIN sababuka.observations o ON o.batch_id = b.id
-         WHERE b.source_metadata->>'demo_package' = ANY($1::text[]) OR o.indicator_version_id = ANY($2::uuid[])`, [DEMO_PACKAGE_CODES, versionIds],
+         WHERE (b.source_metadata->>'demo_package' = ANY($1::text[]) OR o.indicator_version_id = ANY($2::uuid[]))
+           AND NOT EXISTS (
+             SELECT 1 FROM sababuka.observations preserved
+             WHERE preserved.batch_id = b.id
+               AND preserved.indicator_version_id = ANY($2::uuid[])
+               AND preserved.source_status IN ('verified_direct', 'verified_calculated')
+           )`, [DEMO_PACKAGE_CODES, versionIds],
       );
       const batchIds = batches.rows.map((row) => row.id);
       const observations = await client.query<{ id: string }>(
@@ -94,7 +100,7 @@ export class DemoService {
       const evidenceDelete = await client.query(`DELETE FROM sababuka.submission_evidence WHERE batch_id = ANY($1::uuid[])`, [batchIds]);
       summary.evidence_removed = evidenceDelete.rowCount ?? 0;
       await client.query(`DELETE FROM sababuka.validation_issues WHERE batch_id = ANY($1::uuid[])`, [batchIds]);
-      const observationDelete = await client.query(`DELETE FROM sababuka.observations WHERE batch_id = ANY($1::uuid[]) OR indicator_version_id = ANY($2::uuid[])`, [batchIds, versionIds]);
+      const observationDelete = await client.query(`DELETE FROM sababuka.observations WHERE (batch_id = ANY($1::uuid[]) OR indicator_version_id = ANY($2::uuid[])) AND COALESCE(source_status, '') NOT IN ('verified_direct', 'verified_calculated')`, [batchIds, versionIds]);
       summary.observations_removed = observationDelete.rowCount ?? 0;
       const batchDelete = await client.query(`DELETE FROM sababuka.data_batches WHERE id = ANY($1::uuid[])`, [batchIds]);
       summary.batches_removed = batchDelete.rowCount ?? 0;
