@@ -37,7 +37,7 @@ try {
      SELECT $1, r.id, o.id, 'organization', $1
      FROM sababuka.roles r CROSS JOIN sababuka.organizations o
      WHERE r.code = 'opd' AND o.code = 'DINKES'
-     ON CONFLICT (user_id, role_id, organization_id) DO UPDATE SET starts_at = now(), ends_at = NULL`, [userId],
+     ON CONFLICT (user_id, role_id, organization_id, scope_type) DO UPDATE SET starts_at = now(), ends_at = NULL`, [userId],
   );
   await client.query("COMMIT");
   console.log("Akun pilot Dinkes siap: opd.dinkes@sababuka.com");
