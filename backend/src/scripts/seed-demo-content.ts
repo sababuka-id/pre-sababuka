@@ -56,7 +56,7 @@ try {
         (SELECT id FROM sababuka.organizations WHERE code = 'DINKES' LIMIT 1) AS organization_id,
         (SELECT id FROM sababuka.periods WHERE code = '2023' LIMIT 1) AS period_id,
         (SELECT id FROM sababuka.users WHERE email = 'developer@sababuka.com' LIMIT 1) AS actor_id,
-        (SELECT id FROM sababuka.indicator_versions iv JOIN sababuka.indicators i ON i.id = iv.indicator_id WHERE i.code = 'DEMO_PRESENTATION_INDICATOR' AND iv.version_number = 1 LIMIT 1) AS indicator_version_id
+        (SELECT iv.id FROM sababuka.indicator_versions iv JOIN sababuka.indicators i ON i.id = iv.indicator_id WHERE i.code = 'DEMO_PRESENTATION_INDICATOR' AND iv.version_number = 1 LIMIT 1) AS indicator_version_id
     ), dataset_version AS (
       SELECT dv.id FROM sababuka.dataset_versions dv JOIN context c ON c.dataset_id = dv.dataset_id WHERE dv.version_number = 1 LIMIT 1
     ), batch AS (
