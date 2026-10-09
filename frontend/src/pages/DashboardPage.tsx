@@ -45,11 +45,11 @@ export function DashboardPage() {
         <button onClick={() => navigate("/admin/roles")}><span><strong>Atur peran dan hak akses</strong><small>Pastikan setiap peran hanya menerima kewenangan yang diperlukan.</small></span><ArrowRight /></button>
         <button onClick={() => navigate("/admin/menus")}><span><strong>Susun menu berdasarkan peran</strong><small>Tampilan navigasi mengikuti tugas masing-masing pengguna.</small></span><ArrowRight /></button>
       </div></article>
-      <article className="panel readiness-panel"><header><div><span className="eyebrow">Kesiapan lokal</span><h2>Status fondasi</h2></div></header><div className="readiness-list">
+      <article className="panel readiness-panel"><header><div><span className="eyebrow">Kesiapan platform</span><h2>Status fondasi</h2></div></header><div className="readiness-list">
         <div><span className="check-dot">✓</span><p><strong>Autentikasi dan MFA</strong><small>Session, TOTP, dan recovery code aktif.</small></p></div>
         <div><span className="check-dot">✓</span><p><strong>RBAC dinamis</strong><small>42 hak akses dan menu berbasis peran.</small></p></div>
         <div><span className="check-dot">✓</span><p><strong>Audit perubahan</strong><small>Mutasi administrasi tercatat.</small></p></div>
-        <div><span className="pending-dot">○</span><p><strong>Domain development</strong><small>Ditunda sampai aplikasi siap.</small></p></div>
+        <div><span className="check-dot">✓</span><p><strong>Domain development</strong><small>Aktif di dev.sababuka.com; reverse proxy dan health check berjalan.</small></p></div>
       </div></article>
     </section>
   </>;
