@@ -11,7 +11,7 @@ import {
   hashRecoveryCode,
   verifyTotp,
 } from "../security/mfa.js";
-import { hashPassword } from "../security/password.js";
+import { hashPassword, verifyPassword } from "../security/password.js";
 import { hashToken } from "../security/tokens.js";
 import type { AuthContext } from "../types/auth.js";
 import { recordAudit, type AuditContext } from "./audit-service.js";
@@ -43,6 +43,24 @@ export class AccountService {
     private readonly db: Database,
     private readonly config: AppConfig,
   ) {}
+
+  async changePassword(auth: AuthContext, currentPassword: string, newPassword: string, audit: AuditContext) {
+    if (currentPassword === newPassword) throw new ApiError(400, "VALIDATION_ERROR", "Kata sandi baru harus berbeda dari kata sandi awal.");
+    const current = await this.db.query<{ password_hash: string | null }>(
+      `SELECT password_hash FROM sababuka.users WHERE id = $1 AND status = 'active'`, [auth.user.id],
+    );
+    const hash = current.rows[0]?.password_hash;
+    if (!hash || !(await verifyPassword(hash, currentPassword))) {
+      throw new ApiError(401, "INVALID_CREDENTIALS", "Kata sandi saat ini tidak sesuai.");
+    }
+    const passwordHash = await hashPassword(newPassword);
+    await this.db.query(
+      `UPDATE sababuka.users SET password_hash = $2, must_change_password = false, failed_login_count = 0, locked_until = NULL, updated_at = now() WHERE id = $1`,
+      [auth.user.id, passwordHash],
+    );
+    await recordAudit(this.db, { ...audit, actorId: auth.user.id, eventType: "auth.password_changed", entityType: "user", entityId: auth.user.id });
+    return { changed: true };
+  }
 
   private encryptionKey(): Buffer {
     if (!this.config.mfaEncryptionKey) {

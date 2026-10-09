@@ -4,7 +4,7 @@ import { LoadingScreen, Notice } from "./components";
 import { AdminLayout, ComingSoon } from "./layout/AdminLayout";
 import { navigate, usePathname } from "./router";
 import { RolesPage, MenusPage } from "./pages/AccessPages";
-import { InvitationPage, LoginPage, RegistrationPage } from "./pages/AuthPages";
+import { InvitationPage, LoginPage, PasswordSetupPage, RegistrationPage } from "./pages/AuthPages";
 import { DashboardPage } from "./pages/DashboardPage";
 import { OrganizationsPage } from "./pages/OrganizationsPage";
 import { SecurityPage, SystemPage } from "./pages/SystemPage";
@@ -45,6 +45,7 @@ function ProtectedApp() {
   const pathname = usePathname();
   useEffect(() => {
     if (!loading && !user && !["/login", "/activate", "/register"].includes(pathname)) navigate("/login");
+    if (!loading && user?.must_change_password && pathname !== "/security/setup") navigate("/security/setup");
     if (!loading && user && (pathname === "/" || pathname === "/login" || pathname === "/register")) {
       const landing = user.roles.some((role) => role.code === "superadmin") ? "/admin"
         : user.roles.some((role) => role.code === "pimpinan") ? "/dashboard"
@@ -55,6 +56,7 @@ function ProtectedApp() {
 
   if (pathname === "/activate") return <InvitationPage />;
   if (pathname === "/register") return <RegistrationPage />;
+  if (pathname === "/security/setup") return user ? <PasswordSetupPage /> : <LoginPage />;
   if (loading) return <LoadingScreen />;
   if (!user || pathname === "/login") return <LoginPage />;
   const meta = pageMeta[pathname] ?? { title: "Modul SABABUKA", subtitle: "Modul sedang disiapkan." };

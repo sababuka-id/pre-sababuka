@@ -21,6 +21,7 @@ export interface CurrentUser {
   email: string;
   full_name: string;
   mfa_required: boolean;
+  must_change_password: boolean;
   roles: EffectiveRole[];
   permissions: string[];
   organizations: AuthOrganization[];

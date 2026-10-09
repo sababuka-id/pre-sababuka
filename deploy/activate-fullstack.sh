@@ -56,6 +56,7 @@ if [[ ! -f "$env_file" ]]; then
     'bapperida@sababuka.com' \
     'kominfo@sababuka.com' \
     'opd.dkpp@sababuka.com' \
+    'opd.dinkes@sababuka.com' \
     'pimpinan@sababuka.com' \
     "PASSWORD=${demo_password}" > "$credential_file"
 else
@@ -77,6 +78,11 @@ if [[ "$user_count" == "0" ]]; then
   NODE_ENV=development pnpm dev:seed-content
   NODE_ENV=development pnpm dev:seed-official
 fi
+
+# Akun Dinkes dipakai untuk simulasi end-to-end. Jika belum ada, dibuat dengan
+# password awal demo dan wajib menggantinya saat login pertama.
+cd "$release/backend"
+NODE_ENV=development DEMO_PASSWORD="$demo_password" pnpm dev:seed-pilot
 
 install -m 644 "$release/deploy/sababuka-api.service" "$service_file"
 ln -sfn "$release" /srv/sababuka/current

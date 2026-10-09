@@ -17,6 +17,7 @@ const demoUsers = [
   { email: "bapperida@sababuka.com", name: "Admin BAPPERIDA", role: "bapperida", organization: "BAPPERIDA", scope: "global" },
   { email: "kominfo@sababuka.com", name: "Admin KOMINFO", role: "kominfo", organization: "KAPUAS", scope: "global" },
   { email: "opd.dkpp@sababuka.com", name: "Operator OPD DKPP", role: "opd", organization: "DKPP", scope: "organization" },
+  { email: "opd.dinkes@sababuka.com", name: "Operator OPD Dinas Kesehatan", role: "opd", organization: "DINKES", scope: "organization" },
   { email: "pimpinan@sababuka.com", name: "Pimpinan Daerah", role: "pimpinan", organization: "KAPUAS", scope: "published" },
 ] as const;
 
@@ -31,12 +32,12 @@ try {
     const result = await client.query<{ id: string }>(
       `INSERT INTO sababuka.users
          (email, full_name, password_hash, status, must_change_password, mfa_required)
-       VALUES ($1, $2, $3, 'active', false, false)
+       VALUES ($1, $2, $3, 'active', true, false)
        ON CONFLICT (email) DO UPDATE SET
          full_name = EXCLUDED.full_name,
          password_hash = EXCLUDED.password_hash,
          status = 'active',
-         must_change_password = false,
+         must_change_password = true,
          mfa_required = false,
          failed_login_count = 0,
          locked_until = NULL,

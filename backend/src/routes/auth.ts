@@ -106,6 +106,28 @@ export async function authenticationRoutes(app: FastifyInstance): Promise<void> 
     return reply.code(204).send();
   });
 
+  app.post<{ Body: { current_password: string; new_password: string } }>(
+    "/me/password",
+    {
+      schema: {
+        body: {
+          type: "object", additionalProperties: false,
+          required: ["current_password", "new_password"],
+          properties: {
+            current_password: { type: "string", minLength: 8, maxLength: 256 },
+            new_password: { type: "string", minLength: 12, maxLength: 256 },
+          },
+        },
+      },
+    },
+    async (request) => {
+      requireCsrf(request);
+      return new AccountService(app.db, app.config).changePassword(
+        request.auth!, request.body.current_password, request.body.new_password, requestAuditContext(request),
+      );
+    },
+  );
+
   app.get<{ Params: { token: string } }>(
     "/auth/invitations/:token",
     {

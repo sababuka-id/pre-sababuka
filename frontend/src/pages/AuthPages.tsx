@@ -80,6 +80,38 @@ export function LoginPage() {
   </main>;
 }
 
+export function PasswordSetupPage() {
+  const { user, refresh } = useAuth();
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function submit(event: FormEvent) {
+    event.preventDefault();
+    if (newPassword !== confirmPassword) { setError("Konfirmasi kata sandi belum sama."); return; }
+    setBusy(true); setError(null);
+    try {
+      await api("/me/password", { method: "POST", mutation: true, body: jsonBody({ current_password: currentPassword, new_password: newPassword }) });
+      await refresh();
+      navigate("/");
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : "Kata sandi belum dapat diubah.");
+    } finally { setBusy(false); }
+  }
+
+  return <main className="auth-layout"><AuthBrand /><section className="auth-panel"><form className="auth-card" onSubmit={submit}>
+    <div className="auth-card-heading"><span className="eyebrow">Langkah pertama</span><h2>Ganti kata sandi</h2><p>Akun demo ini memakai kata sandi awal. Buat kata sandi pribadi sebelum melanjutkan.</p></div>
+    {error && <Notice tone="error">{error}</Notice>}
+    <label className="field"><span>Kata sandi awal</span><input type="password" autoFocus autoComplete="current-password" value={currentPassword} onChange={(event) => setCurrentPassword(event.target.value)} required minLength={8} /></label>
+    <label className="field"><span>Kata sandi baru</span><input type="password" autoComplete="new-password" value={newPassword} onChange={(event) => setNewPassword(event.target.value)} required minLength={12} /><small>Minimal 12 karakter.</small></label>
+    <label className="field"><span>Ulangi kata sandi baru</span><input type="password" autoComplete="new-password" value={confirmPassword} onChange={(event) => setConfirmPassword(event.target.value)} required minLength={12} /></label>
+    <button className="button primary full" disabled={busy}>{busy ? <Spinner label="Menyimpan" /> : "Simpan kata sandi"}</button>
+    <div className="security-note"><ShieldCheck size={17} /><span>{user?.email}</span></div>
+  </form></section></main>;
+}
+
 interface RegistrationOrganization {
   id: string;
   code: string;

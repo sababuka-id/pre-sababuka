@@ -17,6 +17,7 @@ interface UserRow extends QueryResultRow {
   email: string;
   full_name: string;
   mfa_required: boolean;
+  must_change_password: boolean;
   password_hash: string | null;
   status: string;
   failed_login_count: number;
@@ -30,6 +31,7 @@ interface SessionRow extends QueryResultRow {
   email: string;
   full_name: string;
   mfa_required: boolean;
+  must_change_password: boolean;
 }
 
 interface PermissionRow extends QueryResultRow {
@@ -181,7 +183,7 @@ export class AuthService {
   async getAuthContext(tokenHash: Buffer): Promise<AuthContext | null> {
     const result = await this.db.query<SessionRow>(
       `SELECT s.id AS session_id, s.csrf_token_hash, u.id AS user_id,
-              u.email::text, u.full_name, u.mfa_required
+              u.email::text, u.full_name, u.mfa_required, u.must_change_password
        FROM sababuka.auth_sessions s
        JOIN sababuka.users u ON u.id = s.user_id
        WHERE s.token_hash = $1
@@ -257,6 +259,7 @@ export class AuthService {
         email: session.email,
         full_name: session.full_name,
         mfa_required: session.mfa_required,
+        must_change_password: session.must_change_password,
         roles: rolesResult.rows,
         permissions: permissionsResult.rows.map((row) => row.code),
         organizations: organizationsResult.rows,

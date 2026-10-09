@@ -454,9 +454,9 @@ export class GovernanceService {
     try {
       await client.query("BEGIN");
       const current = await client.query<QueryResultRow & {
-        id: string; indicator_id: string; indicator_name: string; status: string; owner_organization_id: string | null; owner_organization_name: string | null; category_review_status: string; submitted_by: string | null; bapperida_reviewed_by: string | null;
+        id: string; indicator_id: string; indicator_code: string; indicator_name: string; status: string; owner_organization_id: string | null; owner_organization_name: string | null; category_review_status: string; submitted_by: string | null; bapperida_reviewed_by: string | null;
       }>(
-        `SELECT iv.id::text, iv.indicator_id::text, i.name AS indicator_name, iv.status,
+        `SELECT iv.id::text, iv.indicator_id::text, i.code AS indicator_code, i.name AS indicator_name, iv.status,
                 iv.submitted_by::text, iv.bapperida_reviewed_by::text,
                 i.owner_organization_id::text, owner.name AS owner_organization_name, c.review_status AS category_review_status
          FROM sababuka.indicator_versions iv
@@ -542,6 +542,51 @@ export class GovernanceService {
           message: `Indikator ${indicator.indicator_name} telah diverifikasi OPD dan menunggu aktivasi.`,
         }, auth.user.id);
       } else if (action === "activate") {
+        // Bila sudah ada observasi resmi yang valid, aktivasi langsung membuat
+        // publikasi aktif agar alur demo dapat terlihat sampai Dashboard Pimpinan.
+        // Sumber tetap ditampilkan bersama observasi; ini bukan pengganti mapping
+        // konektor live yang memerlukan endpoint dan kredensial sumber.
+        const observations = await client.query<QueryResultRow & { id: string; dataset_version_id: string }>(
+          `SELECT o.id::text, b.dataset_version_id::text
+           FROM sababuka.observations o
+           JOIN sababuka.data_batches b ON b.id = o.batch_id AND b.status IN ('approved', 'published')
+           WHERE o.indicator_version_id = $1 AND o.quality_status = 'valid'
+             AND o.source_status IN ('verified_direct', 'verified_calculated')
+           ORDER BY o.period_id, o.created_at DESC`, [versionId],
+        );
+        if (observations.rows.length) {
+          const publicationKey = `AUTO_${indicator.indicator_code.replace(/[^A-Z0-9_]/gu, "_").slice(0, 68)}`;
+          const activePublication = await client.query<{ id: string }>(
+            `SELECT id::text FROM sababuka.publications WHERE publication_key = $1 AND status = 'active' LIMIT 1`, [publicationKey],
+          );
+          if (!activePublication.rows[0]) {
+            const previous = await client.query<{ version_number: number }>(
+              `SELECT version_number FROM sababuka.publications WHERE publication_key = $1 ORDER BY version_number DESC LIMIT 1`, [publicationKey],
+            );
+            const versionNumber = (previous.rows[0]?.version_number ?? 0) + 1;
+            const publication = await client.query<{ id: string }>(
+              `INSERT INTO sababuka.publications
+                 (publication_key, version_number, publication_number, title, description, status, effective_at, change_notes, created_by, activated_by, activated_at)
+               VALUES ($1, $2, $3, $4, $5, 'active', now(), $6, $7, $7, now()) RETURNING id::text`,
+              [publicationKey, versionNumber, `SABABUKA-AUTO-${versionNumber.toString().padStart(3, "0")}`,
+               `Rilis otomatis — ${indicator.indicator_name}`,
+               "Capaian bersumber dari observasi resmi yang telah lolos validasi teknis OPD.",
+               "Diterbitkan otomatis saat BAPPERIDA mengaktifkan indikator.", auth.user.id],
+            );
+            await client.query(
+              `INSERT INTO sababuka.publication_items (publication_id, observation_id, dataset_version_id, display_order)
+               SELECT $1, selected.id, b.dataset_version_id, row_number() OVER (ORDER BY selected.id)::int FROM unnest($2::uuid[]) WITH ORDINALITY AS selected(id, position)
+               JOIN sababuka.observations o ON o.id = selected.id
+               JOIN sababuka.data_batches b ON b.id = o.batch_id`,
+              [publication.rows[0]!.id, observations.rows.map((row) => row.id)],
+            );
+            await recordAudit(client, { ...audit, eventType: "publication.auto_activated", entityType: "publication", entityId: publication.rows[0]!.id, afterData: { publication_key: publicationKey, observation_count: observations.rows.length } });
+            await notifyRole(client, "pimpinan", {
+              entityType: "publication", entityId: publication.rows[0]!.id, type: "publication.activated",
+              title: "Data indikator siap dipantau", message: `${indicator.indicator_name} sudah dirilis ke Dashboard Pimpinan.`,
+            }, auth.user.id);
+          }
+        }
         if (indicator.owner_organization_id) {
           await notifyOrganization(client, indicator.owner_organization_id, {
             ...indicatorEntity, type: "indicator.activated", title: "Indikator telah diaktifkan",
