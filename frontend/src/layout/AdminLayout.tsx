@@ -72,7 +72,7 @@ const demoRoleOptions = [
   { label: "BAPPERIDA", email: "bapperida@sababuka.com" },
   { label: "OPD Dinkes", email: "opd.dinkes@sababuka.com" },
   { label: "OPD DKPP", email: "opd.dkpp@sababuka.com" },
-  { label: "Kominfo baca-saja", email: "kominfo@sababuka.com" },
+  { label: "Kominfo", email: "kominfo@sababuka.com" },
   { label: "Pimpinan", email: "pimpinan@sababuka.com" },
 ] as const;
 
