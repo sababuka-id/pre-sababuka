@@ -94,7 +94,8 @@ fi
 ln -sfn "$nginx_file" /etc/nginx/sites-enabled/sababuka
 
 systemctl daemon-reload
-systemctl enable --now sababuka-api
+systemctl enable sababuka-api
+systemctl restart sababuka-api
 nginx -t
 systemctl reload nginx
 
