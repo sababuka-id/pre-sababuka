@@ -97,17 +97,14 @@ pnpm build
 pnpm audit --prod
 ```
 
-## Konten demonstrasi laporan antara
+## Data pengembangan lokal
 
-Khusus `NODE_ENV=development`, akun dan isi demonstrasi lokal dapat disiapkan dengan:
+Khusus `NODE_ENV=development`, akun pengujian dan data sumber resmi dapat disiapkan dengan:
 
 ```bash
 pnpm dev:seed-users
-pnpm dev:seed-content
 pnpm dev:seed-official
 ```
-
-`dev:seed-content` mengaktifkan 5 kategori dan 15 indikator pilot, membuat form contoh per OPD pemilik, serta menerbitkan satu publikasi demo tahun 2025. Nilai pada publikasi demo memakai target 2025 sebagai placeholder tampilan dan selalu diberi label **bukan realisasi resmi**. Script menolak berjalan di staging/test/production.
 
 `dev:seed-official` mencatat audit sumber untuk seluruh 15 indikator pilot dan menerbitkan hanya capaian yang sudah dapat ditelusuri. Setiap observasi menyimpan nama sumber, URL, status verifikasi, serta waktu pengambilan. Hasil perhitungan dibedakan dari kutipan langsung. Rangkuman audit terdapat di `docs/17-audit-sumber-indikator-pilot.md`.
 

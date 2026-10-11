@@ -1,4 +1,4 @@
-import { AlertTriangle, CheckCircle2, ChevronLeft, ChevronRight, LoaderCircle, X } from "lucide-react";
+import { AlertTriangle, ArrowDown, ArrowUp, ArrowUpDown, CheckCircle2, ChevronLeft, ChevronRight, LoaderCircle, X } from "lucide-react";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 
 export function Spinner({ label = "Memuat" }: { label?: string }) {
@@ -21,7 +21,23 @@ export function Badge({ tone = "neutral", children }: { tone?: "success" | "warn
   return <span className={`badge ${tone}`}>{children}</span>;
 }
 
-export function Modal({ title, onClose, children, wide = false }: { title: string; onClose(): void; children: ReactNode; wide?: boolean }) {
+export type SortDirection = "asc" | "desc";
+
+export function SortableHeader({ label, column, sortBy, direction, onSort, className }: {
+  label: string; column: string; sortBy: string; direction: SortDirection;
+  onSort(column: string, direction: SortDirection): void; className?: string;
+}) {
+  const active = sortBy === column;
+  const nextDirection: SortDirection = active && direction === "asc" ? "desc" : "asc";
+  const Icon = !active ? ArrowUpDown : direction === "asc" ? ArrowUp : ArrowDown;
+  return <th className={className} aria-sort={active ? (direction === "asc" ? "ascending" : "descending") : "none"}>
+    <button type="button" className={`sortable-header${active ? " active" : ""}`} onClick={() => onSort(column, nextDirection)} title={`Urutkan ${label} ${nextDirection === "asc" ? "menaik" : "menurun"}`}>
+      <span>{label}</span><Icon aria-hidden />
+    </button>
+  </th>;
+}
+
+export function Modal({ title, onClose, children, wide = false, className = "" }: { title: string; onClose(): void; children: ReactNode; wide?: boolean; className?: string }) {
   const modalRef = useRef<HTMLElement>(null);
   useEffect(() => {
     const previousFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null;
@@ -46,7 +62,7 @@ export function Modal({ title, onClose, children, wide = false }: { title: strin
     };
   }, [onClose]);
   return <div className="modal-backdrop" onMouseDown={(event) => { if (event.currentTarget === event.target) onClose(); }}>
-    <section ref={modalRef} tabIndex={-1} className={`modal ${wide ? "wide" : ""}`} role="dialog" aria-modal="true" aria-label={title}>
+    <section ref={modalRef} tabIndex={-1} className={`modal ${wide ? "wide" : ""} ${className}`.trim()} role="dialog" aria-modal="true" aria-label={title}>
       <header><div><span className="eyebrow">SABABUKA BERSINAR</span><h2>{title}</h2></div><button className="icon-button" onClick={onClose} aria-label="Tutup"><X size={20} /></button></header>
       <div className="modal-content">{children}</div>
     </section>
@@ -58,7 +74,11 @@ export function Notice({ tone, children }: { tone: "error" | "success" | "warnin
   return <div className={`notice ${tone}`} role={tone === "error" ? "alert" : "status"} aria-live="polite"><Icon size={18} aria-hidden /><div>{children instanceof Error ? children.message : children}</div></div>;
 }
 
-export function Pagination({ page, totalPages, totalItems, pageSize, sortLabel, onChange, onPageSizeChange }: {
+export function PageSizeControl({ value, onChange }: { value: number; onChange(pageSize: number): void }) {
+  return <label className="page-size page-size-top"><span>Baris per halaman</span><select aria-label="Jumlah baris per halaman" value={value} onChange={(event) => onChange(Number(event.target.value))}>{[10, 20, 50, 100].map((size) => <option key={size} value={size}>{size}</option>)}</select></label>;
+}
+
+export function Pagination({ page, totalPages, totalItems, pageSize, sortLabel, onChange, onPageSizeChange, showPageSize = true }: {
   page: number;
   totalPages: number;
   totalItems?: number;
@@ -66,17 +86,18 @@ export function Pagination({ page, totalPages, totalItems, pageSize, sortLabel, 
   sortLabel?: string;
   onChange(page: number): void;
   onPageSizeChange?(pageSize: number): void;
+  showPageSize?: boolean;
 }) {
   if (totalPages <= 1 && totalItems === undefined) return null;
   const safePageSize = pageSize ?? Math.max(totalItems ?? 0, 1);
   const firstItem = totalItems ? ((page - 1) * safePageSize) + 1 : 0;
   const lastItem = totalItems ? Math.min(page * safePageSize, totalItems) : 0;
   return <div className="pagination">
-    {totalItems !== undefined && <span className="pagination-summary">Menampilkan <strong>{firstItem}-{lastItem}</strong> dari <strong>{totalItems}</strong> data{sortLabel ? <> · Urutan: <strong>{sortLabel}</strong></> : null}</span>}
-    {onPageSizeChange && <label className="page-size">Baris<select aria-label="Jumlah baris per halaman" value={safePageSize} onChange={(event) => onPageSizeChange(Number(event.target.value))}>{[10, 20, 50, 100].map((size) => <option key={size} value={size}>{size}</option>)}</select></label>}
-    <div className="pagination-nav"><button className="button secondary" disabled={page <= 1} onClick={() => onChange(page - 1)}><ChevronLeft size={16} /> Sebelumnya</button>
-      <span>Halaman <strong>{page}</strong> dari <strong>{Math.max(totalPages, 1)}</strong></span>
-      <button className="button secondary" disabled={page >= totalPages} onClick={() => onChange(page + 1)}>Berikutnya <ChevronRight size={16} /></button></div>
+    {totalItems !== undefined && <span className="pagination-summary"><span>Menampilkan <strong>{firstItem}-{lastItem}</strong> dari <strong>{totalItems}</strong> data</span>{sortLabel ? <span className="pagination-sort"> · Urutan: <strong>{sortLabel}</strong></span> : null}</span>}
+    {showPageSize && onPageSizeChange && <PageSizeControl value={safePageSize} onChange={onPageSizeChange} />}
+    <div className="pagination-nav"><button className="button secondary pagination-button" aria-label="Halaman sebelumnya" disabled={page <= 1} onClick={() => onChange(page - 1)}><ChevronLeft size={16} /><span>Sebelumnya</span></button>
+      <span className="pagination-page-label">Halaman <strong>{page}</strong> dari <strong>{Math.max(totalPages, 1)}</strong></span>
+      <button className="button secondary pagination-button" aria-label="Halaman berikutnya" disabled={page >= totalPages} onClick={() => onChange(page + 1)}><span>Berikutnya</span><ChevronRight size={16} /></button></div>
   </div>;
 }
 

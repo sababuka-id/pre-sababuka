@@ -4,6 +4,7 @@ import { ApiError } from "../errors.js";
 import { hashToken, randomToken } from "../security/tokens.js";
 import type { AuthContext } from "../types/auth.js";
 import { recordAudit, type AuditContext } from "./audit-service.js";
+import { notifyUser } from "./notification-service.js";
 
 interface CountedRow extends QueryResultRow {
   total_count: string;
@@ -17,6 +18,8 @@ export interface PageQuery {
   page: number;
   pageSize: number;
   search?: string | undefined;
+  sortBy?: string | undefined;
+  sortOrder?: "asc" | "desc" | undefined;
 }
 
 export interface OrganizationInput {
@@ -35,9 +38,13 @@ export interface UserCreateInput {
 }
 
 export interface UserUpdateInput {
+  email?: string;
   username?: string | null;
   full_name?: string;
-  status?: "invited" | "active" | "suspended" | "locked" | "archived";
+  contact_phone?: string | null;
+  job_title?: string | null;
+  employee_id?: string | null;
+  status?: "invited" | "active" | "suspended" | "locked";
   mfa_required?: boolean;
 }
 
@@ -46,6 +53,7 @@ export interface RoleAssignmentInput {
   scope_type: "global" | "organization" | "self" | "published";
   organization_id?: string | null;
   ends_at?: string | null;
+  approval_notes?: string | null;
 }
 
 export type RoleScope = RoleAssignmentInput["scope_type"];
@@ -124,6 +132,36 @@ function requireGlobal(auth: AuthContext): void {
   }
 }
 
+async function assertOrganizationAccountLimit(
+  client: Pick<Database, "query">,
+  userId: string,
+  roleCode: string,
+  organizationId?: string | null,
+): Promise<void> {
+  if (!organizationId) return;
+  const organization = await client.query<{ code: string } & QueryResultRow>(
+    "SELECT code FROM sababuka.organizations WHERE id = $1 AND is_active = true AND archived_at IS NULL",
+    [organizationId],
+  );
+  if (!organization.rows[0]) throw new ApiError(404, "NOT_FOUND", "Organisasi tidak ditemukan.");
+  const code = organization.rows[0].code;
+  const limit = ["BAPPERIDA", "DISKOMINFOSANTIK"].includes(code) ? 2 : 1;
+  if (roleCode !== "opd" && !["BAPPERIDA", "DISKOMINFOSANTIK"].includes(code)) return;
+  const occupied = await client.query<{ count: string } & QueryResultRow>(
+    `SELECT count(DISTINCT u.id)::text AS count
+     FROM sababuka.users u
+     JOIN sababuka.organization_memberships om ON om.user_id = u.id
+     WHERE om.organization_id = $1 AND om.ends_at IS NULL
+       AND u.id <> $2 AND u.archived_at IS NULL AND u.status IN ('active','locked')`,
+    [organizationId, userId],
+  );
+  if (Number(occupied.rows[0]?.count ?? 0) >= limit) {
+    throw new ApiError(409, "CONFLICT", limit === 1
+      ? "Setiap OPD hanya boleh memiliki satu akun PIC aktif. Nonaktifkan atau ganti PIC lama terlebih dahulu."
+      : "BAPPERIDA dan Diskominfosantik masing-masing dibatasi dua akun aktif.");
+  }
+}
+
 function translateDatabaseError(error: unknown): never {
   const code = (error as { code?: string }).code;
   if (code === "23505") throw new ApiError(409, "CONFLICT", "Data dengan identitas yang sama sudah ada.");
@@ -143,16 +181,31 @@ export class AdminService {
   async listOrganizations(auth: AuthContext, query: PageQuery & { active?: boolean | undefined }) {
     const offset = (query.page - 1) * query.pageSize;
     const scope = organizationScope(auth);
+    const orderColumns: Record<string, string> = { name: "o.name", code: "o.code", type: "o.organization_type", status: "o.is_active", updated_at: "o.updated_at" };
+    const orderColumn = orderColumns[query.sortBy ?? "name"] ?? orderColumns.name!;
+    const orderDirection = query.sortOrder === "desc" ? "DESC" : "ASC";
     const result = await this.db.query<CountedRow & Record<string, unknown>>(
       `SELECT o.id::text, o.code, o.name, o.short_name, o.organization_type,
               o.parent_id::text, o.is_active, o.created_at::text, o.updated_at::text,
+              (SELECT count(DISTINCT i.id)::int
+               FROM sababuka.indicators i
+               JOIN LATERAL (SELECT v.id FROM sababuka.indicator_versions v
+                 WHERE v.indicator_id = i.id ORDER BY v.version_number DESC LIMIT 1) current_version ON true
+               LEFT JOIN sababuka.indicator_organizations io ON io.indicator_version_id = current_version.id
+               WHERE i.archived_at IS NULL AND (i.owner_organization_id = o.id OR io.organization_id = o.id)) AS indicator_count,
+              (SELECT count(DISTINCT i.category_id)::int
+               FROM sababuka.indicators i
+               JOIN LATERAL (SELECT v.id FROM sababuka.indicator_versions v
+                 WHERE v.indicator_id = i.id ORDER BY v.version_number DESC LIMIT 1) current_version ON true
+               LEFT JOIN sababuka.indicator_organizations io ON io.indicator_version_id = current_version.id
+               WHERE i.archived_at IS NULL AND (i.owner_organization_id = o.id OR io.organization_id = o.id)) AS category_count,
               count(*) OVER()::text AS total_count
        FROM sababuka.organizations o
        WHERE o.archived_at IS NULL
          AND ($1::text IS NULL OR o.code ILIKE '%' || $1 || '%' OR o.name ILIKE '%' || $1 || '%')
          AND ($2::boolean IS NULL OR o.is_active = $2)
          AND ($3::boolean OR o.id = ANY($4::uuid[]))
-       ORDER BY o.name, o.code
+       ORDER BY ${orderColumn} ${orderDirection} NULLS LAST, o.name, o.code
        LIMIT $5 OFFSET $6`,
       [query.search?.trim() || null, query.active ?? null, isGlobal(auth), scope, query.pageSize, offset],
     );
@@ -191,15 +244,23 @@ export class AdminService {
     }
   }
 
-  async listUsers(auth: AuthContext, query: PageQuery & { organizationId?: string | undefined }) {
+  async listUsers(auth: AuthContext, query: PageQuery & { organizationId?: string | undefined; status?: string | undefined }) {
     const offset = (query.page - 1) * query.pageSize;
     const scope = organizationScope(auth);
+    const orderColumns: Record<string, string> = { name: "u.full_name", organization: "COALESCE(po.name, ro.name)", status: "u.status", mfa: "u.mfa_required", last_login: "u.last_login_at", created_at: "COALESCE(rr.created_at, u.created_at)" };
+    const orderColumn = orderColumns[query.sortBy ?? "created_at"] ?? orderColumns.created_at!;
+    const orderDirection = query.sortOrder === "asc" ? "ASC" : "DESC";
     const result = await this.db.query<CountedRow & Record<string, unknown>>(
       `SELECT u.id::text, u.email::text, u.username::text, u.full_name, u.status,
               u.mfa_required, (u.password_hash IS NOT NULL) AS has_password,
               u.last_login_at::text, u.created_at::text,
               po.id::text AS organization_id, po.code AS organization_code,
-              po.name AS organization_name, count(*) OVER()::text AS total_count
+              po.name AS organization_name,
+              rr.requested_organization_id::text, ro.code AS requested_organization_code,
+              ro.name AS requested_organization_name, rr.contact_email::text,
+              rr.contact_phone, rr.job_title, rr.employee_id, rr.request_note,
+              rr.status AS registration_status, rr.created_at::text AS registration_created_at,
+              count(*) OVER()::text AS total_count
        FROM sababuka.users u
        LEFT JOIN LATERAL (
          SELECT o.id, o.code, o.name
@@ -209,14 +270,18 @@ export class AdminService {
          ORDER BY om.is_primary DESC, om.created_at
          LIMIT 1
        ) po ON true
+       LEFT JOIN sababuka.user_registration_requests rr ON rr.user_id = u.id
+       LEFT JOIN sababuka.organizations ro ON ro.id = rr.requested_organization_id
        WHERE u.archived_at IS NULL
          AND ($1::text IS NULL OR u.email::text ILIKE '%' || $1 || '%'
               OR u.full_name ILIKE '%' || $1 || '%' OR u.username::text ILIKE '%' || $1 || '%')
          AND ($2::uuid IS NULL OR po.id = $2)
          AND ($3::boolean OR po.id = ANY($4::uuid[]))
-       ORDER BY u.full_name, u.email
-       LIMIT $5 OFFSET $6`,
-      [query.search?.trim() || null, query.organizationId ?? null, isGlobal(auth), scope, query.pageSize, offset],
+         AND ($5::text IS NULL OR u.status = $5)
+       ORDER BY ${orderColumn} ${orderDirection} NULLS LAST, u.full_name, u.email
+       LIMIT $6 OFFSET $7`,
+      [query.search?.trim() || null, query.organizationId ?? null, isGlobal(auth), scope,
+       query.status ?? null, query.pageSize, offset],
     );
     return pageEnvelope(result.rows, query.page, query.pageSize);
   }
@@ -282,20 +347,42 @@ export class AdminService {
   async updateUser(auth: AuthContext, userId: string, input: UserUpdateInput, audit: AuditContext) {
     requireGlobal(auth);
     if (userId === auth.user.id && input.status && input.status !== "active") {
-      throw new ApiError(409, "CONFLICT", "Developer tidak dapat menonaktifkan akunnya sendiri.");
+      throw new ApiError(409, "CONFLICT", "Superadmin tidak dapat menonaktifkan akunnya sendiri.");
     }
     const client = await this.db.connect();
     try {
       await client.query("BEGIN");
       const before = await client.query<QueryResultRow & Record<string, unknown>>(
-        `SELECT id::text, username::text, full_name, status, mfa_required,
-                (password_hash IS NOT NULL) AS has_password
-         FROM sababuka.users WHERE id = $1 AND archived_at IS NULL FOR UPDATE`,
+        `SELECT u.id::text, u.email::text, u.username::text, u.full_name, u.status, u.mfa_required,
+                (u.password_hash IS NOT NULL) AS has_password, rr.status AS registration_status,
+                rr.contact_phone, rr.job_title, rr.employee_id
+         FROM sababuka.users u
+         LEFT JOIN sababuka.user_registration_requests rr ON rr.user_id = u.id
+         WHERE u.id = $1 AND u.archived_at IS NULL FOR UPDATE OF u`,
         [userId],
       );
       if (!before.rowCount) throw new ApiError(404, "NOT_FOUND", "Pengguna tidak ditemukan.");
+      if (input.status === "active" && before.rows[0]!.registration_status === "pending") {
+        throw new ApiError(409, "CONFLICT", "Pendaftaran mandiri harus disetujui melalui pemeriksaan pendaftaran, bukan diaktifkan langsung.");
+      }
       if (input.status === "active" && before.rows[0]!.has_password !== true) {
         throw new ApiError(409, "CONFLICT", "Pengguna harus menerima undangan dan membuat password sebelum diaktifkan.");
+      }
+      if (input.status && input.status !== "active") {
+        const activeSuperadmin = await client.query(
+          `SELECT 1 FROM sababuka.user_role_assignments ura
+           JOIN sababuka.roles r ON r.id = ura.role_id AND r.code = 'superadmin'
+           WHERE ura.user_id = $1 AND ura.ends_at IS NULL`, [userId],
+        );
+        if (activeSuperadmin.rowCount) {
+          const others = await client.query(
+            `SELECT 1 FROM sababuka.users u
+             JOIN sababuka.user_role_assignments ura ON ura.user_id = u.id AND ura.ends_at IS NULL
+             JOIN sababuka.roles r ON r.id = ura.role_id AND r.code = 'superadmin'
+             WHERE u.id <> $1 AND u.status = 'active' AND u.archived_at IS NULL LIMIT 1`, [userId],
+          );
+          if (!others.rowCount) throw new ApiError(409, "CONFLICT", "Superadmin aktif terakhir tidak dapat dinonaktifkan.");
+        }
       }
       if (input.mfa_required === true) {
         const verifiedMfa = await client.query(
@@ -310,24 +397,44 @@ export class AdminService {
       }
       const result = await client.query<QueryResultRow & Record<string, unknown>>(
         `UPDATE sababuka.users
-         SET username = CASE WHEN $2::boolean THEN $3::citext ELSE username END,
-             full_name = COALESCE($4, full_name),
-             status = COALESCE($5, status),
-             mfa_required = COALESCE($6, mfa_required),
-             archived_at = CASE WHEN $5 = 'archived' THEN now() ELSE archived_at END
+         SET email = CASE WHEN $2::boolean THEN $3::citext ELSE email END,
+             username = CASE WHEN $4::boolean THEN $5::citext ELSE username END,
+             full_name = COALESCE($6, full_name),
+             status = COALESCE($7, status),
+             mfa_required = COALESCE($8, mfa_required),
+             failed_login_count = CASE WHEN $7 = 'active' THEN 0 ELSE failed_login_count END,
+             locked_until = CASE WHEN $7 = 'active' THEN NULL ELSE locked_until END,
+             archived_at = CASE WHEN $7 = 'archived' THEN now() ELSE archived_at END
          WHERE id = $1
          RETURNING id::text, email::text, username::text, full_name, status,
                    mfa_required, last_login_at::text, created_at::text, updated_at::text`,
         [
           userId,
-          Object.hasOwn(input, "username"),
-          input.username?.trim() || null,
-          input.full_name?.trim() || null,
-          input.status ?? null,
-          input.mfa_required ?? null,
+          Object.hasOwn(input, "email"), input.email?.trim().toLowerCase() || null,
+          Object.hasOwn(input, "username"), input.username?.trim() || null,
+          input.full_name?.trim() || null, input.status ?? null, input.mfa_required ?? null,
         ],
       );
       const user = result.rows[0]!;
+      if (["contact_phone", "job_title", "employee_id"].some((field) => Object.hasOwn(input, field))) {
+        await client.query(
+          `UPDATE sababuka.user_registration_requests
+           SET contact_email = CASE WHEN $2::boolean THEN $3::citext ELSE contact_email END,
+               contact_phone = CASE WHEN $4::boolean THEN $5 ELSE contact_phone END,
+               job_title = CASE WHEN $6::boolean THEN $7 ELSE job_title END,
+               employee_id = CASE WHEN $8::boolean THEN $9 ELSE employee_id END
+           WHERE user_id = $1`,
+          [userId, Object.hasOwn(input, "email"), input.email?.trim().toLowerCase() || null,
+           Object.hasOwn(input, "contact_phone"), input.contact_phone?.trim() || "-",
+           Object.hasOwn(input, "job_title"), input.job_title?.trim() || "Belum dilengkapi",
+           Object.hasOwn(input, "employee_id"), input.employee_id?.trim() || null],
+        );
+      } else if (Object.hasOwn(input, "email")) {
+        await client.query(
+          `UPDATE sababuka.user_registration_requests SET contact_email = $2 WHERE user_id = $1`,
+          [userId, input.email!.trim().toLowerCase()],
+        );
+      }
       if (input.status && input.status !== "active") {
         await client.query(
           `UPDATE sababuka.auth_sessions
@@ -355,21 +462,110 @@ export class AdminService {
     }
   }
 
+  async rejectRegistration(auth: AuthContext, userId: string, notes: string, audit: AuditContext) {
+    requireGlobal(auth);
+    const client = await this.db.connect();
+    try {
+      await client.query("BEGIN");
+      const registration = await client.query<QueryResultRow & { status: string; full_name: string }>(
+        `SELECT rr.status, u.full_name
+         FROM sababuka.user_registration_requests rr
+         JOIN sababuka.users u ON u.id = rr.user_id
+         WHERE rr.user_id = $1 AND u.archived_at IS NULL
+         FOR UPDATE OF rr, u`, [userId],
+      );
+      if (!registration.rowCount) throw new ApiError(404, "NOT_FOUND", "Pendaftaran tidak ditemukan.");
+      if (registration.rows[0]!.status !== "pending") throw new ApiError(409, "CONFLICT", "Pendaftaran ini sudah pernah diputuskan.");
+      await client.query(
+        `UPDATE sababuka.user_registration_requests
+         SET status = 'rejected', reviewed_by = $2, reviewed_at = now(), review_notes = $3
+         WHERE user_id = $1`, [userId, auth.user.id, notes.trim()],
+      );
+      await client.query(
+        `UPDATE sababuka.users SET status = 'suspended', updated_at = now() WHERE id = $1`, [userId],
+      );
+      await client.query(
+        `UPDATE sababuka.organization_memberships SET ends_at = now(), is_primary = false
+         WHERE user_id = $1 AND ends_at IS NULL`, [userId],
+      );
+      await recordAudit(client, { ...audit, eventType: "user.registration_rejected", entityType: "user", entityId: userId,
+        beforeData: { status: "pending" }, afterData: { status: "rejected", account_status: "suspended", review_notes: notes.trim() } });
+      await client.query("COMMIT");
+      return { id: userId, status: "suspended", registration_status: "rejected" };
+    } catch (error) {
+      await client.query("ROLLBACK");
+      if (error instanceof ApiError) throw error;
+      translateDatabaseError(error);
+    } finally { client.release(); }
+  }
+
+  async archiveUser(auth: AuthContext, userId: string, audit: AuditContext) {
+    requireGlobal(auth);
+    if (userId === auth.user.id) throw new ApiError(409, "CONFLICT", "Superadmin tidak dapat menghapus akunnya sendiri.");
+    const client = await this.db.connect();
+    try {
+      await client.query("BEGIN");
+      const before = await client.query<QueryResultRow & Record<string, unknown>>(
+        `SELECT id::text, email::text, full_name, status FROM sababuka.users
+         WHERE id = $1 AND archived_at IS NULL FOR UPDATE`, [userId],
+      );
+      if (!before.rowCount) throw new ApiError(404, "NOT_FOUND", "Pengguna tidak ditemukan.");
+      const activeSuperadmin = await client.query(
+        `SELECT 1 FROM sababuka.user_role_assignments ura
+         JOIN sababuka.roles r ON r.id = ura.role_id AND r.code = 'superadmin'
+         WHERE ura.user_id = $1 AND ura.ends_at IS NULL`, [userId],
+      );
+      if (activeSuperadmin.rowCount) {
+        const others = await client.query(
+          `SELECT 1 FROM sababuka.users u
+           JOIN sababuka.user_role_assignments ura ON ura.user_id = u.id AND ura.ends_at IS NULL
+           JOIN sababuka.roles r ON r.id = ura.role_id AND r.code = 'superadmin'
+           WHERE u.id <> $1 AND u.status = 'active' AND u.archived_at IS NULL LIMIT 1`, [userId],
+        );
+        if (!others.rowCount) throw new ApiError(409, "CONFLICT", "Superadmin aktif terakhir tidak dapat dihapus.");
+      }
+      await client.query(`UPDATE sababuka.users SET status = 'archived', archived_at = now(), updated_at = now() WHERE id = $1`, [userId]);
+      await client.query(`UPDATE sababuka.auth_sessions SET revoked_at = now(), revoke_reason = 'account_archived' WHERE user_id = $1 AND revoked_at IS NULL`, [userId]);
+      await client.query(`UPDATE sababuka.user_invitations SET revoked_at = now() WHERE user_id = $1 AND accepted_at IS NULL AND revoked_at IS NULL`, [userId]);
+      await client.query(`UPDATE sababuka.organization_memberships SET ends_at = now(), is_primary = false WHERE user_id = $1 AND ends_at IS NULL`, [userId]);
+      await client.query(`UPDATE sababuka.user_role_assignments SET ends_at = now() WHERE user_id = $1 AND ends_at IS NULL`, [userId]);
+      await client.query(
+        `UPDATE sababuka.user_registration_requests
+         SET status = 'rejected', reviewed_by = $2, reviewed_at = now(),
+             review_notes = COALESCE(review_notes, 'Akun dihapus oleh superadmin.')
+         WHERE user_id = $1 AND status = 'pending'`, [userId, auth.user.id],
+      );
+      await recordAudit(client, { ...audit, eventType: "user.archived", entityType: "user", entityId: userId,
+        beforeData: before.rows[0]!, afterData: { status: "archived" } });
+      await client.query("COMMIT");
+      return { id: userId, status: "archived" };
+    } catch (error) {
+      await client.query("ROLLBACK");
+      if (error instanceof ApiError) throw error;
+      translateDatabaseError(error);
+    } finally { client.release(); }
+  }
+
   async approveRegistration(auth: AuthContext, userId: string, input: RoleAssignmentInput, audit: AuditContext) {
     requireGlobal(auth);
     const client = await this.db.connect();
     try {
       await client.query("BEGIN");
-      const user = await client.query<QueryResultRow & { status: string; has_password: boolean }>(
-        `SELECT status, (password_hash IS NOT NULL) AS has_password
-         FROM sababuka.users
-         WHERE id = $1 AND archived_at IS NULL
-         FOR UPDATE`,
+      const user = await client.query<QueryResultRow & { status: string; has_password: boolean; registration_status: string | null }>(
+        `SELECT u.status, (u.password_hash IS NOT NULL) AS has_password,
+                rr.status AS registration_status
+         FROM sababuka.users u
+         LEFT JOIN sababuka.user_registration_requests rr ON rr.user_id = u.id
+         WHERE u.id = $1 AND u.archived_at IS NULL
+         FOR UPDATE OF u`,
         [userId],
       );
       if (!user.rowCount) throw new ApiError(404, "NOT_FOUND", "Pengguna tidak ditemukan.");
       if (user.rows[0]!.status !== "invited" || !user.rows[0]!.has_password) {
         throw new ApiError(409, "CONFLICT", "Hanya pendaftaran mandiri yang masih menunggu verifikasi yang dapat disetujui.");
+      }
+      if (user.rows[0]!.registration_status && user.rows[0]!.registration_status !== "pending") {
+        throw new ApiError(409, "CONFLICT", "Pendaftaran ini sudah pernah diputuskan.");
       }
       const role = await client.query<{ code: string } & QueryResultRow>(
         "SELECT code FROM sababuka.roles WHERE id = $1 AND is_active = true",
@@ -377,6 +573,7 @@ export class AdminService {
       );
       if (!role.rows[0]) throw new ApiError(404, "NOT_FOUND", "Peran tidak ditemukan.");
       assertRoleScope(role.rows[0].code, input.scope_type, input.organization_id);
+      await assertOrganizationAccountLimit(client, userId, role.rows[0].code, input.organization_id);
 
       const assignment = await client.query<QueryResultRow & Record<string, unknown>>(
         `INSERT INTO sababuka.user_role_assignments
@@ -393,9 +590,36 @@ export class AdminService {
       );
       await client.query(
         `UPDATE sababuka.organization_memberships
-         SET membership_type = CASE WHEN $2 = 'opd' THEN 'operator' ELSE 'member' END
-         WHERE user_id = $1 AND ends_at IS NULL`,
-        [userId, role.rows[0].code],
+         SET ends_at = now(), is_primary = false
+         WHERE user_id = $1 AND ends_at IS NULL
+           AND ($2::uuid IS NULL OR organization_id <> $2)`,
+        [userId, input.organization_id ?? null],
+      );
+      if (input.organization_id) {
+        await client.query(
+          `INSERT INTO sababuka.organization_memberships
+             (user_id, organization_id, membership_type, is_primary)
+           VALUES ($1, $2, $3, true)
+           ON CONFLICT (user_id, organization_id) DO UPDATE
+           SET membership_type = EXCLUDED.membership_type,
+               is_primary = true, ends_at = NULL`,
+          [userId, input.organization_id, role.rows[0].code === "opd" ? "operator" : "member"],
+        );
+      } else {
+        await client.query(
+          `UPDATE sababuka.organization_memberships
+           SET membership_type = $2, is_primary = true
+           WHERE user_id = $1 AND ends_at IS NULL`,
+          [userId, role.rows[0].code === "opd" ? "operator" : "member"],
+        );
+      }
+      await client.query(
+        `UPDATE sababuka.user_registration_requests
+         SET status = 'approved', approved_organization_id = $2,
+             approved_role_id = $3, reviewed_by = $4, reviewed_at = now(),
+             review_notes = $5
+         WHERE user_id = $1 AND status = 'pending'`,
+        [userId, input.organization_id ?? null, input.role_id, auth.user.id, input.approval_notes?.trim() || null],
       );
       await recordAudit(client, {
         ...audit,
@@ -404,7 +628,20 @@ export class AdminService {
         entityId: userId,
         organizationId: input.organization_id ?? null,
         beforeData: { status: "invited" },
-        afterData: { status: "active", role_code: role.rows[0].code, assignment: assignment.rows[0]! },
+        afterData: {
+          status: "active",
+          role_code: role.rows[0].code,
+          approved_organization_id: input.organization_id ?? null,
+          approval_notes: input.approval_notes?.trim() || null,
+          assignment: assignment.rows[0]!,
+        },
+      });
+      await notifyUser(client, userId, {
+        type: "user.registration_approved",
+        title: "Pendaftaran akun disetujui",
+        message: "Akun Anda sudah aktif. Buka Beranda Tugas untuk melihat tanggung jawab sesuai peran dan OPD.",
+        entityType: "user",
+        entityId: userId,
       });
       await client.query("COMMIT");
       return { id: userId, status: "active", role_code: role.rows[0].code };
@@ -425,6 +662,7 @@ export class AdminService {
       const role = await client.query<{ code: string }>("SELECT code FROM sababuka.roles WHERE id = $1 AND is_active = true", [input.role_id]);
       if (!role.rows[0]) throw new ApiError(404, "NOT_FOUND", "Role tidak ditemukan.");
       assertRoleScope(role.rows[0].code, input.scope_type, input.organization_id);
+      await assertOrganizationAccountLimit(client, userId, role.rows[0].code, input.organization_id);
       const result = await client.query<QueryResultRow & Record<string, unknown>>(
         `INSERT INTO sababuka.user_role_assignments
            (user_id, role_id, organization_id, scope_type, ends_at, assigned_by)
@@ -463,7 +701,16 @@ export class AdminService {
 
   async listRoles() {
     const result = await this.db.query<QueryResultRow & Record<string, unknown>>(
-      `SELECT r.id::text, r.code, r.name, r.description, r.is_system, r.is_active,
+      `SELECT r.id::text, r.code,
+              CASE r.code
+                WHEN 'superadmin' THEN 'Pengelola Sistem'
+                WHEN 'bapperida' THEN 'Verifikator BAPPERIDA'
+                WHEN 'kominfo' THEN 'Walidata Diskominfosantik'
+                WHEN 'opd' THEN 'Admin/PIC OPD'
+                WHEN 'pimpinan' THEN 'Pimpinan'
+                ELSE r.name
+              END AS name,
+              r.description, r.is_system, r.is_active,
               COALESCE(array_agg(p.code ORDER BY p.code) FILTER (WHERE p.id IS NOT NULL), '{}') AS permissions
        FROM sababuka.roles r
        LEFT JOIN sababuka.role_permissions rp ON rp.role_id = r.id
@@ -482,7 +729,7 @@ export class AdminService {
     return { data: result.rows };
   }
 
-  async replaceRolePermissions(auth: AuthContext, roleId: string, permissionIds: string[], audit: AuditContext) {
+  async replaceRolePermissions(auth: AuthContext, roleId: string, permissionIds: string[], audit: AuditContext, reason?: string) {
     requireGlobal(auth);
     const client = await this.db.connect();
     try {
@@ -503,7 +750,7 @@ export class AdminService {
       if (role.rows[0]!.code === "superadmin") {
         const missing = PROTECTED_SUPERADMIN_PERMISSIONS.filter((code) => !codes.includes(code));
         if (missing.length) {
-          throw new ApiError(409, "CONFLICT", `Hak akses inti Developer wajib dipertahankan: ${missing.join(", ")}.`);
+          throw new ApiError(409, "CONFLICT", `Hak akses inti Superadmin wajib dipertahankan: ${missing.join(", ")}.`);
         }
       }
       const before = await client.query<QueryResultRow & { code: string }>(
@@ -526,7 +773,7 @@ export class AdminService {
         entityType: "role",
         entityId: roleId,
         beforeData: { permissions: before.rows.map((row) => row.code) },
-        afterData: { permissions: codes },
+        afterData: { permissions: codes, reason: reason ?? null },
       });
       await client.query("COMMIT");
       return { role_id: roleId, permissions: codes };
@@ -593,7 +840,7 @@ export class AdminService {
       if (role.rows[0]!.code === "superadmin") {
         const missing = PROTECTED_SUPERADMIN_MENUS.filter((code) => !codes.includes(code));
         if (missing.length) {
-          throw new ApiError(409, "CONFLICT", `Menu inti Developer wajib dipertahankan: ${missing.join(", ")}.`);
+          throw new ApiError(409, "CONFLICT", `Menu inti Superadmin wajib dipertahankan: ${missing.join(", ")}.`);
         }
       }
       const before = await client.query<QueryResultRow & { code: string }>(

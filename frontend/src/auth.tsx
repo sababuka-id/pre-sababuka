@@ -1,5 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
-import { api, ApiClientError, jsonBody, setCsrfToken } from "./api";
+import { api, ApiClientError, clearRolePreview, jsonBody, setCsrfToken, setRolePreview } from "./api";
 import type { CurrentUser, MenuItem } from "./types";
 
 interface LoginInput {
@@ -16,6 +16,8 @@ interface AuthState {
   login(input: LoginInput): Promise<void>;
   logout(): Promise<void>;
   refresh(): Promise<void>;
+  startPreview(role: "bapperida" | "kominfo" | "opd" | "pimpinan", organizationId?: string): Promise<void>;
+  stopPreview(): Promise<void>;
 }
 
 const AuthContext = createContext<AuthState | null>(null);
@@ -44,6 +46,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [refresh]);
 
   const login = useCallback(async (input: LoginInput) => {
+    clearRolePreview();
     const session = await api<{ user: CurrentUser; csrf_token: string }>("/auth/login", {
       method: "POST",
       body: jsonBody(input),
@@ -56,6 +59,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const logout = useCallback(async () => {
     try {
+      clearRolePreview();
       await api<void>("/auth/logout", { method: "POST", mutation: true });
     } finally {
       setCsrfToken(null);
@@ -64,7 +68,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
-  const value = useMemo(() => ({ user, menu, loading, login, logout, refresh }), [user, menu, loading, login, logout, refresh]);
+  const startPreview = useCallback(async (role: "bapperida" | "kominfo" | "opd" | "pimpinan", organizationId?: string) => {
+    setRolePreview(role, organizationId);
+    try { await refresh(); }
+    catch (error) { clearRolePreview(); await refresh(); throw error; }
+  }, [refresh]);
+
+  const stopPreview = useCallback(async () => { clearRolePreview(); await refresh(); }, [refresh]);
+
+  const value = useMemo(() => ({ user, menu, loading, login, logout, refresh, startPreview, stopPreview }), [user, menu, loading, login, logout, refresh, startPreview, stopPreview]);
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 

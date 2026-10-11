@@ -101,7 +101,7 @@ export class AuthService {
     if (user.status === "invited" && user.password_hash) {
       const passwordValid = await verifyPassword(user.password_hash, input.password);
       if (passwordValid) {
-        throw new ApiError(403, "ACCOUNT_PENDING", "Akun masih menunggu verifikasi Developer SABABUKA.");
+        throw new ApiError(403, "ACCOUNT_PENDING", "Akun masih menunggu persetujuan Superadmin SABABUKA.");
       }
       await this.recordLoginFailure(user, input, "invalid_password");
       return null;
@@ -267,6 +267,54 @@ export class AuthService {
     };
   }
 
+  async getPreviewAuthContext(auth: AuthContext, roleCode: string, organizationId?: string): Promise<AuthContext> {
+    if (this.config.nodeEnv !== "development") throw new ApiError(403, "PERMISSION_DENIED", "Pratinjau peran hanya tersedia pada lingkungan lokal.");
+    if (!auth.user.roles.some((role) => role.code === "superadmin" && role.scope_type === "global")) {
+      throw new ApiError(403, "PERMISSION_DENIED", "Pratinjau peran hanya tersedia untuk Developer.");
+    }
+    const allowed = new Set(["bapperida", "kominfo", "opd", "pimpinan"]);
+    if (!allowed.has(roleCode)) throw new ApiError(400, "VALIDATION_ERROR", "Peran pratinjau tidak valid.");
+    if (roleCode === "opd" && !organizationId) throw new ApiError(400, "VALIDATION_ERROR", "Pilih OPD yang akan ditinjau.");
+
+    const role = await this.db.query<{ id: string; code: string } & QueryResultRow>(
+      `SELECT id::text, code FROM sababuka.roles WHERE code = $1 AND is_active = true`, [roleCode],
+    );
+    if (!role.rows[0]) throw new ApiError(404, "NOT_FOUND", "Peran pratinjau belum tersedia.");
+    const scopeType: EffectiveRole["scope_type"] = roleCode === "opd" ? "organization" : roleCode === "pimpinan" ? "published" : "global";
+    const organizationCode = roleCode === "bapperida" ? "BAPPERIDA" : roleCode === "kominfo" ? "DISKOMINFOSANTIK" : roleCode === "pimpinan" ? "KAPUAS" : null;
+    const organization = await this.db.query<AuthOrganization & QueryResultRow>(
+      `SELECT id::text, code, name, short_name, organization_type, parent_id::text,
+              is_active, created_at::text, updated_at::text
+       FROM sababuka.organizations
+       WHERE archived_at IS NULL AND is_active = true
+         AND ($1::uuid IS NOT NULL AND id = $1::uuid OR $1::uuid IS NULL AND code = $2::varchar)
+       LIMIT 1`, [roleCode === "opd" ? organizationId : null, organizationCode],
+    );
+    if (!organization.rows[0]) throw new ApiError(404, "NOT_FOUND", roleCode === "opd" ? "OPD tidak ditemukan atau tidak aktif." : "Organisasi peran belum tersedia.");
+    if (roleCode === "opd" && organization.rows[0].organization_type !== "opd") throw new ApiError(400, "VALIDATION_ERROR", "Organisasi yang dipilih bukan OPD.");
+    const permissions = await this.db.query<PermissionRow>(
+      `SELECT DISTINCT p.code FROM sababuka.role_permissions rp
+       JOIN sababuka.permissions p ON p.id = rp.permission_id
+       WHERE rp.role_id = $1 ORDER BY p.code`, [role.rows[0].id],
+    );
+    const roleLabel = roleCode === "bapperida" ? "BAPPERIDA" : roleCode === "kominfo" ? "Walidata Diskominfosantik" : roleCode === "pimpinan" ? "Pimpinan" : `OPD ${organization.rows[0].short_name ?? organization.rows[0].name}`;
+    return {
+      sessionId: auth.sessionId,
+      csrfTokenHash: auth.csrfTokenHash,
+      user: {
+        id: auth.user.id,
+        email: auth.user.email,
+        full_name: `Pratinjau ${roleLabel}`,
+        mfa_required: false,
+        must_change_password: false,
+        roles: [{ code: roleCode, scope_type: scopeType, organization_id: roleCode === "opd" ? organization.rows[0].id : null }],
+        permissions: permissions.rows.map((row) => row.code),
+        organizations: [organization.rows[0]],
+        simulation: { active: true, role_code: roleCode as "bapperida" | "kominfo" | "opd" | "pimpinan", organization_id: roleCode === "opd" ? organization.rows[0].id : null, organization_name: organization.rows[0].name, original_full_name: auth.user.full_name, original_email: auth.user.email },
+      },
+    };
+  }
+
   async logout(
     auth: AuthContext,
     request: { requestId: string; ipAddress: string | null; userAgent: string | null },
@@ -347,6 +395,34 @@ export class AuthService {
       entries.sort((a, b) => a.display_order - b.display_order || a.label.localeCompare(b.label, "id"));
       for (const entry of entries) sortItems(entry.children);
     };
+    sortItems(roots);
+    return roots;
+  }
+
+  async getMenuForRoles(roleCodes: string[]): Promise<EffectiveMenuItem[]> {
+    const result = await this.db.query<MenuRow>(
+      `SELECT DISTINCT m.code, parent.code AS parent_code, m.label, m.icon,
+              m.route_name, COALESCE(rmi.display_order, m.display_order) AS display_order
+       FROM sababuka.roles r
+       JOIN sababuka.role_menu_items rmi ON rmi.role_id = r.id AND rmi.is_visible = true
+       JOIN sababuka.menu_items m ON m.id = rmi.menu_item_id AND m.is_active = true
+       LEFT JOIN sababuka.menu_items parent ON parent.id = m.parent_id
+       WHERE r.code = ANY($1::varchar[]) AND r.is_active = true
+         AND (m.required_permission IS NULL OR EXISTS (
+           SELECT 1 FROM sababuka.role_permissions rp
+           JOIN sababuka.permissions p ON p.id = rp.permission_id
+           WHERE rp.role_id = r.id AND p.code = m.required_permission
+         ))
+       ORDER BY display_order, m.label`, [roleCodes],
+    );
+    const items = new Map<string, EffectiveMenuItem>();
+    for (const row of result.rows) items.set(row.code, { code: row.code, label: row.label, icon: row.icon, route_name: row.route_name, display_order: row.display_order, children: [] });
+    const roots: EffectiveMenuItem[] = [];
+    for (const row of result.rows) {
+      const item = items.get(row.code)!; const parent = row.parent_code ? items.get(row.parent_code) : undefined;
+      if (parent) parent.children.push(item); else roots.push(item);
+    }
+    const sortItems = (entries: EffectiveMenuItem[]): void => { entries.sort((a, b) => a.display_order - b.display_order || a.label.localeCompare(b.label, "id")); for (const entry of entries) sortItems(entry.children); };
     sortItems(roots);
     return roots;
   }

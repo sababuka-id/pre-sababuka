@@ -20,7 +20,6 @@ if [[ ! -f "$env_file" ]]; then
   db_password=$(openssl rand -hex 24)
   mfa_key=$(openssl rand -base64 32 | tr -d '\n')
   connector_key=$(openssl rand -base64 32 | tr -d '\n')
-  demo_password=$(openssl rand -base64 24 | tr -d '\n' | tr '/+' 'AZ')
 
   sudo -u postgres psql -v ON_ERROR_STOP=1 -d postgres \
     -c "ALTER ROLE sababuka_app LOGIN PASSWORD '$db_password'" \
@@ -49,18 +48,6 @@ if [[ ! -f "$env_file" ]]; then
     'EVIDENCE_MAX_BYTES=10485760' \
     'BPS_DOMAIN_CODE=6203' > "$env_file"
 
-  install -m 600 /dev/null "$credential_file"
-  printf '%s\n' \
-    'Akun demo SABABUKA' \
-    'developer@sababuka.com' \
-    'bapperida@sababuka.com' \
-    'kominfo@sababuka.com' \
-    'opd.dkpp@sababuka.com' \
-    'opd.dinkes@sababuka.com' \
-    'pimpinan@sababuka.com' \
-    "PASSWORD=${demo_password}" > "$credential_file"
-else
-  demo_password=$(sed -n 's/^PASSWORD=//p' "$credential_file")
 fi
 
 set -a
@@ -71,21 +58,29 @@ set +a
 cd "$release/backend"
 pnpm db:migrate
 
-user_count=$(sudo -u postgres psql -d sababuka -Atc \
-  "SELECT count(*) FROM sababuka.users")
-if [[ "$user_count" == "0" ]]; then
-  NODE_ENV=development DEMO_PASSWORD="$demo_password" pnpm dev:seed-users
-  NODE_ENV=development pnpm dev:seed-official
+# Data contoh tidak pernah dimasukkan otomatis ke produksi. Seed hanya tersedia
+# untuk lingkungan demonstrasi yang secara eksplisit mengaktifkannya.
+if [[ "${ENABLE_DEMO_SEED:-false}" == "true" ]]; then
+  demo_password=${DEMO_PASSWORD:-$(openssl rand -base64 24 | tr -d '\n' | tr '/+' 'AZ')}
+  install -m 600 /dev/null "$credential_file"
+  printf '%s\n' \
+    'Akun demo SABABUKA' \
+    'developer@sababuka.com' \
+    'bapperida@sababuka.com' \
+    'kominfo@sababuka.com' \
+    'opd.dkpp@sababuka.com' \
+    'opd.dinkes@sababuka.com' \
+    'pimpinan@sababuka.com' \
+    "PASSWORD=${demo_password}" > "$credential_file"
+
+  user_count=$(sudo -u postgres psql -d sababuka -Atc \
+    "SELECT count(*) FROM sababuka.users")
+  if [[ "$user_count" == "0" ]]; then
+    NODE_ENV=development DEMO_PASSWORD="$demo_password" pnpm dev:seed-users
+    NODE_ENV=development pnpm dev:seed-official
+  fi
+  NODE_ENV=development DEMO_PASSWORD="$demo_password" pnpm dev:seed-pilot
 fi
-
-# Menjaga paket demo dan observasi sumber resmi tetap tersedia setelah reset
-# atau rilis ulang, tanpa mengubah status workflow yang sedang disimulasikan.
-NODE_ENV=development pnpm dev:seed-content
-
-# Akun Dinkes dipakai untuk simulasi end-to-end. Jika belum ada, dibuat dengan
-# password awal demo dan wajib menggantinya saat login pertama.
-cd "$release/backend"
-NODE_ENV=development DEMO_PASSWORD="$demo_password" pnpm dev:seed-pilot
 
 install -m 644 "$release/deploy/sababuka-api.service" "$service_file"
 ln -sfn "$release" /srv/sababuka/current

@@ -18,7 +18,7 @@ function Get-ContainerEnvValue([string[]]$Environment, [string]$Name) {
   return ([string]$entry).Substring($Name.Length + 1).Trim()
 }
 
-Write-Host "Menyiapkan demo SABABUKA..." -ForegroundColor Cyan
+Write-Host "Menyiapkan SABABUKA lokal..." -ForegroundColor Cyan
 
 $container = wsl -d Ubuntu -- docker inspect -f "{{.State.Status}}" sababuka-local-db 2>$null
 if ($LASTEXITCODE -ne 0) {
@@ -73,8 +73,6 @@ try {
     pnpm dev:seed-users
     if ($LASTEXITCODE -ne 0) { throw "Seed akun demo gagal." }
   }
-  pnpm dev:seed-content
-  if ($LASTEXITCODE -ne 0) { throw "Seed konten demo gagal." }
   pnpm dev:seed-official
   if ($LASTEXITCODE -ne 0) { throw "Seed data resmi gagal." }
   pnpm build
@@ -109,7 +107,7 @@ $health = Invoke-RestMethod -Uri "http://127.0.0.1:3001/api/v1/health" -Method G
 if ($health.status -ne "ok") { throw "Health check backend tidak mengembalikan status ok." }
 
 Write-Host ""
-Write-Host "Demo SABABUKA siap." -ForegroundColor Green
+Write-Host "SABABUKA lokal siap." -ForegroundColor Green
 Write-Host "Buka: http://127.0.0.1:5173/"
 $lanAddress = Get-NetIPConfiguration -ErrorAction SilentlyContinue |
   Where-Object { $_.IPv4DefaultGateway -and $_.NetAdapter.Status -eq "Up" } |
@@ -121,7 +119,7 @@ if ($lanAddress) {
 }
 Write-Host "Akun Developer/Superadmin: developer@sababuka.com"
 Write-Host "Akun BAPPERIDA: bapperida@sababuka.com"
-Write-Host "Akun Kominfo baca-saja: kominfo@sababuka.com"
+  Write-Host "Akun Walidata Diskominfosantik: kominfo@sababuka.com"
 Write-Host "Akun OPD DKPP: opd.dkpp@sababuka.com"
 Write-Host "Akun Pimpinan: pimpinan@sababuka.com"
 if ($ResetDemoUsers) {

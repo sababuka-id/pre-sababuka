@@ -24,6 +24,17 @@ Migration PostgreSQL/PostGIS untuk baseline MVP v1.
 | 010 | Periode pelaporan pada batch dan dataset sistem untuk input capaian manual OPD |
 | 011 | Metadata bukti dukung privat, checksum, relasi indikator, dan soft delete |
 | 012 | Menu dashboard operasional bagi role workflow data |
+| 013 | Provenance observasi dan sumber data |
+| 014 | Direktori 28 perangkat daerah/badan dan 17 kecamatan |
+| 015 | Baseline draf RPJMD: 8 fokus, 29 kategori, 69 indikator, pemilik, dan target |
+| 016 | Pembersihan placeholder target RPJMD yang tidak tersedia |
+| 017–029 | Workflow strategis, demo terisolasi, konektor, dan penguatan RBAC/audit |
+| 030 | Pemetaan Disbudparpora dan pemeriksaan kelengkapan kepemilikan seluruh indikator RPJMD |
+| 031 | Penegasan Diskominfosantik sebagai Walidata dan alur registrasi PIC OPD yang diverifikasi Developer |
+| 032 | Profil integrasi sumber data OPD dan jadwal sinkronisasi |
+| 033 | Pembersihan katalog dan artefak demo dari data operasional |
+| 034 | Navigasi pelaporan berbasis peran: Beranda Tugas, Pelaporan Realisasi, dan Verifikasi Pelaporan OPD |
+| 035 | Analisis keputusan, master geografi 17 kecamatan, serta menu Keuangan Daerah dan Layanan Publik |
 
 Semua migration menggunakan transaksi. Jangan mengubah file migration yang sudah diterapkan pada lingkungan bersama; buat migration baru.
 

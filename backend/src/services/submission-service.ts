@@ -13,6 +13,8 @@ export interface SubmissionQuery {
   organizationId?: string | undefined;
   periodId?: string | undefined;
   status?: string | undefined;
+  sortBy?: string | undefined;
+  sortOrder?: "asc" | "desc" | undefined;
 }
 
 interface SubmissionDetail extends Record<string, unknown> {
@@ -72,12 +74,25 @@ export class SubmissionService {
 
   async list(auth: AuthContext, query: SubmissionQuery) {
     const scope = organizationScope(auth);
+    const orderColumns: Record<string, string> = { updated_at: "b.updated_at", organization: "o.name", period: "p.starts_on", row_count: "b.row_count", status: "b.status" };
+    const orderColumn = orderColumns[query.sortBy ?? "updated_at"] ?? orderColumns.updated_at!;
+    const orderDirection = query.sortOrder === "asc" ? "ASC" : "DESC";
     const result = await this.db.query<CountedRow & Record<string, unknown>>(
       `SELECT b.id::text, b.dataset_version_id::text, b.organization_id::text,
               o.code AS organization_code, o.name AS organization_name,
-              b.reporting_period_id::text, p.code AS period_code, p.label AS period_label,
+              b.reporting_period_id::text, p.code AS period_code, p.label AS period_label,p.period_type,
               b.submission_method, b.status, b.row_count, b.submitted_at::text,
               b.approved_at::text, b.created_at::text, b.updated_at::text,
+              (SELECT count(DISTINCT iv.id)::int
+               FROM sababuka.indicator_versions iv
+               JOIN sababuka.indicators i ON i.id=iv.indicator_id
+               WHERE iv.status='active' AND iv.effective_from<=p.ends_on
+                 AND (iv.effective_until IS NULL OR iv.effective_until>=p.starts_on)
+                 AND (iv.frequency=p.period_type OR (iv.frequency IN ('event','custom') AND p.period_type='custom'))
+                 AND (i.owner_organization_id=b.organization_id OR EXISTS (
+                   SELECT 1 FROM sababuka.indicator_organizations io
+                   WHERE io.indicator_version_id=iv.id AND io.organization_id=b.organization_id
+                     AND io.responsibility IN ('primary_producer','supporter')))) AS indicator_count,
               count(*) OVER()::text AS total_count
        FROM sababuka.data_batches b
        JOIN sababuka.organizations o ON o.id = b.organization_id
@@ -89,15 +104,53 @@ export class SubmissionService {
          AND ($3::uuid IS NULL OR b.organization_id = $3)
          AND ($4::uuid IS NULL OR b.reporting_period_id = $4)
          AND ($5::text IS NULL OR b.status = $5)
-       ORDER BY b.updated_at DESC, b.id DESC LIMIT $6 OFFSET $7`,
+       ORDER BY ${orderColumn} ${orderDirection} NULLS LAST, b.updated_at DESC, b.id DESC LIMIT $6 OFFSET $7`,
       [isGlobal(auth), scope, query.organizationId ?? null, query.periodId ?? null, query.status ?? null,
        query.pageSize, (query.page - 1) * query.pageSize],
     );
     return pageEnvelope(result.rows, query.page, query.pageSize);
   }
 
+  async availablePeriods(auth: AuthContext, organizationId: string) {
+    assertOrganizationScope(auth, organizationId);
+    const result = await this.db.query<QueryResultRow & Record<string, unknown>>(
+      `SELECT p.id::text,p.code,p.label,p.period_type,p.starts_on::text,p.ends_on::text,
+              count(DISTINCT iv.id)::int AS indicator_count,
+              b.id::text AS submission_id,b.status AS submission_status
+       FROM sababuka.periods p
+       JOIN sababuka.indicator_versions iv
+         ON iv.status='active' AND iv.effective_from<=p.ends_on
+        AND (iv.effective_until IS NULL OR iv.effective_until>=p.starts_on)
+        AND (iv.frequency=p.period_type OR (iv.frequency IN ('event','custom') AND p.period_type='custom'))
+       JOIN sababuka.indicators i ON i.id=iv.indicator_id AND i.is_active=true
+       LEFT JOIN sababuka.data_batches b
+         ON b.organization_id=$1 AND b.reporting_period_id=p.id
+        AND b.submission_method='manual' AND b.status<>'cancelled'
+       WHERE p.starts_on<=CURRENT_DATE
+         AND (i.owner_organization_id=$1 OR EXISTS (
+           SELECT 1 FROM sababuka.indicator_organizations io
+           WHERE io.indicator_version_id=iv.id AND io.organization_id=$1
+             AND io.responsibility IN ('primary_producer','supporter')))
+       GROUP BY p.id,b.id,b.status
+       ORDER BY p.ends_on DESC,p.period_type,p.label`, [organizationId]);
+    return { data: result.rows };
+  }
+
   async create(auth: AuthContext, input: { organization_id: string; period_id: string }, audit: AuditContext) {
     assertOrganizationScope(auth, input.organization_id);
+    const eligible = await this.db.query<{ indicator_count: number }>(
+      `SELECT count(DISTINCT iv.id)::int AS indicator_count
+       FROM sababuka.periods p
+       JOIN sababuka.indicator_versions iv
+         ON iv.status='active' AND iv.effective_from<=p.ends_on
+        AND (iv.effective_until IS NULL OR iv.effective_until>=p.starts_on)
+        AND (iv.frequency=p.period_type OR (iv.frequency IN ('event','custom') AND p.period_type='custom'))
+       JOIN sababuka.indicators i ON i.id=iv.indicator_id AND i.is_active=true
+       WHERE p.id=$2 AND (i.owner_organization_id=$1 OR EXISTS (
+         SELECT 1 FROM sababuka.indicator_organizations io
+         WHERE io.indicator_version_id=iv.id AND io.organization_id=$1
+           AND io.responsibility IN ('primary_producer','supporter')))`, [input.organization_id,input.period_id]);
+    if (!eligible.rows[0]?.indicator_count) throw new ApiError(400,"VALIDATION_ERROR","Tidak ada indikator aktif dengan frekuensi yang sesuai untuk OPD dan periode ini.");
     try {
       const result = await this.db.query<QueryResultRow & Record<string, unknown>>(
         `INSERT INTO sababuka.data_batches
@@ -128,7 +181,7 @@ export class SubmissionService {
     const batchResult = await this.db.query<QueryResultRow & Record<string, unknown>>(
       `SELECT b.id::text, b.dataset_version_id::text, b.organization_id::text,
               o.code AS organization_code, o.name AS organization_name,
-              b.reporting_period_id::text, p.code AS period_code, p.label AS period_label,
+              b.reporting_period_id::text, p.code AS period_code, p.label AS period_label,p.period_type,
               b.submission_method, b.status, b.row_count, b.submitted_at::text,
               b.approved_at::text, b.created_at::text, b.updated_at::text,
               (SELECT wa.notes FROM sababuka.workflow_actions wa
@@ -144,7 +197,7 @@ export class SubmissionService {
     assertOrganizationScope(auth, batch.organization_id as string);
     const observations = await this.db.query<QueryResultRow & Record<string, unknown>>(
       `SELECT iv.id::text AS indicator_version_id, i.code AS indicator_code, i.name AS indicator_name,
-              iv.data_type, u.name AS unit_name, u.symbol AS unit_symbol,
+              iv.data_type,iv.frequency,u.name AS unit_name,u.symbol AS unit_symbol,
               t.numeric_value AS target_numeric_value, t.text_value AS target_text_value,
               obs.id::text AS observation_id, obs.numeric_value, obs.text_value, obs.notes,
               obs.quality_status, obs.created_at::text
@@ -152,17 +205,21 @@ export class SubmissionService {
        JOIN sababuka.indicators i ON i.id = iv.indicator_id
        JOIN sababuka.units u ON u.id = iv.unit_id
        JOIN sababuka.data_batches b ON b.id = $1
+       JOIN sababuka.periods p ON p.id=b.reporting_period_id
        LEFT JOIN sababuka.targets t ON t.indicator_version_id = iv.id
          AND t.period_id = b.reporting_period_id AND t.geography_id IS NULL
          AND t.dimension_values = '{}'::jsonb
        LEFT JOIN sababuka.observations obs ON obs.batch_id = b.id
          AND obs.indicator_version_id = iv.id AND obs.period_id = b.reporting_period_id
          AND obs.geography_id IS NULL AND obs.dimension_values = '{}'::jsonb
-       WHERE iv.status = 'active'
-         AND (i.owner_organization_id = b.organization_id OR EXISTS (
-           SELECT 1 FROM sababuka.indicator_organizations io
-           WHERE io.indicator_version_id = iv.id AND io.organization_id = b.organization_id
-             AND io.responsibility IN ('primary_producer', 'supporter')))
+       WHERE obs.id IS NOT NULL
+          OR (iv.status = 'active' AND i.is_active=true
+              AND (iv.frequency=p.period_type OR (iv.frequency IN ('event','custom') AND p.period_type='custom'))
+              AND iv.effective_from<=p.ends_on AND (iv.effective_until IS NULL OR iv.effective_until>=p.starts_on)
+              AND (i.owner_organization_id = b.organization_id OR EXISTS (
+                SELECT 1 FROM sababuka.indicator_organizations io
+                WHERE io.indicator_version_id = iv.id AND io.organization_id = b.organization_id
+                  AND io.responsibility IN ('primary_producer', 'supporter'))))
        ORDER BY i.name`, [id],
     );
     return { ...batch, observations: observations.rows } as SubmissionDetail;
@@ -297,7 +354,9 @@ export class SubmissionService {
     const transition = transitions[action];
     if (!transition.from.includes(from)) throw new ApiError(409, "CONFLICT", `Aksi ${action} tidak berlaku dari status ${from}.`);
     if (action === "return" && !notes?.trim()) throw new ApiError(400, "VALIDATION_ERROR", "Catatan koreksi wajib diisi saat mengembalikan data.");
-    if (action === "submit" && Number(detail.row_count) < 1) throw new ApiError(409, "CONFLICT", "Isi minimal satu capaian sebelum dikirim.");
+    if (action === "submit" && Number(detail.row_count) < detail.observations.length) {
+      throw new ApiError(409, "CONFLICT", `Lengkapi seluruh ${detail.observations.length} indikator periode ini sebelum dikirim.`);
+    }
     const timestampSql = action === "submit" ? ", submitted_by = $4, submitted_at = now()"
       : action === "approve" ? ", approved_by = $4, approved_at = now()" : "";
     await this.db.query(

@@ -42,12 +42,16 @@ export async function authenticationRoutes(app: FastifyInstance): Promise<void> 
         body: {
           type: "object",
           additionalProperties: false,
-          required: ["email", "full_name", "organization_id", "password"],
+          required: ["email", "full_name", "organization_id", "contact_phone", "job_title", "password"],
           properties: {
             email: { type: "string", format: "email", maxLength: 255 },
             username: { type: ["string", "null"], minLength: 3, maxLength: 120, pattern: "^[A-Za-z0-9._-]+$" },
             full_name: { type: "string", minLength: 2, maxLength: 255 },
             organization_id: { type: "string", format: "uuid" },
+            contact_phone: { type: "string", minLength: 8, maxLength: 50, pattern: "^[0-9+(). -]+$" },
+            job_title: { type: "string", minLength: 2, maxLength: 160 },
+            employee_id: { type: ["string", "null"], minLength: 3, maxLength: 80 },
+            request_note: { type: ["string", "null"], maxLength: 1000 },
             password: { type: "string", minLength: 12, maxLength: 256 },
           },
         },

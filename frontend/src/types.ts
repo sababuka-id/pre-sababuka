@@ -14,6 +14,8 @@ export interface Organization {
   is_active: boolean;
   created_at: string;
   updated_at: string;
+  indicator_count?: number;
+  category_count?: number;
 }
 
 export interface CurrentUser {
@@ -25,6 +27,14 @@ export interface CurrentUser {
   roles: EffectiveRole[];
   permissions: string[];
   organizations: Organization[];
+  simulation?: {
+    active: true;
+    role_code: "bapperida" | "kominfo" | "opd" | "pimpinan";
+    organization_id: string | null;
+    organization_name: string | null;
+    original_full_name: string;
+    original_email: string;
+  };
 }
 
 export interface MenuItem {
@@ -59,6 +69,16 @@ export interface UserSummary {
   organization_id: string | null;
   organization_code: string | null;
   organization_name: string | null;
+  requested_organization_id: string | null;
+  requested_organization_code: string | null;
+  requested_organization_name: string | null;
+  contact_email: string | null;
+  contact_phone: string | null;
+  job_title: string | null;
+  employee_id: string | null;
+  request_note: string | null;
+  registration_status: "pending" | "approved" | "rejected" | null;
+  registration_created_at: string | null;
   last_login_at: string | null;
   created_at: string;
 }
@@ -180,6 +200,9 @@ export interface Indicator {
   category_id: string;
   category_code: string;
   category_name: string;
+  policy_focus_id: string | null;
+  policy_focus_code: string | null;
+  policy_focus_name: string | null;
   category_review_status: "draft" | "in_review" | "approved" | "rejected";
   owner_organization_id: string | null;
   owner_organization_name: string | null;
@@ -200,6 +223,18 @@ export interface Indicator {
   unit_symbol: string | null;
   organizations: IndicatorOrganization[];
   targets: IndicatorTarget[];
+  target_count: number;
+  has_definition: boolean;
+  has_owner: boolean;
+  has_unit: boolean;
+  has_source: boolean;
+  has_rpjmd_targets: boolean;
+  metadata_complete: boolean;
+}
+
+export interface BulkTransitionResult {
+  processed: Array<{ id: string; status: string }>;
+  skipped: Array<{ id: string; reason: string }>;
 }
 
 export interface SubmissionObservation {
@@ -216,6 +251,7 @@ export interface SubmissionObservation {
   text_value: string | null;
   notes: string | null;
   quality_status: string | null;
+  frequency: string;
 }
 
 export interface Submission {
@@ -227,9 +263,11 @@ export interface Submission {
   reporting_period_id: string;
   period_code: string;
   period_label: string;
+  period_type: string;
   submission_method: string;
   status: "draft" | "submitted" | "under_review" | "returned" | "approved";
   row_count: number;
+  indicator_count: number;
   submitted_at: string | null;
   approved_at: string | null;
   review_notes: string | null;
@@ -255,18 +293,22 @@ export interface SubmissionEvidence {
 
 export interface PublicationItem {
   id: string; observation_id: string; dataset_version_id: string; display_order: number;
-  indicator_code: string; indicator_name: string; period_label: string;
+  indicator_code: string; indicator_name: string; category_name: string; policy_focus_name: string | null; period_label: string;
   numeric_value: string | null; text_value: string | null; unit_name: string; unit_symbol: string | null; organization_name: string;
+  is_currently_eligible: boolean;
 }
 export interface Publication {
   id: string; publication_key: string; version_number: number; publication_number: string;
   title: string; description: string | null; status: "draft" | "active" | "replaced" | "withdrawn";
-  effective_at: string | null; change_notes: string | null; item_count: number; items: PublicationItem[];
+  effective_at: string | null; change_notes: string | null; item_count: number; eligible_item_count: number;
+  needs_reconciliation: boolean; items: PublicationItem[];
+  created_at: string; updated_at: string;
 }
 export interface PublicationCandidate {
   observation_id: string; dataset_version_id: string; indicator_code: string; indicator_name: string;
   period_id: string; period_label: string; numeric_value: string | null; text_value: string | null;
   unit_name: string; unit_symbol: string | null; organization_name: string; approved_at: string;
+  category_name: string; policy_focus_name: string | null;
 }
 
 export interface NotificationItem { id: string; notification_type: string; title: string; message: string; entity_type: string | null; entity_id: string | null; read_at: string | null; created_at: string }

@@ -30,11 +30,16 @@ export async function authenticateRequest(request: FastifyRequest): Promise<void
 
   const auth = await authService(request).getAuthContext(hashToken(sessionToken));
   if (!auth) throw new ApiError(401, "AUTH_REQUIRED", "Sesi tidak valid atau telah kedaluwarsa.");
-  request.auth = auth;
+  const previewRole = request.headers["x-sababuka-preview-role"];
+  const previewOrganization = request.headers["x-sababuka-preview-organization"];
+  request.auth = typeof previewRole === "string"
+    ? await authService(request).getPreviewAuthContext(auth, previewRole, typeof previewOrganization === "string" ? previewOrganization : undefined)
+    : auth;
 }
 
 export function requireCsrf(request: FastifyRequest): void {
   if (!request.auth) throw new ApiError(401, "AUTH_REQUIRED", "Sesi diperlukan.");
+  if (request.auth.user.simulation?.active) throw new ApiError(403, "PERMISSION_DENIED", "Mode pratinjau hanya untuk melihat. Kembali ke Developer untuk melakukan perubahan.");
   const token = request.headers["x-csrf-token"];
   if (typeof token !== "string" || !tokensMatch(token, request.auth.csrfTokenHash)) {
     throw new ApiError(403, "PERMISSION_DENIED", "Token CSRF tidak valid.");
@@ -51,6 +56,6 @@ export function requirePermission(request: FastifyRequest, permission: string): 
 export function requireSuperadmin(request: FastifyRequest): void {
   if (!request.auth) throw new ApiError(401, "AUTH_REQUIRED", "Sesi diperlukan.");
   if (!request.auth.user.roles.some((role) => role.code === "superadmin" && role.scope_type === "global")) {
-    throw new ApiError(403, "PERMISSION_DENIED", "Tindakan ini hanya tersedia untuk Developer SABABUKA.");
+    throw new ApiError(403, "PERMISSION_DENIED", "Tindakan ini hanya tersedia untuk Superadmin SABABUKA.");
   }
 }

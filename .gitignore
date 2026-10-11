@@ -6,6 +6,9 @@ tmp/
 .qa/
 .slide-build/
 .tmp/
+.build/
+.deploy/
+.tmp_sababuka/
 
 # Local secrets
 .env
@@ -29,3 +32,4 @@ __pycache__/
 .DS_Store
 Thumbs.db
 *.log
+*.inspect.ndjson

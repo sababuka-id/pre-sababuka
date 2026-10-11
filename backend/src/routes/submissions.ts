@@ -32,16 +32,26 @@ function evidencePath(request: FastifyRequest, storageKey: string): string {
 }
 
 export async function submissionRoutes(app: FastifyInstance): Promise<void> {
-  app.get<{ Querystring: { page?: number; page_size?: number; organization_id?: string; period_id?: string; status?: string } }>("/submissions", {
+  app.get<{ Querystring: { organization_id: string } }>("/submissions/available-periods", {
+    schema: { querystring: { type: "object", additionalProperties: false, required: ["organization_id"], properties: { organization_id: uuid } } },
+  }, async (request) => {
+    requirePermission(request,"submission.view");
+    return service(request).availablePeriods(request.auth!,request.query.organization_id);
+  });
+
+  app.get<{ Querystring: { page?: number; page_size?: number; organization_id?: string; period_id?: string; status?: string; sort_by?: string; sort_order?: "asc" | "desc" } }>("/submissions", {
     schema: { querystring: { type: "object", additionalProperties: false, properties: {
       page: { type: "integer", minimum: 1 }, page_size: { type: "integer", minimum: 1, maximum: 100 },
       organization_id: uuid, period_id: uuid,
       status: { type: "string", enum: ["draft", "submitted", "under_review", "returned", "approved"] },
+      sort_by: { type: "string", enum: ["updated_at", "organization", "period", "row_count", "status"] },
+      sort_order: { type: "string", enum: ["asc", "desc"] },
     } } },
   }, async (request) => {
     requirePermission(request, "submission.view");
     return service(request).list(request.auth!, { page: request.query.page ?? 1, pageSize: request.query.page_size ?? 25,
-      organizationId: request.query.organization_id, periodId: request.query.period_id, status: request.query.status });
+      organizationId: request.query.organization_id, periodId: request.query.period_id, status: request.query.status,
+      sortBy: request.query.sort_by, sortOrder: request.query.sort_order });
   });
 
   app.post<{ Body: { organization_id: string; period_id: string } }>("/submissions", {

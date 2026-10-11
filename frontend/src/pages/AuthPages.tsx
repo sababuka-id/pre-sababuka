@@ -7,7 +7,7 @@ import { navigate } from "../router";
 
 function AuthBrand() {
   return <aside className="auth-brand">
-    <div className="auth-brand-top"><div className="brand-symbol light">S</div><div><strong>SABABUKA</strong><span>BERSINAR</span></div></div>
+    <div className="auth-brand-top"><div className="brand-logo auth-logo"><img src="/logo-kapuas.png" alt="Lambang Kabupaten Kapuas" /></div><div><strong>SABABUKA</strong></div></div>
     <div className="auth-copy">
       <span className="eyebrow light">Sistem Analisis Big Data Kabupaten Kapuas</span>
       <h1>Satu ruang kendali untuk data daerah yang dapat dipercaya.</h1>
@@ -18,7 +18,7 @@ function AuthBrand() {
       <div><Sparkles /><span><strong>Data terkurasi</strong><small>Setiap angka memiliki sumber dan status validasi.</small></span></div>
       <div><Bot /><span><strong>Asisten untuk pimpinan</strong><small>Jawaban hanya dari data yang layak tayang.</small></span></div>
     </div>
-    <small className="auth-foot">Pemerintah Kabupaten Kapuas</small>
+    <small className="auth-foot">Pemerintah Kabupaten Kapuas<br /><strong>Dikembangkan oleh Tim IT UPR 2026</strong></small>
   </aside>;
 }
 
@@ -57,10 +57,20 @@ export function LoginPage() {
     }
   }
 
-  return <main className="auth-layout">
-    <AuthBrand />
-    <section className="auth-panel">
-      <form className="auth-card" onSubmit={submit}>
+  return <main className="login-page">
+    <div className="login-illustration" aria-hidden="true">
+      <span className="login-orbit login-orbit-one" />
+      <span className="login-orbit login-orbit-two" />
+      <span className="login-dot login-dot-one" />
+      <span className="login-dot login-dot-two" />
+      <span className="login-dot login-dot-three" />
+    </div>
+    <section className="login-panel">
+      <form className="auth-card login-card" onSubmit={submit}>
+        <div className="login-identity">
+          <div className="brand-logo login-logo"><img src="/logo-kapuas.png" alt="Lambang Kabupaten Kapuas" /></div>
+          <div><strong>SABABUKA</strong><small>Pemerintah Kabupaten Kapuas</small></div>
+        </div>
         <div className="auth-card-heading"><span className="eyebrow">Akses aman</span><h2>{mfaMode ? "Verifikasi dua langkah" : "Masuk ke SABABUKA"}</h2><p>{mfaMode ? "Masukkan kode dari aplikasi Authenticator Anda." : "Masuk menggunakan akun SABABUKA yang telah diverifikasi."}</p></div>
         {error && <Notice tone="error">{error}</Notice>}
         {!mfaMode ? <>
@@ -75,6 +85,7 @@ export function LoginPage() {
         <button className="button primary full" disabled={busy}>{busy ? <Spinner label="Memeriksa" /> : <>{mfaMode ? "Verifikasi" : "Masuk"}<ArrowRight size={17} /></>}</button>
         {!mfaMode && <button className="button secondary full" type="button" onClick={() => navigate("/register")}><UserRoundPlus size={17} />Daftar akun baru</button>}
         <div className="security-note"><ShieldCheck size={17} /><span>Session dilindungi cookie HttpOnly, CSRF, dan pencatatan audit.</span></div>
+        <small className="login-credit">Dikembangkan oleh Tim IT UPR 2026</small>
       </form>
     </section>
   </main>;
@@ -125,6 +136,10 @@ export function RegistrationPage() {
   const [email, setEmail] = useState("");
   const [username, setUsername] = useState("");
   const [organizationId, setOrganizationId] = useState("");
+  const [jobTitle, setJobTitle] = useState("");
+  const [employeeId, setEmployeeId] = useState("");
+  const [contactPhone, setContactPhone] = useState("");
+  const [requestNote, setRequestNote] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [busy, setBusy] = useState(true);
@@ -133,7 +148,7 @@ export function RegistrationPage() {
 
   useEffect(() => {
     api<{ data: RegistrationOrganization[] }>("/auth/registration-organizations")
-      .then((result) => { setOrganizations(result.data); setOrganizationId(result.data[0]?.id ?? ""); })
+      .then((result) => setOrganizations(result.data))
       .catch((reason: unknown) => setError(reason instanceof Error ? reason.message : "Daftar OPD gagal dimuat."))
       .finally(() => setBusy(false));
   }, []);
@@ -145,7 +160,9 @@ export function RegistrationPage() {
     try {
       await api("/auth/register", { method: "POST", body: jsonBody({
         email, username: username || null, full_name: fullName,
-        organization_id: organizationId, password,
+        organization_id: organizationId, contact_phone: contactPhone,
+        job_title: jobTitle, employee_id: employeeId || null,
+        request_note: requestNote || null, password,
       }) });
       setComplete(true);
     } catch (reason) {
@@ -159,18 +176,26 @@ export function RegistrationPage() {
       <div className="auth-card registration-card">
         {complete ? <>
           <div className="success-symbol"><Check /></div>
-          <div className="auth-card-heading centered"><span className="eyebrow">Pendaftaran terkirim</span><h2>Menunggu verifikasi</h2><p>Developer SABABUKA akan memeriksa OPD dan menetapkan peran Anda. Setelah disetujui, akun dapat langsung digunakan untuk masuk.</p></div>
+          <div className="auth-card-heading centered"><span className="eyebrow">Pendaftaran terkirim</span><h2>Menunggu persetujuan Pengelola Sistem</h2><p>OPD yang dipilih masih berupa pengajuan. Pengelola Sistem akan memeriksa identitas PIC lalu menetapkan OPD dan hak akses final.</p></div>
           <button className="button primary full" onClick={() => navigate("/login")}>Kembali ke halaman masuk</button>
         </> : <form className="form-stack" onSubmit={submit}>
-          <div className="auth-card-heading"><span className="eyebrow">Pendaftaran mandiri</span><h2>Buat akun SABABUKA</h2><p>Isi identitas sesuai OPD. Hak akses baru aktif setelah diverifikasi Developer SABABUKA.</p></div>
+          <div className="auth-card-heading"><span className="eyebrow">Pendaftaran perwakilan OPD</span><h2>Ajukan akun SABABUKA</h2><p>Isi identitas PIC resmi. Pendaftaran ini belum memberi akses sampai diperiksa dan disetujui Pengelola Sistem.</p></div>
           {error && <Notice tone="error">{error}</Notice>}
-          <label className="field"><span>Nama lengkap</span><input autoFocus value={fullName} onChange={(event) => setFullName(event.target.value)} autoComplete="name" required /></label>
-          <label className="field"><span>Email aktif</span><input type="email" value={email} onChange={(event) => setEmail(event.target.value)} autoComplete="email" placeholder="nama@kapuaskab.go.id" required /></label>
-          <label className="field"><span>Username opsional</span><input value={username} onChange={(event) => setUsername(event.target.value)} autoComplete="username" pattern="[A-Za-z0-9._-]+" minLength={3} /></label>
-          <label className="field"><span>Organisasi/OPD</span><select value={organizationId} onChange={(event) => setOrganizationId(event.target.value)} required><option value="">Pilih organisasi</option>{organizations.map((item) => <option key={item.id} value={item.id}>{item.code} - {item.short_name ?? item.name}</option>)}</select></label>
+          <fieldset className="registration-section"><legend>Identitas PIC</legend>
+            <label className="field"><span>Nama lengkap</span><input autoFocus value={fullName} onChange={(event) => setFullName(event.target.value)} autoComplete="name" required /></label>
+            <label className="field"><span>Jabatan dalam OPD</span><input value={jobTitle} onChange={(event) => setJobTitle(event.target.value)} placeholder="Contoh: Pranata Komputer Ahli Muda" required /></label>
+            <label className="field"><span>NIP/NIK pegawai <small>(opsional)</small></span><input value={employeeId} onChange={(event) => setEmployeeId(event.target.value)} inputMode="numeric" placeholder="Untuk membantu verifikasi identitas" /></label>
+          </fieldset>
+          <fieldset className="registration-section"><legend>Kontak dan perwakilan</legend>
+            <label className="field"><span>Email aktif/dinas</span><input type="email" value={email} onChange={(event) => setEmail(event.target.value)} autoComplete="email" placeholder="nama@kapuaskab.go.id" required /><small>Dipakai untuk login dan komunikasi status akun.</small></label>
+            <label className="field"><span>Nomor HP/WhatsApp aktif</span><input value={contactPhone} onChange={(event) => setContactPhone(event.target.value)} autoComplete="tel" inputMode="tel" pattern="[0-9+(). -]+" minLength={8} placeholder="08xx xxxx xxxx" required /></label>
+            <label className="field"><span>OPD yang diwakili</span><select value={organizationId} onChange={(event) => setOrganizationId(event.target.value)} required><option value="">Pilih OPD</option>{organizations.map((item) => <option key={item.id} value={item.id}>{item.short_name ?? item.name}</option>)}</select><small>Setiap OPD memiliki satu akun PIC. BAPPERIDA dan Diskominfosantik dapat memiliki dua akun untuk memisahkan fungsi internal dan verifikasi/walidata.</small></label>
+            <label className="field"><span>Keterangan tambahan <small>(opsional)</small></span><textarea rows={3} value={requestNote} onChange={(event) => setRequestNote(event.target.value)} placeholder="Contoh: ditunjuk sebagai operator data RPJMD melalui surat tugas." /></label>
+          </fieldset>
+          <label className="field"><span>Username <small>(opsional)</small></span><input value={username} onChange={(event) => setUsername(event.target.value)} autoComplete="username" pattern="[A-Za-z0-9._-]+" minLength={3} /></label>
           <label className="field"><span>Kata sandi</span><input type="password" value={password} onChange={(event) => setPassword(event.target.value)} autoComplete="new-password" minLength={12} required /><small>Minimal 12 karakter.</small></label>
           <label className="field"><span>Ulangi kata sandi</span><input type="password" value={confirmPassword} onChange={(event) => setConfirmPassword(event.target.value)} autoComplete="new-password" minLength={12} required /></label>
-          <Notice tone="success">Authenticator bersifat opsional untuk akun biasa dan dapat diaktifkan setelah akun disetujui.</Notice>
+          <Notice tone="success">Pengelola Sistem memverifikasi akun dan menetapkan OPD serta peran final. BAPPERIDA memeriksa substansi indikator/capaian, bukan identitas akun.</Notice>
           <button className="button primary full" disabled={busy || !organizationId}>{busy ? <Spinner label="Mendaftarkan" /> : <>Kirim pendaftaran <ArrowRight size={17} /></>}</button>
           <button className="text-button auth-back-link" type="button" onClick={() => navigate("/login")}>Sudah punya akun? Masuk</button>
         </form>}

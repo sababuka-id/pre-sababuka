@@ -7,13 +7,19 @@ import {
 
 const uuid = { type: "string", format: "uuid" } as const;
 const nullableUuid = { anyOf: [uuid, { type: "null" }] } as const;
-interface PageQueryInput { page?: number; page_size?: number; q?: string }
+const bulkBody = {
+  type: "object", additionalProperties: false, required: ["ids"],
+  properties: { ids: { type: "array", minItems: 1, maxItems: 100, uniqueItems: true, items: uuid } },
+} as const;
+interface PageQueryInput { page?: number; page_size?: number; q?: string; sort_by?: string; sort_order?: "asc" | "desc" }
 const pageProperties = {
   page: { type: "integer", minimum: 1, default: 1 },
   page_size: { type: "integer", minimum: 1, maximum: 100, default: 25 },
   q: { type: "string", maxLength: 200 },
+  sort_by: { type: "string", maxLength: 40 },
+  sort_order: { type: "string", enum: ["asc", "desc"] },
 } as const;
-const pageQuery = (query: PageQueryInput) => ({ page: query.page ?? 1, pageSize: query.page_size ?? 25, search: query.q });
+const pageQuery = (query: PageQueryInput) => ({ page: query.page ?? 1, pageSize: query.page_size ?? 25, search: query.q, sortBy: query.sort_by, sortOrder: query.sort_order });
 const service = (request: FastifyRequest) => new GovernanceService(request.server.db);
 const mutate = (request: FastifyRequest, permission: string) => { requireCsrf(request); requirePermission(request, permission); };
 
@@ -45,7 +51,7 @@ const indicatorBody = {
     category_id: uuid, owner_organization_id: nullableUuid,
     definition: { type: "string", minLength: 5, maxLength: 10000 },
     formula: { type: ["string", "null"], maxLength: 10000 }, unit_id: uuid,
-    frequency: { type: "string", enum: ["annual", "semester", "quarter", "monthly", "event", "custom"] },
+    frequency: { type: "string", enum: ["annual", "semester", "quarter", "monthly", "weekly", "event", "custom"] },
     data_type: { type: "string", enum: ["number", "integer", "percentage", "currency", "text", "boolean"] },
     direction: { type: ["string", "null"], enum: ["increase", "decrease", "maintain", null] },
     source_reference: { type: ["string", "null"], maxLength: 4000 },
@@ -88,13 +94,26 @@ export async function governanceRoutes(app: FastifyInstance): Promise<void> {
       return service(request).transitionCategory(request.auth!, request.params.category_id, request.params.action, requestAuditContext(request));
     },
   );
+  app.post<{ Params: { action: "submit" | "approve" | "reject" | "reopen" }; Body: { ids: string[] } }>(
+    "/categories/bulk-actions/:action",
+    { schema: {
+      params: { type: "object", additionalProperties: false, required: ["action"], properties: { action: { type: "string", enum: ["submit", "approve", "reject", "reopen"] } } },
+      body: bulkBody,
+    } },
+    async (request) => {
+      const permission = ["approve", "reject"].includes(request.params.action) ? "category.approve" : "category.submit";
+      mutate(request, permission);
+      return service(request).bulkTransitionCategories(request.auth!, request.body.ids, request.params.action, requestAuditContext(request));
+    },
+  );
   app.get("/units", async (request) => { requirePermission(request, "indicator.view"); return service(request).listUnits(); });
   app.get("/periods", async (request) => { requirePermission(request, "indicator.view"); return service(request).listPeriods(); });
-  app.get<{ Querystring: PageQueryInput & { category_id?: string; organization_id?: string; status?: string } }>("/indicators", {
-    schema: { querystring: { type: "object", additionalProperties: false, properties: { ...pageProperties, category_id: uuid, organization_id: uuid,
-      status: { type: "string", enum: ["draft", "in_review", "opd_verification", "approved", "active", "retired"] } } } },
+  app.get<{ Querystring: PageQueryInput & { policy_focus_id?: string; category_id?: string; organization_id?: string; status?: string; completeness?: string } }>("/indicators", {
+    schema: { querystring: { type: "object", additionalProperties: false, properties: { ...pageProperties, policy_focus_id: uuid, category_id: uuid, organization_id: uuid,
+      status: { type: "string", enum: ["draft", "in_review", "opd_verification", "approved", "active", "retired"] },
+      completeness: { type: "string", enum: ["complete", "incomplete"] } } } },
   }, async (request) => {
-    requirePermission(request, "indicator.view"); return service(request).listIndicators(request.auth!, { ...pageQuery(request.query), categoryId: request.query.category_id, organizationId: request.query.organization_id, status: request.query.status });
+    requirePermission(request, "indicator.view"); return service(request).listIndicators(request.auth!, { ...pageQuery(request.query), policyFocusId: request.query.policy_focus_id, categoryId: request.query.category_id, organizationId: request.query.organization_id, status: request.query.status, completeness: request.query.completeness });
   });
   app.post<{ Body: IndicatorInput }>("/indicators", { schema: { body: indicatorBody } }, async (request, reply) => {
     mutate(request, "indicator.manage"); return reply.code(201).send(await service(request).createIndicator(request.auth!, request.body, requestAuditContext(request)));
@@ -121,6 +140,20 @@ export async function governanceRoutes(app: FastifyInstance): Promise<void> {
           : request.params.action === "verify" ? "indicator.verify" : "indicator.activate";
       mutate(request, permission);
       return service(request).transitionIndicatorVersion(request.auth!, request.params.version_id, request.params.action, requestAuditContext(request));
+    },
+  );
+  app.post<{ Params: { action: "submit" | "approve" | "verify" | "activate" | "retire" }; Body: { ids: string[] } }>(
+    "/indicator-versions/bulk-actions/:action",
+    { schema: {
+      params: { type: "object", additionalProperties: false, required: ["action"], properties: { action: { type: "string", enum: ["submit", "approve", "verify", "activate", "retire"] } } },
+      body: bulkBody,
+    } },
+    async (request) => {
+      const permission = request.params.action === "submit" ? "indicator.submit"
+        : request.params.action === "approve" ? "indicator.approve"
+          : request.params.action === "verify" ? "indicator.verify" : "indicator.activate";
+      mutate(request, permission);
+      return service(request).bulkTransitionIndicatorVersions(request.auth!, request.body.ids, request.params.action, requestAuditContext(request));
     },
   );
 }

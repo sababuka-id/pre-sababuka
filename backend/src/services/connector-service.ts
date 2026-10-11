@@ -1,10 +1,13 @@
-import { createHash } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
+import ExcelJS from "exceljs";
 import type { Database, QueryResultRow } from "../database.js";
 import { ApiError } from "../errors.js";
 import type { AppConfig } from "../config.js";
 import { decryptSecret, encryptSecret, maskSecret } from "../security/secrets.js";
 import type { AuthContext } from "../types/auth.js";
 import { recordAudit, type AuditContext } from "./audit-service.js";
+import { inspectPublicWebsite } from "./website-scraper.js";
+import { notifyRole } from "./notification-service.js";
 
 interface SourceRow extends QueryResultRow { id: string; code: string; name: string; source_type: string; base_url: string | null; connection_config: Record<string, unknown>; credential_reference: string | null; last_checked_at: string | null }
 interface MappingRow extends QueryResultRow { id: string; indicator_version_id: string; indicator_code: string; indicator_name: string; source_id: string; source_code: string; source_type: string; external_dataset_id: string; external_resource_id: string | null; resource_url: string | null; geography_field: string | null; geography_code: string; year_field: string; value_field: string; unit_field: string | null; expected_unit: string | null; frequency: string; transform_json: Record<string, unknown>; source_priority: number; relation_type: string; status: string; dataset_version_id: string | null }
@@ -30,6 +33,9 @@ interface CandidateSummary {
   unmapped_count: number;
   ambiguous_count: number;
   candidates: Array<{ type: "category" | "indicator"; code: string; name: string; source_title: string; score: number; reason: string; status: "mapped" | "unmapped" | "ambiguous" }>;
+  annual_series_count?: number;
+  structured_series_count?: number;
+  series_candidates?: Array<{ title: string; dataset_name: string; years: number[]; formats: string[]; structured: boolean }>;
 }
 
 interface BpsSecretRow extends QueryResultRow { encrypted_secret: string; masked_hint: string | null; last_tested_at: string | null; last_test_status: string; last_test_error: string | null }
@@ -39,6 +45,7 @@ const YEARS = new Set([2025, 2026, 2027, 2028, 2029]);
 function hash(value: string): string { return createHash("sha256").update(value, "utf8").digest("hex"); }
 function asText(value: unknown): string { return value === null || value === undefined ? "" : String(value).trim(); }
 function asNumber(value: unknown): number | null {
+  if (value && typeof value === "object" && "result" in value) return asNumber((value as { result?: unknown }).result);
   if (typeof value === "number" && Number.isFinite(value)) return value;
   const raw = asText(value).replace(/\s+/gu, "").replace(/\.(?=\d{3}(?:\D|$))/gu, "").replace(",", ".");
   if (!raw) return null;
@@ -71,11 +78,36 @@ async function fetchText(url: string, options?: RequestInit): Promise<{ text: st
   return { text, checksum: hash(text) };
 }
 
+async function fetchBuffer(url: string, options?: RequestInit): Promise<{ buffer: Buffer; checksum: string }> {
+  const response = await fetch(url, { ...options, signal: AbortSignal.timeout(30_000) });
+  if (!response.ok) throw new ApiError(502, "SOURCE_UNAVAILABLE", `Sumber eksternal mengembalikan HTTP ${response.status}.`);
+  const buffer = Buffer.from(await response.arrayBuffer());
+  return { buffer, checksum: createHash("sha256").update(buffer).digest("hex") };
+}
+
 export interface MappingInput {
   indicator_version_id: string; source_code: string; external_dataset_id: string; external_resource_id?: string | null;
   resource_url?: string | null; geography_field?: string | null; geography_code?: string; year_field: string;
   value_field: string; unit_field?: string | null; expected_unit?: string | null; source_priority?: number;
   relation_type?: "primary" | "supporting" | "comparison"; effective_from?: string;
+  transform_json?: Record<string, unknown>;
+}
+
+export interface IntegrationProfileInput {
+  organization_id: string;
+  code: string;
+  name: string;
+  connector_kind: "api_json" | "ckan" | "bps" | "csv_url" | "file_upload" | "database_view" | "html_scrape" | "manual";
+  base_url?: string | null;
+  endpoint_path?: string | null;
+  auth_type: "none" | "api_key" | "bearer" | "basic" | "oauth2";
+  data_format: "json" | "csv" | "xlsx" | "html" | "database" | "manual";
+  data_path?: string | null;
+  sync_mode: "manual" | "scheduled";
+  sync_interval_minutes?: number | null;
+  verification_mode: "preview_required" | "auto_import";
+  notes?: string | null;
+  status?: "draft" | "active" | "paused";
 }
 
 export class ConnectorService {
@@ -92,6 +124,88 @@ export class ConnectorService {
       } catch (error) { return { ...source, status: "error", status_message: error instanceof Error ? error.message : "Koneksi gagal." }; }
     }));
     return { data: rows };
+  }
+
+  async listIntegrationProfiles() {
+    const result = await this.db.query<QueryResultRow & Record<string, unknown>>(
+      `SELECT p.id::text, p.data_source_id::text, s.code, s.name, s.source_type, s.base_url, s.connection_config,
+              s.owner_organization_id::text AS organization_id, o.name AS organization_name,
+              p.connector_kind, p.auth_type, p.data_format, p.endpoint_path, p.data_path,
+              p.sync_mode, p.sync_interval_minutes, p.sync_timezone, p.verification_mode,
+              p.status, p.last_sync_status, p.last_synced_at::text, p.next_sync_at::text,
+              p.notes, p.created_at::text, p.updated_at::text,
+              (SELECT count(*)::int FROM sababuka.indicator_source_mappings m
+               WHERE m.source_id = s.id AND m.status <> 'retired') AS mapping_count,
+              (SELECT count(*)::int FROM sababuka.connector_runs r
+               WHERE r.source_id = s.id) AS run_count
+       FROM sababuka.data_source_integrations p
+       JOIN sababuka.data_sources s ON s.id = p.data_source_id
+       LEFT JOIN sababuka.organizations o ON o.id = s.owner_organization_id
+       WHERE s.is_active = true
+       ORDER BY o.name NULLS LAST, s.name`,
+    );
+    return { data: result.rows };
+  }
+
+  async previewWebsiteIntegration(profileId: string, audit: AuditContext) {
+    const result = await this.db.query<QueryResultRow & {
+      source_id: string; organization_id: string | null; connector_kind: string; base_url: string | null;
+    }>(`SELECT p.data_source_id::text AS source_id, s.owner_organization_id::text AS organization_id,
+               p.connector_kind, s.base_url
+        FROM sababuka.data_source_integrations p
+        JOIN sababuka.data_sources s ON s.id=p.data_source_id
+        WHERE p.id=$1 AND s.is_active=true`, [profileId]);
+    const profile = result.rows[0];
+    if (!profile) throw new ApiError(404, "NOT_FOUND", "Profil integrasi tidak ditemukan.");
+    if (profile.connector_kind !== "html_scrape") throw new ApiError(400, "CONNECTOR_NOT_READY", "Pemeriksaan browser hanya tersedia untuk sumber website/scraping.");
+    if (!profile.base_url) throw new ApiError(400, "VALIDATION_ERROR", "Alamat website belum diisi.");
+
+    const preview = await inspectPublicWebsite(profile.base_url);
+    const syncStatus = preview.status === "reachable" ? "success" : "failed";
+    await this.db.query(`UPDATE sababuka.data_source_integrations SET last_sync_status=$2,last_synced_at=now(),updated_at=now() WHERE id=$1`, [profileId, syncStatus]);
+    await this.db.query(`UPDATE sababuka.data_sources SET last_checked_at=now(),connection_config=connection_config || $2::jsonb,updated_at=now() WHERE id=$1`, [profile.source_id, JSON.stringify({ website_audit_status: preview.status, website_last_http_status: preview.http_status, website_last_checked_at: preview.checked_at })]);
+    await recordAudit(this.db, { ...audit, eventType: "connector.website_previewed", entityType: "data_source", entityId: profile.source_id, organizationId: profile.organization_id, afterData: { status: preview.status, http_status: preview.http_status, final_url: preview.final_url, years: preview.years, table_count: preview.table_count, document_count: preview.document_links.length } });
+    return preview;
+  }
+
+  async saveIntegrationProfile(auth: AuthContext, input: IntegrationProfileInput, audit: AuditContext, profileId?: string) {
+    if (input.sync_mode === "scheduled" && (!input.sync_interval_minutes || input.sync_interval_minutes < 60)) {
+      throw new ApiError(400, "VALIDATION_ERROR", "Interval sinkronisasi terjadwal minimal 60 menit.");
+    }
+    if (!["file_upload", "manual"].includes(input.connector_kind) && !input.base_url) {
+      throw new ApiError(400, "VALIDATION_ERROR", "Alamat sumber wajib diisi untuk jenis koneksi ini.");
+    }
+    const sourceType = ({ api_json: "api", ckan: "ckan", bps: "bps", csv_url: "file", file_upload: "file", database_view: "database_view", html_scrape: "other", manual: "manual" } as const)[input.connector_kind];
+    const client = await this.db.connect();
+    try {
+      await client.query("BEGIN");
+      let sourceId: string;
+      if (profileId) {
+        const current = await client.query<{ source_id: string }>(`SELECT data_source_id::text AS source_id FROM sababuka.data_source_integrations WHERE id=$1 FOR UPDATE`, [profileId]);
+        if (!current.rows[0]) throw new ApiError(404, "NOT_FOUND", "Profil integrasi tidak ditemukan.");
+        sourceId = current.rows[0].source_id;
+        await client.query(`UPDATE sababuka.data_sources SET code=$2,name=$3,source_type=$4,base_url=$5,owner_organization_id=$6,connection_config=$7::jsonb,updated_at=now() WHERE id=$1`,
+          [sourceId, input.code, input.name, sourceType, input.base_url ?? null, input.organization_id, JSON.stringify({ connector_kind: input.connector_kind, endpoint_path: input.endpoint_path ?? null, data_path: input.data_path ?? null, data_format: input.data_format })]);
+        await client.query(`UPDATE sababuka.data_source_integrations SET connector_kind=$2,auth_type=$3,data_format=$4,endpoint_path=$5,data_path=$6,sync_mode=$7,sync_interval_minutes=$8,verification_mode=$9,status=$10,notes=$11,updated_by=$12,next_sync_at=CASE WHEN $7='scheduled' THEN now()+make_interval(mins=>$8) ELSE NULL END WHERE id=$1`,
+          [profileId, input.connector_kind, input.auth_type, input.data_format, input.endpoint_path ?? null, input.data_path ?? null, input.sync_mode, input.sync_mode === "scheduled" ? input.sync_interval_minutes : null, input.verification_mode, input.status ?? "draft", input.notes ?? null, auth.user.id]);
+      } else {
+        const source = await client.query<{ id: string }>(`INSERT INTO sababuka.data_sources (code,name,source_type,base_url,owner_organization_id,connection_config,credential_reference,created_by) VALUES ($1,$2,$3,$4,$5,$6::jsonb,$7,$8) RETURNING id::text`,
+          [input.code, input.name, sourceType, input.base_url ?? null, input.organization_id, JSON.stringify({ connector_kind: input.connector_kind, endpoint_path: input.endpoint_path ?? null, data_path: input.data_path ?? null, data_format: input.data_format }), input.auth_type === "none" ? null : `${input.code}_CREDENTIAL`, auth.user.id]);
+        sourceId = source.rows[0]!.id;
+        await client.query(`INSERT INTO sababuka.data_source_integrations (data_source_id,connector_kind,auth_type,data_format,endpoint_path,data_path,sync_mode,sync_interval_minutes,verification_mode,status,notes,created_by,updated_by,next_sync_at) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$12,CASE WHEN $7='scheduled' THEN now()+make_interval(mins=>$8) ELSE NULL END)`,
+          [sourceId, input.connector_kind, input.auth_type, input.data_format, input.endpoint_path ?? null, input.data_path ?? null, input.sync_mode, input.sync_mode === "scheduled" ? input.sync_interval_minutes : null, input.verification_mode, input.status ?? "draft", input.notes ?? null, auth.user.id]);
+      }
+      await recordAudit(client, { ...audit, eventType: profileId ? "connector.integration_updated" : "connector.integration_created", entityType: "data_source", entityId: sourceId, organizationId: input.organization_id, afterData: { ...input, credentials: input.auth_type === "none" ? "not_required" : "managed_separately" } as unknown as JsonObject });
+      await client.query("COMMIT");
+      const saved = await this.db.query<QueryResultRow & Record<string, unknown>>(`SELECT p.id::text FROM sababuka.data_source_integrations p WHERE p.data_source_id=$1`, [sourceId]);
+      return { id: saved.rows[0]!.id, data_source_id: sourceId };
+    } catch (error) {
+      await client.query("ROLLBACK");
+      if (error instanceof ApiError) throw error;
+      if ((error as { code?: string }).code === "23505") throw new ApiError(409, "CONFLICT", "Kode sumber sudah digunakan.");
+      if ((error as { code?: string }).code === "23503") throw new ApiError(400, "VALIDATION_ERROR", "OPD pemilik sumber tidak valid.");
+      throw error;
+    } finally { client.release(); }
   }
 
   private async source(code: string): Promise<SourceRow> {
@@ -190,6 +304,11 @@ export class ConnectorService {
     await this.persistProfile(source, profile);
     if (sourceCode === "BPS_KAPUAS") await this.db.query(`UPDATE sababuka.connector_secrets SET last_tested_at=$2, last_test_status=$3, last_test_error=$4, updated_at=now() WHERE source_id=$1`, [source.id, profile.checked_at, profile.reachable ? "connected" : "failed", profile.error]);
     await recordAudit(this.db, { ...audit, eventType: "connector.connection_tested", entityType: "data_source", entityId: source.id, afterData: { reachable: profile.reachable, response_ms: profile.response_ms, candidate_summary: profile.candidate_summary }, metadata: { source_code: source.code } });
+    if (!profile.reachable) {
+      const notification = { type: "connector.connection_failed", title: "Sumber data tidak dapat dijangkau", message: `${source.name} gagal diperiksa. ${profile.error ?? "Periksa alamat, kredensial, dan kondisi layanan sumber."}`, entityType: "data_source", entityId: source.id };
+      await notifyRole(this.db, "kominfo", notification, audit.actorId ?? undefined);
+      await notifyRole(this.db, "superadmin", notification, audit.actorId ?? undefined);
+    }
     return profile;
   }
 
@@ -201,16 +320,40 @@ export class ConnectorService {
       if (!statusResponse.ok) throw new Error(`HTTP ${statusResponse.status}`);
       const status = await statusResponse.json() as { success?: boolean; result?: JsonObject };
       if (!status.success) throw new Error("status invalid");
-      const catalogResponse = await fetch(`${base}/api/3/action/package_search?rows=50`, { signal: AbortSignal.timeout(20_000) });
+      const pageSize = 1000;
+      const catalogResponse = await fetch(`${base}/api/3/action/package_search?rows=${pageSize}&start=0`, { signal: AbortSignal.timeout(20_000) });
       if (!catalogResponse.ok) throw new Error(`HTTP ${catalogResponse.status}`);
       const catalog = await catalogResponse.json() as { success?: boolean; result?: { count?: number; results?: JsonObject[] } };
       if (!catalog.success || !catalog.result) throw new Error("catalog invalid");
-      const packages = catalog.result.results ?? [];
+      const firstPackages = catalog.result.results ?? [];
+      const datasetCount = catalog.result.count ?? firstPackages.length;
+      const starts = Array.from({ length: Math.max(0, Math.ceil(datasetCount / pageSize) - 1) }, (_, index) => (index + 1) * pageSize);
+      const remainingPages = await Promise.all(starts.map(async (start) => {
+        const response = await fetch(`${base}/api/3/action/package_search?rows=${pageSize}&start=${start}`, { signal: AbortSignal.timeout(20_000) });
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        const page = await response.json() as { success?: boolean; result?: { results?: JsonObject[] } };
+        if (!page.success) throw new Error("catalog page invalid");
+        return page.result?.results ?? [];
+      }));
+      const packages = [...firstPackages, ...remainingPages.flat()];
       const publishers = [...new Set(packages.map((item) => typeof item.organization === "object" && item.organization ? asText((item.organization as JsonObject).title ?? (item.organization as JsonObject).name) : "").filter(Boolean))].slice(0, 25);
       const years = [...new Set(packages.flatMap((item) => `${asText(item.title)} ${asText(item.notes)}`.match(/20\d{2}/gu) ?? []).map(Number).filter((year) => year >= 2000 && year <= 2100))].sort();
-      const resources = packages.flatMap((item) => Array.isArray(item.resources) ? item.resources : []).filter((item) => typeof item === "object" && item).filter((item) => ["csv", "json", "api"].includes(asText((item as JsonObject).format).toLowerCase()) || /\.(csv|json)(\?|$)/iu.test(asText((item as JsonObject).url)));
+      const structuredFormats = new Set(["csv", "json", "api", "xls", "xlsx", "xml", "ods", "geojson"]);
+      const resources = packages.flatMap((item) => Array.isArray(item.resources) ? item.resources : []).filter((item) => typeof item === "object" && item).filter((item) => structuredFormats.has(asText((item as JsonObject).format).toLowerCase()) || /\.(csv|json|xls|xlsx|xml|ods|geojson)(\?|$)/iu.test(asText((item as JsonObject).url)));
       const titles = packages.map((item) => asText(item.title)).filter(Boolean);
-      return { source_code: source.code, reachable: true, response_ms: Date.now() - started, platform: `CKAN ${asText(status.result?.version) || "catalog"}`, dataset_count: catalog.result.count ?? packages.length, resource_count: resources.length, publishers, years, checked_at: new Date().toISOString(), error: null, candidate_summary: await this.matchCandidates(titles, source.id) };
+      const seriesCandidates = packages.map((item) => {
+        const text = `${asText(item.title)} ${asText(item.notes)}`;
+        const foundYears = [...new Set((text.match(/20\d{2}/gu) ?? []).map(Number).filter((year) => year >= 2000 && year <= 2100))].sort();
+        const formats = [...new Set((Array.isArray(item.resources) ? item.resources : []).filter((resource) => typeof resource === "object" && resource).map((resource) => asText((resource as JsonObject).format).toUpperCase()).filter(Boolean))];
+        const hasRange = /20\d{2}\s*(?:-|–|—|s\/d|sampai)\s*20\d{2}/iu.test(text);
+        const structured = formats.some((format) => structuredFormats.has(format.toLowerCase()));
+        return { title: asText(item.title), dataset_name: asText(item.name), years: foundYears, formats, structured, hasRange };
+      }).filter((item) => item.hasRange || item.years.length >= 2);
+      const candidateSummary = await this.matchCandidates(titles, source.id);
+      candidateSummary.annual_series_count = seriesCandidates.length;
+      candidateSummary.structured_series_count = seriesCandidates.filter((item) => item.structured).length;
+      candidateSummary.series_candidates = seriesCandidates.slice(0, 10).map((item) => ({ title: item.title, dataset_name: item.dataset_name, years: item.years, formats: item.formats, structured: item.structured }));
+      return { source_code: source.code, reachable: true, response_ms: Date.now() - started, platform: `CKAN ${asText(status.result?.version) || "catalog"}`, dataset_count: datasetCount, resource_count: resources.length, publishers, years, checked_at: new Date().toISOString(), error: null, candidate_summary: candidateSummary };
     } catch (error) {
       return this.failedProfile(source.code, started, error);
     }
@@ -236,7 +379,7 @@ export class ConnectorService {
 
   private failedProfile(sourceCode: string, started: number, error: unknown): ConnectionProfile {
     const message = error instanceof Error && error.message.startsWith("API key") ? error.message : "Sumber tidak dapat dijangkau atau responsnya tidak valid.";
-    return { source_code: sourceCode, reachable: false, response_ms: Date.now() - started, platform: null, dataset_count: null, resource_count: null, publishers: [], years: [], checked_at: new Date().toISOString(), error: message, candidate_summary: { candidate_count: 0, mapped_count: 0, unmapped_count: 0, ambiguous_count: 0, candidates: [] } };
+    return { source_code: sourceCode, reachable: false, response_ms: Date.now() - started, platform: null, dataset_count: null, resource_count: null, publishers: [], years: [], checked_at: new Date().toISOString(), error: message, candidate_summary: { candidate_count: 0, mapped_count: 0, unmapped_count: 0, ambiguous_count: 0, candidates: [], annual_series_count: 0, structured_series_count: 0, series_candidates: [] } };
   }
 
   private async persistProfile(source: SourceRow, profile: ConnectionProfile): Promise<void> {
@@ -289,6 +432,7 @@ export class ConnectorService {
       [input.indicator_version_id, source.id, input.external_dataset_id, input.external_resource_id ?? null, input.resource_url ?? null,
        input.geography_field ?? null, input.geography_code ?? "6203", input.year_field, input.value_field, input.unit_field ?? null,
        input.expected_unit ?? null, input.source_priority ?? 100, input.relation_type ?? "primary", input.effective_from ?? "2025-01-01", auth.user.id]);
+    if (input.transform_json) await this.db.query(`UPDATE sababuka.indicator_source_mappings SET transform_json=$2::jsonb WHERE id=$1`, [result.rows[0]!.id, JSON.stringify(input.transform_json)]);
     await recordAudit(this.db, { ...audit, eventType: "connector.mapping_created", entityType: "indicator_source_mapping", entityId: result.rows[0]!.id as string, afterData: input as unknown as JsonObject, metadata: { source_code: input.source_code } });
     return this.getMapping(result.rows[0]!.id as string);
   }
@@ -324,10 +468,16 @@ export class ConnectorService {
       ? await this.resolveCkanResource(source, mapping)
       : source.source_type === "bps"
         ? await this.resolveBpsResource(source, mapping)
-        : (() => { throw new ApiError(409, "CONNECTOR_NOT_READY", "Jenis sumber belum didukung konektor."); })();
-    const response = await fetchText(resource.url);
-    const rows = resource.format.toLowerCase() === "json" ? this.parseJson(response.text) : resource.format.toLowerCase() === "csv" ? parseCsv(response.text) : (() => { throw new ApiError(400, "UNSUPPORTED_FORMAT", "Vertical slice hanya menerima CSV atau JSON terstruktur."); })();
-    const run = await this.db.query<QueryResultRow & Record<string, unknown>>(`INSERT INTO sababuka.connector_runs (mapping_id, source_id, status, dry_run, source_url, source_identifier, response_checksum, fetched_at, created_by) VALUES ($1,$2,'fetched',true,$3,$4,$5,now(),$6) RETURNING id::text`, [mapping.id, source.id, resource.public_url, resource.id, response.checksum, auth.user.id]);
+        : ["api", "file", "other"].includes(source.source_type)
+          ? this.resolveGenericResource(source, mapping)
+          : (() => { throw new ApiError(409, "CONNECTOR_NOT_READY", "Jenis sumber ini memakai unggah manual atau adaptor database khusus."); })();
+    const format = resource.format.toLowerCase();
+    const fetched = format === "xlsx" ? await fetchBuffer(resource.url) : await fetchText(resource.url);
+    const rows = format === "json" ? this.parseJson((fetched as { text: string }).text, asText(source.connection_config.data_path))
+      : format === "csv" ? parseCsv((fetched as { text: string }).text)
+        : format === "xlsx" ? await this.parseXlsx((fetched as { buffer: Buffer }).buffer, mapping.transform_json)
+          : (() => { throw new ApiError(400, "UNSUPPORTED_FORMAT", "Sinkronisasi otomatis menerima CSV, JSON, atau Excel XLSX terstruktur."); })();
+    const run = await this.db.query<QueryResultRow & Record<string, unknown>>(`INSERT INTO sababuka.connector_runs (mapping_id, source_id, status, dry_run, source_url, source_identifier, response_checksum, fetched_at, created_by) VALUES ($1,$2,'fetched',true,$3,$4,$5,now(),$6) RETURNING id::text`, [mapping.id, source.id, resource.public_url, resource.id, fetched.checksum, auth.user.id]);
     const runId = run.rows[0]!.id as string;
     let valid = 0; let invalid = 0;
     for (const raw of rows) {
@@ -340,27 +490,124 @@ export class ConnectorService {
       if (numberValue === null && !asText(rawValue)) errors.push("Nilai kosong atau bukan angka.");
       const unit = mapping.unit_field ? asText(raw[mapping.unit_field]) : null;
       if (mapping.expected_unit && unit && unit !== mapping.expected_unit) errors.push("Satuan tidak sesuai mapping.");
+      const qualityWarnings = Array.isArray(raw._quality_warnings) ? raw._quality_warnings.map(asText).filter(Boolean) : [];
       const rowChecksum = hash(JSON.stringify(raw)); const status = errors.length ? "invalid" : "valid";
-      await this.db.query(`INSERT INTO sababuka.connector_staging_values (run_id,mapping_id,year,geography_code,numeric_value,text_value,unit_value,raw_data,row_checksum,validation_status,validation_errors,source_url,source_retrieved_at) VALUES ($1,$2,$3,$4,$5,$6,$7,$8::jsonb,$9,$10,$11::jsonb,$12,now()) ON CONFLICT (run_id,year,geography_code,row_checksum) DO NOTHING`, [runId, mapping.id, year, geography, numberValue, numberValue === null ? asText(rawValue) : null, unit, JSON.stringify(raw), rowChecksum, status, JSON.stringify(errors), resource.public_url]);
+      await this.db.query(`INSERT INTO sababuka.connector_staging_values (run_id,mapping_id,year,geography_code,numeric_value,text_value,unit_value,raw_data,row_checksum,validation_status,validation_errors,source_url,source_retrieved_at) VALUES ($1,$2,$3,$4,$5,$6,$7,$8::jsonb,$9,$10,$11::jsonb,$12,now()) ON CONFLICT (run_id,year,geography_code,row_checksum) DO NOTHING`, [runId, mapping.id, year, geography, numberValue, numberValue === null ? asText(rawValue) : null, unit, JSON.stringify(raw), rowChecksum, status, JSON.stringify([...errors, ...qualityWarnings]), resource.public_url]);
       if (errors.length) invalid += 1; else valid += 1;
     }
     const status = valid ? "ready" : "failed";
-    await this.db.query(`UPDATE sababuka.connector_runs SET status=$2, preview_json=$3::jsonb, updated_at=now() WHERE id=$1`, [runId, status, JSON.stringify({ rows_seen: rows.length, valid_rows: valid, invalid_rows: invalid, years: [...new Set(rows.map((row) => Number.parseInt(asText(row[mapping.year_field]), 10)).filter((year) => YEARS.has(year)))].sort() })]);
-    await recordAudit(this.db, { ...audit, eventType: "connector.sync_staged", entityType: "connector_run", entityId: runId, afterData: { status, valid_rows: valid, invalid_rows: invalid }, metadata: { mapping_id: mapping.id, source_url: resource.public_url, checksum: response.checksum } });
+    const warnings = rows.flatMap((row) => Array.isArray(row._quality_warnings) ? row._quality_warnings.map(asText).filter(Boolean) : []);
+    await this.db.query(`UPDATE sababuka.connector_runs SET status=$2, preview_json=$3::jsonb, updated_at=now() WHERE id=$1`, [runId, status, JSON.stringify({ rows_seen: rows.length, valid_rows: valid, invalid_rows: invalid, warning_count: warnings.length, warnings, years: [...new Set(rows.map((row) => Number.parseInt(asText(row[mapping.year_field]), 10)).filter((year) => YEARS.has(year)))].sort() })]);
+    await recordAudit(this.db, { ...audit, eventType: "connector.sync_staged", entityType: "connector_run", entityId: runId, afterData: { status, valid_rows: valid, invalid_rows: invalid }, metadata: { mapping_id: mapping.id, source_url: resource.public_url, checksum: fetched.checksum } });
+    if (status === "failed" || invalid > 0) {
+      await notifyRole(this.db, "kominfo", {
+        type: status === "failed" ? "connector.sync_failed" : "connector.reconciliation_required",
+        title: status === "failed" ? "Sinkronisasi sumber gagal" : "Data perlu direkonsiliasi",
+        message: status === "failed" ? `${mapping.indicator_name}: tidak ada baris sumber yang lolos validasi.` : `${mapping.indicator_name}: ${invalid} baris perlu diperiksa sebelum data diimpor.`,
+        entityType: "connector_run",
+        entityId: runId,
+      }, auth.user.id);
+    }
     return this.getRun(runId);
   }
 
-  private parseJson(text: string): JsonObject[] {
+  private parseJson(text: string, dataPath?: string): JsonObject[] {
     const value = JSON.parse(text) as unknown;
-    if (Array.isArray(value)) return value.filter((item): item is JsonObject => Boolean(item && typeof item === "object"));
-    if (value && typeof value === "object" && Array.isArray((value as JsonObject).data)) return (value as JsonObject).data as JsonObject[];
+    let selected = value;
+    if (dataPath && value && typeof value === "object") {
+      selected = dataPath.split(".").filter(Boolean).reduce<unknown>((current, key) => current && typeof current === "object" ? (current as JsonObject)[key] : undefined, value);
+    }
+    if (Array.isArray(selected)) return selected.filter((item): item is JsonObject => Boolean(item && typeof item === "object"));
+    if (selected && typeof selected === "object" && Array.isArray((selected as JsonObject).data)) return (selected as JsonObject).data as JsonObject[];
     throw new ApiError(400, "SOURCE_INVALID", "JSON sumber harus berupa array baris atau objek dengan data[].");
+  }
+
+  private async parseXlsx(buffer: Buffer, transform: Record<string, unknown>): Promise<JsonObject[]> {
+    const workbook = new ExcelJS.Workbook();
+    await workbook.xlsx.load(buffer as unknown as ExcelJS.Buffer);
+    const sheetName = asText(transform.sheet_name);
+    const worksheet = sheetName ? workbook.getWorksheet(sheetName) : workbook.worksheets[0];
+    if (!worksheet) throw new ApiError(400, "SOURCE_INVALID", `Lembar Excel ${sheetName || "pertama"} tidak ditemukan.`);
+    if (transform.mode !== "ratio_percent_total_row") throw new ApiError(400, "SOURCE_INVALID", "Resource Excel memerlukan pola transformasi yang disetujui Walidata.");
+    const labelColumn = Number(transform.label_column ?? 2);
+    const totalLabel = asText(transform.total_label || "JUMLAH").toUpperCase();
+    const denominatorColumn = Number(transform.denominator_column);
+    const numeratorColumns = Array.isArray(transform.numerator_columns) ? transform.numerator_columns.map(Number) : [];
+    const staticYear = Number(transform.static_year);
+    if (!denominatorColumn || !numeratorColumns.length || !YEARS.has(staticYear)) throw new ApiError(400, "SOURCE_INVALID", "Konfigurasi agregasi Excel belum lengkap.");
+    let totalRow: ExcelJS.Row | undefined;
+    worksheet.eachRow((row) => { if (asText(row.getCell(labelColumn).value).toUpperCase() === totalLabel) totalRow = row; });
+    if (!totalRow) throw new ApiError(400, "SOURCE_INVALID", `Baris ${totalLabel} tidak ditemukan pada lembar ${worksheet.name}.`);
+    const denominator = asNumber(totalRow.getCell(denominatorColumn).value);
+    const numerators = numeratorColumns.map((column) => asNumber(totalRow!.getCell(column).value));
+    if (denominator === null || denominator <= 0 || numerators.some((value) => value === null)) throw new ApiError(400, "SOURCE_INVALID", "Nilai agregat Excel tidak lengkap atau penyebut tidak valid.");
+    const numerator = numerators.reduce<number>((sum, value) => sum + (value ?? 0), 0);
+    const warnings: string[] = [];
+    const checks = Array.isArray(transform.quality_checks) ? transform.quality_checks : [];
+    for (const checkValue of checks) {
+      const check = checkValue as Record<string, unknown>;
+      if (check.type !== "sum_equals") continue;
+      const total = asNumber(totalRow.getCell(Number(check.total_column)).value);
+      const parts = Array.isArray(check.component_columns) ? check.component_columns.map((column) => asNumber(totalRow!.getCell(Number(column)).value)) : [];
+      if (total === null || parts.some((value) => value === null)) continue;
+      const difference = parts.reduce<number>((sum, value) => sum + (value ?? 0), 0) - total;
+      if (Math.abs(difference) > Number(check.tolerance ?? 0)) warnings.push(asText(check.message) || `Total sumber berbeda ${difference} dari penjumlahan komponennya.`);
+    }
+    return [{ tahun: staticYear, nilai: Number(((numerator / denominator) * 100).toFixed(Number(transform.decimal_places ?? 2))), satuan: "%", _source_sheet: worksheet.name, _source_row: totalRow.number, _numerator: numerator, _denominator: denominator, _quality_warnings: warnings }];
+  }
+
+  private resolveGenericResource(source: SourceRow, mapping: MappingRow) {
+    const configuredPath = asText(source.connection_config.endpoint_path);
+    const raw = mapping.resource_url || (source.base_url && configuredPath ? new URL(configuredPath, source.base_url).toString() : source.base_url);
+    if (!raw) throw new ApiError(409, "CONNECTOR_NOT_READY", "Alamat endpoint atau resource belum dikonfigurasi.");
+    this.assertResourceUrlAllowed(source, raw);
+    const configuredFormat = asText(source.connection_config.data_format).toLowerCase();
+    const format = configuredFormat || (raw.toLowerCase().includes(".csv") ? "csv" : "json");
+    if (!["json", "csv"].includes(format)) throw new ApiError(409, "CONNECTOR_NOT_READY", "Format ini memerlukan unggah file atau adaptor khusus.");
+    return { id: mapping.external_resource_id ?? mapping.external_dataset_id, url: raw, public_url: raw, format };
+  }
+
+  async runDueSchedules(): Promise<{ profiles: number; succeeded: number; failed: number }> {
+    const due = await this.db.query<QueryResultRow & { id: string; source_id: string; actor_id: string; sync_interval_minutes: number; verification_mode: string }>(
+      `UPDATE sababuka.data_source_integrations p
+       SET last_sync_status='running',
+           next_sync_at=now()+make_interval(mins=>p.sync_interval_minutes), updated_at=now()
+       FROM sababuka.data_sources s
+       WHERE s.id=p.data_source_id AND s.is_active=true AND p.status='active'
+         AND p.sync_mode='scheduled' AND p.next_sync_at <= now()
+       RETURNING p.id::text, p.data_source_id::text AS source_id,
+                 COALESCE(p.updated_by,p.created_by,s.created_by)::text AS actor_id,
+                 p.sync_interval_minutes, p.verification_mode`,
+    );
+    let succeeded = 0; let failed = 0;
+    for (const profile of due.rows) {
+      try {
+        const mappings = await this.db.query<{ id: string }>(`SELECT id::text FROM sababuka.indicator_source_mappings WHERE source_id=$1 AND status='active' ORDER BY id`, [profile.source_id]);
+        if (!profile.actor_id) throw new Error("Akun pelaksana sinkronisasi tidak tersedia.");
+        const auth = { sessionId: "scheduler", csrfTokenHash: Buffer.alloc(0), user: { id: profile.actor_id, email: "scheduler@sababuka.local", full_name: "Penjadwal Integrasi SABABUKA", mfa_required: false, must_change_password: false, roles: [], permissions: [], organizations: [] } } satisfies AuthContext;
+        const audit: AuditContext = { actorId: profile.actor_id, requestId: `scheduler:${randomUUID()}`, ipAddress: null, userAgent: "SABABUKA integration scheduler" };
+        for (const mapping of mappings.rows) {
+          const run = await this.sync(auth, mapping.id, audit) as unknown as { id: string; status: string };
+          if (profile.verification_mode === "auto_import" && run.status === "ready") await this.importRun(auth, run.id, audit);
+        }
+        await this.db.query(`UPDATE sababuka.data_source_integrations SET last_sync_status='success',last_synced_at=now(),updated_at=now() WHERE id=$1`, [profile.id]);
+        succeeded += 1;
+      } catch {
+        await this.db.query(`UPDATE sababuka.data_source_integrations SET last_sync_status='failed',last_synced_at=now(),updated_at=now() WHERE id=$1`, [profile.id]);
+        await notifyRole(this.db, "kominfo", { type: "connector.schedule_failed", title: "Sinkronisasi terjadwal gagal", message: "Satu sumber data terjadwal gagal diproses. Buka Ruang Walidata untuk memeriksa koneksi dan mapping.", entityType: "data_source", entityId: profile.source_id });
+        await notifyRole(this.db, "superadmin", { type: "connector.schedule_failed", title: "Sinkronisasi terjadwal gagal", message: "Satu sumber data terjadwal gagal diproses dan memerlukan pemeriksaan Walidata.", entityType: "data_source", entityId: profile.source_id });
+        failed += 1;
+      }
+    }
+    return { profiles: due.rows.length, succeeded, failed };
   }
 
   private async resolveCkanResource(source: SourceRow, mapping: MappingRow) {
     if (mapping.resource_url) {
       this.assertResourceUrlAllowed(source, mapping.resource_url);
-      return { id: mapping.external_resource_id ?? mapping.external_dataset_id, url: mapping.resource_url, public_url: mapping.resource_url, format: mapping.resource_url.toLowerCase().includes(".json") ? "json" : "csv" };
+      const lowerUrl = mapping.resource_url.toLowerCase();
+      const format = lowerUrl.includes(".xlsx") ? "xlsx" : lowerUrl.includes(".json") ? "json" : "csv";
+      return { id: mapping.external_resource_id ?? mapping.external_dataset_id, url: mapping.resource_url, public_url: mapping.resource_url, format };
     }
     const url = `${source.base_url!.replace(/\/$/u, "")}/api/3/action/package_show?id=${encodeURIComponent(mapping.external_dataset_id)}`;
     const response = await fetch(url, { signal: AbortSignal.timeout(20_000) });
@@ -401,7 +648,7 @@ export class ConnectorService {
     const run = await this.db.query<QueryResultRow & Record<string, unknown>>(`SELECT r.id::text, r.status, r.mapping_id::text, r.source_url, r.response_checksum, m.dataset_version_id::text, m.indicator_version_id::text, m.source_id::text, m.external_dataset_id, m.external_resource_id, m.status AS mapping_status, s.name AS source_name, i.owner_organization_id::text AS organization_id FROM sababuka.connector_runs r JOIN sababuka.indicator_source_mappings m ON m.id=r.mapping_id JOIN sababuka.data_sources s ON s.id=m.source_id JOIN sababuka.indicator_versions iv ON iv.id=m.indicator_version_id JOIN sababuka.indicators i ON i.id=iv.indicator_id WHERE r.id=$1`, [runId]);
     const row = run.rows[0]; if (!row) throw new ApiError(404, "NOT_FOUND", "Riwayat sinkronisasi tidak ditemukan.");
     if (row.status !== "ready" || !["approved", "active"].includes(row.mapping_status as string)) throw new ApiError(409, "CONFLICT", "Preview belum siap diimpor atau mapping belum disetujui.");
-    const staging = await this.db.query<QueryResultRow & Record<string, unknown>>(`SELECT year, geography_code, numeric_value, text_value, unit_value, source_url, source_retrieved_at::text FROM sababuka.connector_staging_values WHERE run_id=$1 AND validation_status='valid' ORDER BY year`, [runId]);
+    const staging = await this.db.query<QueryResultRow & Record<string, unknown>>(`SELECT year, geography_code, numeric_value, text_value, unit_value, validation_errors, source_url, source_retrieved_at::text FROM sababuka.connector_staging_values WHERE run_id=$1 AND validation_status='valid' ORDER BY year`, [runId]);
     if (!staging.rows.length) throw new ApiError(409, "CONFLICT", "Tidak ada baris valid untuk diimpor.");
     const datasetVersionId = row.dataset_version_id as string ?? await this.ensureDatasetVersion(row, auth.user.id);
     if (!row.dataset_version_id) await this.db.query(`UPDATE sababuka.indicator_source_mappings SET dataset_version_id=$2, updated_at=now() WHERE id=$1`, [row.mapping_id, datasetVersionId]);
@@ -426,7 +673,10 @@ export class ConnectorService {
       }
       if (!firstBatch) firstBatch = batchId;
       const values = staging.rows.filter((item) => Number(item.year) === year);
-      for (const item of values) await this.db.query(`INSERT INTO sababuka.observations (batch_id,indicator_version_id,period_id,geography_id,numeric_value,text_value,quality_status,created_by,source_name,source_url,source_status,source_retrieved_at) VALUES ($1,$2,$3,$4,$5,$6,'valid',$7,$8,$9,'verified_direct',$10) ON CONFLICT (batch_id,indicator_version_id,period_id,geography_id,dimension_hash) DO NOTHING`, [batchId, row.indicator_version_id, period.rows[0].id, geographyIds.get(String(item.geography_code)), item.numeric_value ?? null, item.text_value ?? null, auth.user.id, row.source_name, item.source_url, item.source_retrieved_at]);
+      for (const item of values) {
+        const warnings = Array.isArray(item.validation_errors) ? item.validation_errors.map(asText).filter(Boolean) : [];
+        await this.db.query(`INSERT INTO sababuka.observations (batch_id,indicator_version_id,period_id,geography_id,numeric_value,text_value,quality_status,notes,created_by,source_name,source_url,source_status,source_retrieved_at) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,'verified_calculated',$12) ON CONFLICT (batch_id,indicator_version_id,period_id,geography_id,dimension_hash) DO NOTHING`, [batchId, row.indicator_version_id, period.rows[0].id, geographyIds.get(String(item.geography_code)), item.numeric_value ?? null, item.text_value ?? null, warnings.length ? "warning" : "valid", warnings.length ? `Perlu rekonsiliasi: ${warnings.join(" ")}` : null, auth.user.id, row.source_name, item.source_url, item.source_retrieved_at]);
+      }
       await this.db.query(`UPDATE sababuka.data_batches SET row_count=(SELECT count(*) FROM sababuka.observations WHERE batch_id=$1), updated_at=now() WHERE id=$1`, [batchId]);
     }
     await this.db.query(`UPDATE sababuka.connector_runs SET status='imported', dry_run=false, approved_by=$2, approved_at=now(), imported_batch_id=$3, updated_at=now() WHERE id=$1`, [runId, auth.user.id, firstBatch]);

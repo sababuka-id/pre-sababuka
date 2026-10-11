@@ -48,7 +48,7 @@ Backend API menjadi jalur data tunggal bagi seluruh kanal. Data mentah, data has
 - Asisten Data Pimpinan lokal sudah membaca publikasi aktif, memberikan sitasi, dan menolak jawaban jika data belum cukup.
 - Notifikasi workflow dan audit viewer sudah tersedia untuk memantau tindak lanjut OPD/Bapperida sesuai scope.
 - QA lintas-role dan dashboard operasional telah tersedia; kesiapan deployment development dinilai melalui dokumen audit sebelum VPS/domain disentuh.
-- Environment lokal memuat demonstrasi laporan antara: 5 kategori, 15 indikator, target 2025–2029, form contoh OPD, dan publikasi demo 2025 yang ditandai bukan realisasi resmi.
+- Environment lokal memakai katalog RPJMD sebagai master indikator; paket kategori dan indikator demo tidak ditanamkan saat startup.
 
 ## Peta dokumentasi
 

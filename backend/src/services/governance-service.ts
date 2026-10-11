@@ -10,6 +10,16 @@ export interface GovernancePageQuery {
   page: number;
   pageSize: number;
   search?: string | undefined;
+  sortBy?: string | undefined;
+  sortOrder?: "asc" | "desc" | undefined;
+}
+
+export type CategoryTransitionAction = "submit" | "approve" | "reject" | "reopen";
+export type IndicatorTransitionAction = "submit" | "approve" | "verify" | "activate" | "retire";
+
+export interface BulkTransitionResult {
+  processed: Array<{ id: string; status: string }>;
+  skipped: Array<{ id: string; reason: string }>;
 }
 
 export interface PolicyFocusInput {
@@ -49,7 +59,7 @@ export interface IndicatorInput {
   definition: string;
   formula?: string | null;
   unit_id: string;
-  frequency: "annual" | "semester" | "quarter" | "monthly" | "event" | "custom";
+  frequency: "annual" | "semester" | "quarter" | "monthly" | "weekly" | "event" | "custom";
   data_type: "number" | "integer" | "percentage" | "currency" | "text" | "boolean";
   direction?: "increase" | "decrease" | "maintain" | null;
   source_reference?: string | null;
@@ -138,11 +148,14 @@ export class GovernanceService {
   }
 
   async listCategories(query: GovernancePageQuery & { policyFocusId?: string | undefined }) {
+    const orderColumns: Record<string, string> = { hierarchy: "c.display_order", name: "c.name", focus: "pf.name", count: "indicator_count", status: "c.review_status", updated_at: "c.updated_at" };
+    const orderColumn = orderColumns[query.sortBy ?? "hierarchy"] ?? orderColumns.hierarchy!;
+    const orderDirection = query.sortOrder === "desc" ? "DESC" : "ASC";
     const result = await this.db.query<CountedRow & Record<string, unknown>>(
       `SELECT c.id::text, c.code, c.name, c.description, c.policy_focus_id::text,
               pf.name AS policy_focus_name, c.parent_id::text, c.display_order, c.is_active,
               c.review_status, c.submitted_by::text, c.submitted_at::text,
-              c.decided_by::text, c.decided_at::text, c.decision_notes,
+              c.decided_by::text, c.decided_at::text, c.decision_notes, c.updated_at::text,
               count(i.id)::int AS indicator_count, count(*) OVER()::text AS total_count
        FROM sababuka.categories c
        LEFT JOIN sababuka.policy_focuses pf ON pf.id = c.policy_focus_id
@@ -151,7 +164,7 @@ export class GovernanceService {
          AND ($1::text IS NULL OR c.code ILIKE '%' || $1 || '%' OR c.name ILIKE '%' || $1 || '%')
          AND ($2::uuid IS NULL OR c.policy_focus_id = $2)
        GROUP BY c.id, pf.name
-       ORDER BY c.display_order, c.code, c.name LIMIT $3 OFFSET $4`,
+       ORDER BY ${orderColumn} ${orderDirection} NULLS LAST, c.display_order, c.code, c.name LIMIT $3 OFFSET $4`,
       [query.search?.trim() || null, query.policyFocusId ?? null, query.pageSize, (query.page - 1) * query.pageSize],
     );
     return pageEnvelope(result.rows, query.page, query.pageSize);
@@ -178,7 +191,7 @@ export class GovernanceService {
   async transitionCategory(
     auth: AuthContext,
     categoryId: string,
-    action: "submit" | "approve" | "reject" | "reopen",
+    action: CategoryTransitionAction,
     audit: AuditContext,
   ) {
     requireGlobal(auth);
@@ -248,6 +261,25 @@ export class GovernanceService {
     } finally { client.release(); }
   }
 
+  async bulkTransitionCategories(
+    auth: AuthContext,
+    categoryIds: string[],
+    action: CategoryTransitionAction,
+    audit: AuditContext,
+  ): Promise<BulkTransitionResult> {
+    const result: BulkTransitionResult = { processed: [], skipped: [] };
+    for (const id of [...new Set(categoryIds)]) {
+      try {
+        const changed = await this.transitionCategory(auth, id, action, audit) as { review_status?: string };
+        result.processed.push({ id, status: changed.review_status ?? "" });
+      } catch (error) {
+        if (error instanceof ApiError) result.skipped.push({ id, reason: error.message });
+        else throw error;
+      }
+    }
+    return result;
+  }
+
   async listUnits() {
     const result = await this.db.query(`SELECT id::text, code, name, symbol, decimal_places FROM sababuka.units WHERE is_active = true ORDER BY name`);
     return { data: result.rows };
@@ -258,21 +290,35 @@ export class GovernanceService {
     return { data: result.rows };
   }
 
-  async listIndicators(auth: AuthContext, query: GovernancePageQuery & { categoryId?: string | undefined; organizationId?: string | undefined; status?: string | undefined }) {
+  async listIndicators(auth: AuthContext, query: GovernancePageQuery & { policyFocusId?: string | undefined; categoryId?: string | undefined; organizationId?: string | undefined; status?: string | undefined; completeness?: string | undefined }) {
     const scope = organizationScope(auth);
+    const orderColumns: Record<string, string> = { hierarchy: "pf.display_order", name: "i.name", focus: "pf.name", owner: "owner.name", metadata: "metadata_complete", targets: "target_count", status: "iv.status", updated_at: "i.updated_at" };
+    const orderColumn = orderColumns[query.sortBy ?? "hierarchy"] ?? orderColumns.hierarchy!;
+    const orderDirection = query.sortOrder === "desc" ? "DESC" : "ASC";
     const result = await this.db.query<CountedRow & Record<string, unknown>>(
       `SELECT i.id::text, i.code, i.name, i.category_id::text, c.code AS category_code, c.name AS category_name,
+              c.policy_focus_id::text, pf.code AS policy_focus_code, pf.name AS policy_focus_name,
               c.review_status AS category_review_status,
-              i.owner_organization_id::text, owner.name AS owner_organization_name, i.is_active,
+              i.owner_organization_id::text, owner.name AS owner_organization_name, i.is_active, i.updated_at::text,
               iv.id::text AS version_id, iv.version_number, iv.definition, iv.formula,
               iv.frequency, iv.data_type, iv.direction, iv.source_reference,
               iv.access_level, iv.effective_from::text, iv.status,
               u.id::text AS unit_id, u.name AS unit_name, u.symbol AS unit_symbol,
               COALESCE(orgs.items, '[]'::json) AS organizations,
               COALESCE(targets.items, '[]'::json) AS targets,
+              COALESCE(targets.target_count, 0)::int AS target_count,
+              (length(trim(iv.definition)) >= 5) AS has_definition,
+              (i.owner_organization_id IS NOT NULL) AS has_owner,
+              (iv.unit_id IS NOT NULL) AS has_unit,
+              (length(trim(COALESCE(iv.source_reference, ''))) > 0) AS has_source,
+              (COALESCE(targets.target_count, 0) >= 5) AS has_rpjmd_targets,
+              (length(trim(iv.definition)) >= 5 AND i.owner_organization_id IS NOT NULL
+                AND iv.unit_id IS NOT NULL AND length(trim(COALESCE(iv.source_reference, ''))) > 0
+                AND COALESCE(targets.target_count, 0) >= 5) AS metadata_complete,
               count(*) OVER()::text AS total_count
        FROM sababuka.indicators i
        JOIN sababuka.categories c ON c.id = i.category_id
+       LEFT JOIN sababuka.policy_focuses pf ON pf.id = c.policy_focus_id
        LEFT JOIN sababuka.organizations owner ON owner.id = i.owner_organization_id
        JOIN LATERAL (
          SELECT v.* FROM sababuka.indicator_versions v
@@ -288,20 +334,28 @@ export class GovernanceService {
        LEFT JOIN LATERAL (
          SELECT json_agg(json_build_object('id', t.id::text, 'period_id', p.id::text, 'period_code', p.code,
                   'period_label', p.label, 'numeric_value', t.numeric_value, 'text_value', t.text_value, 'notes', t.notes)
-                  ORDER BY p.starts_on) AS items
+                  ORDER BY p.starts_on) AS items, count(*)::int AS target_count
          FROM sababuka.targets t JOIN sababuka.periods p ON p.id = t.period_id
          WHERE t.indicator_version_id = iv.id AND t.geography_id IS NULL AND t.dimension_values = '{}'::jsonb
        ) targets ON true
        WHERE i.archived_at IS NULL
          AND ($1::text IS NULL OR i.code ILIKE '%' || $1 || '%' OR i.name ILIKE '%' || $1 || '%')
          AND ($2::uuid IS NULL OR i.category_id = $2)
-         AND ($3::uuid IS NULL OR i.owner_organization_id = $3 OR EXISTS (
-           SELECT 1 FROM sababuka.indicator_organizations x WHERE x.indicator_version_id = iv.id AND x.organization_id = $3))
-         AND ($4::text IS NULL OR iv.status = $4)
-         AND ($5::boolean OR i.owner_organization_id = ANY($6::uuid[]) OR EXISTS (
-           SELECT 1 FROM sababuka.indicator_organizations x WHERE x.indicator_version_id = iv.id AND x.organization_id = ANY($6::uuid[])))
-       ORDER BY c.display_order, c.code, i.name, i.code LIMIT $7 OFFSET $8`,
-      [query.search?.trim() || null, query.categoryId ?? null, query.organizationId ?? null, query.status ?? null,
+         AND ($3::uuid IS NULL OR c.policy_focus_id = $3)
+         AND ($4::uuid IS NULL OR i.owner_organization_id = $4 OR EXISTS (
+           SELECT 1 FROM sababuka.indicator_organizations x WHERE x.indicator_version_id = iv.id AND x.organization_id = $4))
+         AND ($5::text IS NULL OR iv.status = $5)
+         AND ($6::text IS NULL OR ($6 = 'complete' AND length(trim(iv.definition)) >= 5
+              AND i.owner_organization_id IS NOT NULL AND iv.unit_id IS NOT NULL
+              AND length(trim(COALESCE(iv.source_reference, ''))) > 0 AND COALESCE(targets.target_count, 0) >= 5)
+            OR ($6 = 'incomplete' AND NOT (length(trim(iv.definition)) >= 5
+              AND i.owner_organization_id IS NOT NULL AND iv.unit_id IS NOT NULL
+              AND length(trim(COALESCE(iv.source_reference, ''))) > 0 AND COALESCE(targets.target_count, 0) >= 5)))
+         AND ($7::boolean OR i.owner_organization_id = ANY($8::uuid[]) OR EXISTS (
+           SELECT 1 FROM sababuka.indicator_organizations x WHERE x.indicator_version_id = iv.id AND x.organization_id = ANY($8::uuid[])))
+       ORDER BY ${orderColumn} ${orderDirection} NULLS LAST, pf.display_order, c.display_order, c.code, i.name, i.code LIMIT $9 OFFSET $10`,
+      [query.search?.trim() || null, query.categoryId ?? null, query.policyFocusId ?? null,
+       query.organizationId ?? null, query.status ?? null, query.completeness ?? null,
        isGlobal(auth), scope, query.pageSize, (query.page - 1) * query.pageSize],
     );
     return pageEnvelope(result.rows, query.page, query.pageSize);
@@ -439,7 +493,7 @@ export class GovernanceService {
   async transitionIndicatorVersion(
     auth: AuthContext,
     versionId: string,
-    action: "submit" | "approve" | "verify" | "activate" | "retire",
+    action: IndicatorTransitionAction,
     audit: AuditContext,
   ) {
     const transitions = {
@@ -454,11 +508,16 @@ export class GovernanceService {
     try {
       await client.query("BEGIN");
       const current = await client.query<QueryResultRow & {
-        id: string; indicator_id: string; indicator_code: string; indicator_name: string; status: string; owner_organization_id: string | null; owner_organization_name: string | null; category_review_status: string; submitted_by: string | null; bapperida_reviewed_by: string | null;
+        id: string; indicator_id: string; indicator_code: string; indicator_name: string; status: string; owner_organization_id: string | null; owner_organization_name: string | null; category_review_status: string; submitted_by: string | null; bapperida_reviewed_by: string | null; metadata_complete: boolean;
       }>(
         `SELECT iv.id::text, iv.indicator_id::text, i.code AS indicator_code, i.name AS indicator_name, iv.status,
                 iv.submitted_by::text, iv.bapperida_reviewed_by::text,
-                i.owner_organization_id::text, owner.name AS owner_organization_name, c.review_status AS category_review_status
+                i.owner_organization_id::text, owner.name AS owner_organization_name, c.review_status AS category_review_status,
+                (length(trim(iv.definition)) >= 5 AND i.owner_organization_id IS NOT NULL
+                  AND iv.unit_id IS NOT NULL AND length(trim(COALESCE(iv.source_reference, ''))) > 0
+                  AND (SELECT count(*) FROM sababuka.targets t
+                       WHERE t.indicator_version_id = iv.id AND t.geography_id IS NULL
+                         AND t.dimension_values = '{}'::jsonb) >= 5) AS metadata_complete
          FROM sababuka.indicator_versions iv
          JOIN sababuka.indicators i ON i.id = iv.indicator_id
          LEFT JOIN sababuka.organizations owner ON owner.id = i.owner_organization_id
@@ -483,6 +542,9 @@ export class GovernanceService {
       }
       if (action === "submit" && currentVersion.category_review_status !== "approved") {
         throw new ApiError(409, "CONFLICT", "Kategori harus disetujui BAPPERIDA sebelum indikator diajukan.");
+      }
+      if (action === "submit" && !currentVersion.metadata_complete) {
+        throw new ApiError(409, "CONFLICT", "Lengkapi definisi, satuan, OPD, sumber data, dan target RPJMD 2025–2029 sebelum indikator diajukan.");
       }
       if (action === "approve" && !currentVersion.owner_organization_id) {
         throw new ApiError(409, "CONFLICT", "OPD pemilik harus ditetapkan sebelum indikator dikirim untuk verifikasi teknis.");
@@ -612,5 +674,24 @@ export class GovernanceService {
       if (error instanceof ApiError) throw error;
       translateDatabaseError(error);
     } finally { client.release(); }
+  }
+
+  async bulkTransitionIndicatorVersions(
+    auth: AuthContext,
+    versionIds: string[],
+    action: IndicatorTransitionAction,
+    audit: AuditContext,
+  ): Promise<BulkTransitionResult> {
+    const result: BulkTransitionResult = { processed: [], skipped: [] };
+    for (const id of [...new Set(versionIds)]) {
+      try {
+        const changed = await this.transitionIndicatorVersion(auth, id, action, audit) as { status?: string };
+        result.processed.push({ id, status: changed.status ?? "" });
+      } catch (error) {
+        if (error instanceof ApiError) result.skipped.push({ id, reason: error.message });
+        else throw error;
+      }
+    }
+    return result;
   }
 }

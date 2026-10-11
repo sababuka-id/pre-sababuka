@@ -18,10 +18,10 @@
     "db:migrate": "tsx src/scripts/migrate.ts",
     "admin:create": "tsx src/scripts/create-superadmin.ts",
     "dev:seed-users": "tsx src/scripts/seed-demo-users.ts",
+    "accounts:reset-foundation": "tsx src/scripts/reset-foundation-accounts.ts",
     "dev:seed-pilot": "tsx src/scripts/seed-pilot-account.ts",
-    "dev:seed-content": "tsx src/scripts/seed-demo-content.ts",
     "dev:seed-official": "tsx src/scripts/seed-official-pilot-data.ts",
-    "dev:seed-e2e": "tsx src/scripts/seed-demo-e2e.ts",
+    "dev:seed-opd-websites": "tsx src/scripts/seed-local-opd-websites.ts",
     "db:repair-orphans": "tsx src/scripts/repair-orphans.ts"
   },
   "dependencies": {
@@ -30,8 +30,10 @@
     "@fastify/multipart": "9.3.0",
     "@fastify/rate-limit": "^11.2.0",
     "argon2": "^0.45.1",
+    "exceljs": "^4.4.0",
     "fastify": "^5.12.5",
-    "pg": "^8.23.0"
+    "pg": "^8.23.0",
+    "playwright": "1.58.2"
   },
   "devDependencies": {
     "@types/node": "^26.6.3",

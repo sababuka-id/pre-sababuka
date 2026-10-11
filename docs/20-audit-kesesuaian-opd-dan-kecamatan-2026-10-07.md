@@ -103,3 +103,7 @@ Migrasi `014_official_organization_directory.sql` diterapkan pada 7 Oktober 2026
 - total tabel organisasi adalah 49 karena empat entitas teknis dan pilot tetap dipertahankan untuk menjaga relasi pengguna, indikator, dan struktur aplikasi.
 
 Kartu ringkasan administrasi menghitung 45 OPD dan kecamatan, sedangkan halaman master organisasi tetap menampilkan seluruh 49 entitas.
+
+## Tambahan organisasi dari Matrix RPJMD
+
+Migration `030_complete_rpjmd_organization_mapping.sql` menambahkan Disbudparpora sebagai entitas OPD berdasarkan penyebutan langsung pada Matrix RPJMD, di luar 45 entitas pada lampiran sumber audit ini. Disbudparpora menjadi pemilik utama tiga indikator budaya dan pariwisata yang sebelumnya belum memiliki relasi organisasi. Dengan tambahan tersebut, seluruh 69 indikator baseline RPJMD memiliki OPD utama. Nama dan kode resminya tetap ditandai menunggu konfirmasi BAPPERIDA/OPD karena tidak tercantum pada lampiran 28 perangkat daerah yang dipakai dalam pemeriksaan awal.

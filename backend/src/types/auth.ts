@@ -25,6 +25,14 @@ export interface CurrentUser {
   roles: EffectiveRole[];
   permissions: string[];
   organizations: AuthOrganization[];
+  simulation?: {
+    active: true;
+    role_code: "bapperida" | "kominfo" | "opd" | "pimpinan";
+    organization_id: string | null;
+    organization_name: string | null;
+    original_full_name: string;
+    original_email: string;
+  };
 }
 
 export interface AuthContext {

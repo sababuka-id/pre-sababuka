@@ -10,7 +10,13 @@ export async function notifyRole(db: Queryable, roleCode: string, notification: 
      FROM sababuka.user_role_assignments ura JOIN sababuka.roles r ON r.id = ura.role_id
      JOIN sababuka.users u ON u.id = ura.user_id AND u.status = 'active'
      WHERE r.code = $1::varchar AND ura.starts_at <= now() AND (ura.ends_at IS NULL OR ura.ends_at > now())
-       AND ($7::uuid IS NULL OR ura.user_id <> $7::uuid)`,
+       AND ($7::uuid IS NULL OR ura.user_id <> $7::uuid)
+       AND NOT EXISTS (
+         SELECT 1 FROM sababuka.notifications existing
+         WHERE existing.user_id = ura.user_id AND existing.notification_type = $2::varchar
+           AND existing.entity_type = $5::varchar AND existing.entity_id = $6::uuid
+           AND existing.read_at IS NULL
+       )`,
     [roleCode, notification.type, notification.title, notification.message, notification.entityType, notification.entityId, excludeUserId ?? null],
   );
 }
@@ -21,7 +27,13 @@ export async function notifyOrganization(db: Queryable, organizationId: string, 
      SELECT DISTINCT om.user_id, $2::varchar, $3::varchar, $4::text, $5::varchar, $6::uuid
      FROM sababuka.organization_memberships om JOIN sababuka.users u ON u.id = om.user_id AND u.status = 'active'
      WHERE om.organization_id = $1::uuid AND om.starts_at <= now() AND (om.ends_at IS NULL OR om.ends_at > now())
-       AND ($7::uuid IS NULL OR om.user_id <> $7::uuid)`,
+       AND ($7::uuid IS NULL OR om.user_id <> $7::uuid)
+       AND NOT EXISTS (
+         SELECT 1 FROM sababuka.notifications existing
+         WHERE existing.user_id = om.user_id AND existing.notification_type = $2::varchar
+           AND existing.entity_type = $5::varchar AND existing.entity_id = $6::uuid
+           AND existing.read_at IS NULL
+       )`,
     [organizationId, notification.type, notification.title, notification.message, notification.entityType, notification.entityId, excludeUserId ?? null],
   );
 }
@@ -31,7 +43,13 @@ export async function notifyUser(db: Queryable, userId: string, notification: { 
     `INSERT INTO sababuka.notifications (user_id, notification_type, title, message, entity_type, entity_id)
      SELECT id, $2::varchar, $3::varchar, $4::text, $5::varchar, $6::uuid
      FROM sababuka.users
-     WHERE id = $1::uuid AND status = 'active'`,
+     WHERE id = $1::uuid AND status = 'active'
+       AND NOT EXISTS (
+         SELECT 1 FROM sababuka.notifications existing
+         WHERE existing.user_id = $1::uuid AND existing.notification_type = $2::varchar
+           AND existing.entity_type = $5::varchar AND existing.entity_id = $6::uuid
+           AND existing.read_at IS NULL
+       )`,
     [userId, notification.type, notification.title, notification.message, notification.entityType, notification.entityId],
   );
 }

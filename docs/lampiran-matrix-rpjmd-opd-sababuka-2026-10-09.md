@@ -18,6 +18,14 @@ Setelah expose pendahuluan, tim melanjutkan pekerjaan dengan Matrix RPJMD Kabupa
 | 8 | Tata kelola digital, data, dan fiskal | 4 | 13 | Setda bagian organisasi; Inspektorat; Disarpus; Diskominfosantik; BAPPERIDA; BKPSDM; BKAD; Bapenda |
 | **Total** |  | **29** | **69** | **9 indikator tingkat tujuan** |
 
+### Status pemuatan ke SABABUKA
+
+- Seluruh 8 fokus kebijakan, 29 kelompok isu atau kategori, dan 69 indikator pada resume Matrix RPJMD telah dimuat sebagai baseline draf.
+- Seluruh indikator memiliki OPD utama agar dapat masuk ke alur review BAPPERIDA dan verifikasi teknis OPD.
+- Disbudparpora ditambahkan berdasarkan penyebutan pada Matrix RPJMD dan dipetakan sebagai OPD utama untuk PAD Sektor Pariwisata, Rasio PDRB Penyediaan Akomodasi dan Makan Minum, serta Indeks Pembangunan Kebudayaan.
+- Nama dan kode resmi Disbudparpora tetap perlu dikonfirmasi karena entitas tersebut tidak tercantum pada lampiran 28 perangkat daerah yang menjadi sumber direktori awal.
+- Status baseline adalah draf inventarisasi. Pemuatan ke sistem tidak menggantikan pengesahan BAPPERIDA, verifikasi definisi dan sumber oleh OPD, atau persetujuan data realisasi.
+
 ## C. Matrix forum organisasi
 
 Direktori resmi yang menjadi bahan konfirmasi terdiri dari 28 perangkat daerah atau badan dan 17 kecamatan. Setiap baris dibahas dengan keputusan: **masuk**, **koreksi nama atau kode**, **tambah**, **keluarkan**, atau **menunggu konfirmasi**.

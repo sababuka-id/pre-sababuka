@@ -18,7 +18,7 @@ export async function operationRoutes(app: FastifyInstance): Promise<void> {
     const global = auth.user.roles.some((role) => role.scope_type === "global");
     const organizations = [...new Set([...auth.user.organizations.map((item) => item.id), ...auth.user.roles.flatMap((role) => role.organization_id ? [role.organization_id] : [])])];
     const params = [global, organizations, request.query.period_id ?? null] as const;
-    const [status, indicators, organizationsSummary, recent] = await Promise.all([
+    const [status, indicators, organizationsSummary, recent, governanceTasks, publicationTasks] = await Promise.all([
       app.db.query<{ status: string; count: number }>(
         `SELECT b.status, count(*)::int AS count FROM sababuka.data_batches b
          JOIN sababuka.dataset_versions dv ON dv.id = b.dataset_version_id JOIN sababuka.datasets d ON d.id = dv.dataset_id
@@ -48,6 +48,33 @@ export async function operationRoutes(app: FastifyInstance): Promise<void> {
          LEFT JOIN sababuka.periods p ON p.id = b.reporting_period_id
          WHERE ($1::boolean OR b.organization_id = ANY($2::uuid[])) AND ($3::uuid IS NULL OR b.reporting_period_id = $3)
          ORDER BY b.updated_at DESC, b.id DESC LIMIT 10`, params),
+      app.db.query<{ categories_in_review: number; indicators_in_review: number; indicators_opd_verification: number }>(
+        `SELECT
+           (SELECT count(*)::int FROM sababuka.categories c
+            WHERE c.is_active = true AND c.review_status = 'in_review') AS categories_in_review,
+           count(*) FILTER (WHERE iv.status = 'in_review')::int AS indicators_in_review,
+           count(*) FILTER (WHERE iv.status = 'opd_verification')::int AS indicators_opd_verification
+         FROM sababuka.indicator_versions iv
+         JOIN sababuka.indicators i ON i.id = iv.indicator_id AND i.is_active = true
+         WHERE ($1::boolean OR i.owner_organization_id = ANY($2::uuid[]) OR EXISTS (
+           SELECT 1 FROM sababuka.indicator_organizations io
+           WHERE io.indicator_version_id = iv.id AND io.organization_id = ANY($2::uuid[])))`,
+        [global, organizations]),
+      app.db.query<{ draft_publications: number; publications_to_reconcile: number }>(
+        `SELECT
+           count(*) FILTER (WHERE p.status = 'draft')::int AS draft_publications,
+           count(*) FILTER (WHERE p.status = 'active' AND EXISTS (
+             SELECT 1 FROM sababuka.publication_items pi
+             JOIN sababuka.observations obs ON obs.id = pi.observation_id
+             JOIN sababuka.data_batches b ON b.id = obs.batch_id
+             JOIN sababuka.indicator_versions iv ON iv.id = obs.indicator_version_id
+             JOIN sababuka.indicators i ON i.id = iv.indicator_id
+             JOIN sababuka.categories c ON c.id = i.category_id
+             WHERE pi.publication_id = p.id
+               AND NOT (b.status IN ('approved','published') AND iv.status = 'active'
+                        AND i.is_active = true AND c.is_active = true AND c.review_status = 'approved')
+           ))::int AS publications_to_reconcile
+         FROM sababuka.publications p`),
     ]);
     const byStatus = Object.fromEntries(status.rows.map((row) => [row.status, row.count]));
     return {
@@ -55,9 +82,18 @@ export async function operationRoutes(app: FastifyInstance): Promise<void> {
       metrics: {
         active_indicators: indicators.rows[0]?.count ?? 0,
         draft: byStatus.draft ?? 0,
+        submitted: byStatus.submitted ?? 0,
+        under_review: byStatus.under_review ?? 0,
         pending_review: (byStatus.submitted ?? 0) + (byStatus.under_review ?? 0),
         returned: byStatus.returned ?? 0,
         approved: byStatus.approved ?? 0,
+      },
+      tasks: {
+        categories_in_review: governanceTasks.rows[0]?.categories_in_review ?? 0,
+        indicators_in_review: governanceTasks.rows[0]?.indicators_in_review ?? 0,
+        indicators_opd_verification: governanceTasks.rows[0]?.indicators_opd_verification ?? 0,
+        draft_publications: publicationTasks.rows[0]?.draft_publications ?? 0,
+        publications_to_reconcile: publicationTasks.rows[0]?.publications_to_reconcile ?? 0,
       },
       organizations: organizationsSummary.rows,
       recent: recent.rows,

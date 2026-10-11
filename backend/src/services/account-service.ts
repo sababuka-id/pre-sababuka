@@ -15,6 +15,7 @@ import { hashPassword, verifyPassword } from "../security/password.js";
 import { hashToken } from "../security/tokens.js";
 import type { AuthContext } from "../types/auth.js";
 import { recordAudit, type AuditContext } from "./audit-service.js";
+import { notifyRole } from "./notification-service.js";
 
 interface InvitationRow extends QueryResultRow {
   invitation_id: string;
@@ -35,6 +36,10 @@ export interface SelfRegistrationInput {
   username?: string | null;
   full_name: string;
   organization_id: string;
+  contact_phone: string;
+  job_title: string;
+  employee_id?: string | null;
+  request_note?: string | null;
   password: string;
 }
 
@@ -74,6 +79,7 @@ export class AccountService {
       `SELECT id::text, code, name, short_name
        FROM sababuka.organizations
        WHERE is_active = true AND archived_at IS NULL
+         AND organization_type = 'opd'
        ORDER BY name, code`,
     );
     return { data: result.rows };
@@ -84,13 +90,30 @@ export class AccountService {
     const client = await this.db.connect();
     try {
       await client.query("BEGIN");
-      const organization = await client.query<{ id: string } & QueryResultRow>(
-        `SELECT id::text FROM sababuka.organizations
+      const organization = await client.query<{ id: string; code: string } & QueryResultRow>(
+        `SELECT id::text, code FROM sababuka.organizations
          WHERE id = $1 AND is_active = true AND archived_at IS NULL
          FOR SHARE`,
         [input.organization_id],
       );
       if (!organization.rowCount) throw new ApiError(404, "NOT_FOUND", "Organisasi tidak ditemukan atau sudah tidak aktif.");
+
+      const accountLimit = ["BAPPERIDA", "DISKOMINFOSANTIK"].includes(organization.rows[0]!.code) ? 2 : 1;
+      const occupied = await client.query<{ count: string } & QueryResultRow>(
+        `SELECT count(DISTINCT u.id)::text AS count
+         FROM sababuka.users u
+         JOIN sababuka.organization_memberships om ON om.user_id = u.id
+         LEFT JOIN sababuka.user_registration_requests rr ON rr.user_id = u.id
+         WHERE om.organization_id = $1 AND om.ends_at IS NULL
+           AND u.archived_at IS NULL AND u.status IN ('invited','active','locked')
+           AND COALESCE(rr.status, 'approved') <> 'rejected'`,
+        [input.organization_id],
+      );
+      if (Number(occupied.rows[0]?.count ?? 0) >= accountLimit) {
+        throw new ApiError(409, "CONFLICT", accountLimit === 1
+          ? "OPD ini sudah memiliki satu akun PIC. Hubungi Pengelola Sistem jika PIC perlu diganti."
+          : "Batas dua akun untuk BAPPERIDA/Diskominfosantik sudah terisi.");
+      }
 
       const result = await client.query<QueryResultRow & Record<string, unknown>>(
         `INSERT INTO sababuka.users
@@ -106,6 +129,21 @@ export class AccountService {
          VALUES ($1, $2, 'applicant', true)`,
         [user.id, input.organization_id],
       );
+      await client.query(
+        `INSERT INTO sababuka.user_registration_requests
+           (user_id, requested_organization_id, contact_email, contact_phone,
+            job_title, employee_id, request_note)
+         VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+        [
+          user.id,
+          input.organization_id,
+          input.email.trim().toLowerCase(),
+          input.contact_phone.trim(),
+          input.job_title.trim(),
+          input.employee_id?.trim() || null,
+          input.request_note?.trim() || null,
+        ],
+      );
       await recordAudit(client, {
         ...audit,
         actorId: user.id as string,
@@ -113,13 +151,26 @@ export class AccountService {
         entityType: "user",
         entityId: user.id as string,
         organizationId: input.organization_id,
-        afterData: { ...user, organization_id: input.organization_id },
+        afterData: {
+          ...user,
+          requested_organization_id: input.organization_id,
+          contact_phone: input.contact_phone.trim(),
+          job_title: input.job_title.trim(),
+          employee_id: input.employee_id?.trim() || null,
+        },
+      });
+      await notifyRole(client, "superadmin", {
+        type: "user.registration_requested",
+        title: "Pendaftaran PIC baru",
+        message: `${input.full_name.trim()} mendaftar sebagai perwakilan ${organization.rows[0]!.code}. Periksa identitas, OPD, dan perannya.`,
+        entityType: "user",
+        entityId: user.id as string,
       });
       await client.query("COMMIT");
       return {
         email: user.email,
         status: "pending_approval",
-        message: "Pendaftaran berhasil. Akun akan dapat digunakan setelah diverifikasi Developer SABABUKA.",
+        message: "Pendaftaran berhasil. Superadmin akan memverifikasi identitas PIC, OPD, dan peran sebelum akun dapat digunakan.",
       };
     } catch (error) {
       await client.query("ROLLBACK");
